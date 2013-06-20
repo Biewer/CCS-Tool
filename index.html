@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+<head>
+
+<title>Splodge - the maker of Markers</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<meta name="ROBOTS" content="index, follow" />
+<meta name="copyright" content="Splodge GbR" />
+<meta name="keywords" content="Splodge, App Development, Product Design, Markers, Marker, Mark, Textmarker, App, Apps, App Store, Apple, Highlight, Text, Texts, Markings, Readability, Productivity, Education, Important stuff, Information, Sum up texts, App Developer, new Apps, iPad, iPhone, Apps for iPad, Pupil, Student, Professor, Scientist, Journalist" />
+<meta name="description" content="This is the website of Splodge, the maker of Markers. Get to know our company and learn about our app Markers on the iOS App Store. Feel free to contact us anytime if you have any questions about or products or services in terms of app development and product design." />
+
+<meta name="viewport" content="width=800">
+
+
+<link rel="shortcut icon" href="favicon.ico" />
+
+<link rel="stylesheet" type="text/css" media="print" href="styles/print.css" />
+<style type="text/css" media="screen">
+	@import url(styles/screen.css);
+</style>
+
+<script type="text/javascript">
+
+var _inputField, _errorField, _resultField;
+var _mainScript = null, _parserScript = null;
+
+function init() {
+	_inputField = document.getElementById("inputField");
+	_errorField = document.getElementById("errorField");
+	_resultField = document.getElementById("resultField");
+	
+	reloadScripts();
+}
+
+function parse() {
+	try {
+		ccs = CCSParser.parse(_inputField.value);
+		_resultField.innerText = ccs.toString();
+		_errorField.innerHTML = "&nbsp;";
+		console.log(ccs.getPossibleSteps().join(", "));
+	} catch (e) {
+		_errorField.innerText = "Line " + e.line + ", column " + e.column + ": " + e.message;
+		_resultField.innerText = "";
+	}
+}
+
+function reloadScripts() {
+	if (_mainScript) {
+		_mainScript.parentNode.removeChild(_mainScript);
+	}
+	if (_parserScript) {
+		_parserScript.parentNode.removeChild(_parserScript);
+	}
+	
+	_mainScript = document.createElement("SCRIPT");
+	_mainScript.setAttribute("type", "text/javascript");
+	_mainScript.setAttribute("src", "CCS.js?x" + Math.ceil(Math.random()*10000));
+	document.head.appendChild(_mainScript);
+	
+	_parserScript = document.createElement("SCRIPT");
+	_parserScript.setAttribute("type", "text/javascript");
+	_parserScript.setAttribute("src", "CCSParser.js?x" + Math.ceil(Math.random()*10000));
+	document.head.appendChild(_parserScript);
+	
+	window.setTimeout(parse, 50);
+}
+
+</script>
+
+</head>
+
+<body onload="init();">
+<h1>Test Playground</h1>
+<p>Enter your CCS code here:</p>
+<div style="float:left; width:45%">
+<textarea id="inputField" style="width: 100%; height: 525px;" oninput="parse();">Train[t] := is_empty!.
+put_stone!.
+enter_pass!t.
+exit_pass!t.
+take_stone!.Train[t]
+
+Basket := is_empty?. Basket
++ put_stone?. Full
+
+Full := take_stone?. Basket
++ put_stone?. Full
+
+(Basket | Train[1] | Train[2])\{is_empty,put_stone,take_stone}</textarea>
+<p id="errorField">&nbsp;</p>
+<input type="button" name="" value="Reload Scripts!" onclick="reloadScripts();" />
+</div>
+
+<pre id ="resultField" style="float: right; width:45%;"></pre>
+</body>
+
+</html>
