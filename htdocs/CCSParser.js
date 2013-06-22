@@ -1263,7 +1263,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, a, e) { 
-        										return new Match(a, e); 
+        										return new Match(a, (e == "") ? null : e); 
         									})(pos0.offset, pos0.line, pos0.column, result0[0], result0[6]);
         }
         if (result0 === null) {
@@ -1405,7 +1405,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, a, e) { 
-        	  									return new Output(a, e); 
+        	  									return new Output(a, (e == "") ? null : e); 
         	  								})(pos0.offset, pos0.line, pos0.column, result0[0], result0[3]);
         }
         if (result0 === null) {
@@ -2810,7 +2810,7 @@ CCSParser = (function(){
             pos = clone(pos3);
           }
           if (result2 !== null) {
-            result2 = (function(offset, line, column, right) { return ['+' + '(' + right[0] + ')', '+"'+op+'"+'+right[1]]; })(pos2.offset, pos2.line, pos2.column, result2[3]);
+            result2 = (function(offset, line, column, right) { return ['+' + '(' + right[0] + ')', '+"^"+'+right[1]]; })(pos2.offset, pos2.line, pos2.column, result2[3]);
           }
           if (result2 === null) {
             pos = clone(pos2);
@@ -2853,7 +2853,7 @@ CCSParser = (function(){
               pos = clone(pos3);
             }
             if (result2 !== null) {
-              result2 = (function(offset, line, column, right) { return ['+' + '(' + right[0] + ')', '+"'+op+'"+'+right[1]]; })(pos2.offset, pos2.line, pos2.column, result2[3]);
+              result2 = (function(offset, line, column, right) { return ['+' + '(' + right[0] + ')', '+"^"+'+right[1]]; })(pos2.offset, pos2.line, pos2.column, result2[3]);
             }
             if (result2 === null) {
               pos = clone(pos2);

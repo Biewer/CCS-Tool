@@ -18,13 +18,15 @@
 
 <link rel="stylesheet" type="text/css" media="print" href="styles/print.css" />
 <style type="text/css" media="screen">
-	@import url(styles/screen.css);
+	@import url(screen.css);
 </style>
 
 <script type="text/javascript">
 
 var _inputField, _errorField, _resultField;
 var _mainScript = null, _parserScript = null;
+
+var stepView;
 
 function init() {
 	_inputField = document.getElementById("inputField");
@@ -40,8 +42,12 @@ function parse() {
 		_resultField.innerText = ccs.toString();
 		_errorField.innerHTML = "&nbsp;";
 		console.log(ccs.getPossibleSteps().join(", "));
+		document.getElementById("ccsView").innerHTML = "";
+		stepView = new CCSStepView(ccs);
+		document.getElementById("ccsView").appendChild(stepView.getNode());
 	} catch (e) {
-		_errorField.innerText = "Line " + e.line + ", column " + e.column + ": " + e.message;
+		col = (e.column) ? ", column " + e.column : ""
+		_errorField.innerText = "Line " + e.line + col + ": " + e.message;
 		_resultField.innerText = "";
 	}
 }
@@ -93,6 +99,11 @@ Full := take_stone?. Basket
 </div>
 
 <pre id ="resultField" style="float: right; width:45%;"></pre>
+<div style="float: right; width:45%;" id="ccsView">
+<p class="ccs_view">
+<span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P</span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?</a>.<span>b?.<span>0</span></span></span></span>
+</p>
+</div>
 </body>
 
 </html>

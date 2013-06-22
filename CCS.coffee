@@ -1,38 +1,33 @@
 
+# - Constants
 CCSInternalChannel = "\u03c4"	# tau
-CCSExitChannel = "\u03b4"		# rho
+CCSExitChannel = "\u03b4"		# rho	
+CCSUIChannel = "\u03c8"			# psi	
+ObjID = 1
+_DEBUG = []
 
-class Environment
-	constructor: (parent) ->
-		@env = {}
-		if parent
-			@env[key] = value for key, value of parent.env
-	getValueForIdentifier: (identifier) -> 
-		if @env[identifier] then @env[identifier] else throw 'Unbound identifier "' + identifier + '"!'
-	setValueForIdentifier: (identifier, value) -> @env[identifier] = value
-	
 
+# - CCS
 class CCS
-	constructor: (@processDefinitions, @system) ->		# System must be an applied (anonymous) process definition
+	constructor: (@processDefinitions, @system) ->
+		@system.setCCS @
+		pd.setCCS @ for pd in @processDefinitions
 	
-	#Properties
-	getProcessDefinitionAtIndex: (i) -> @processDefinitions[i]
-	getProcessDefinitionCount: -> @processDefinitions.length
-	getSystem: -> @system
+	getProcessDefinition: (name, argCount) -> 
+		result = null
+		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pn, pd of @processDefinitions
+		return result
 	getPossibleSteps: (env) -> @system.getPossibleSteps(env)
 	
 	toString: -> "#{ (process.toString() for name, process of @processDefinitions).join("") }\n#{ @system.toString() }";
 
 
-
-
-
+# - ProcessDefinition
 class ProcessDefinition
 	constructor: (@name, @process, @params) ->					# string x Process x string*
 	
-	#Properties
-	getName: -> @name
-	getProcess: ->@process
+	getArgCount: -> if @params then @params.length else 0
+	setCCS: (ccs) -> @process.setCCS ccs
 	
 	toString: -> 
 		result = @name
@@ -41,112 +36,156 @@ class ProcessDefinition
 		return result;
 
 
-# NOT IN USE
-class AppliedProcessDefinition extends Process
-	constructor: (@process, @environment, @processApplication, @applicationEnvironment) ->		# Sets up a new environment
-	
-	getPossibleSteps: -> @process.getPossibleSteps(@environment)
-	getApplicapleRules: -> @process.getApplicapleRules()
-	toString: -> @process.toString()
-# NOT IN USE
-
+# - Process (abstract class)
 class Process
 	constructor: (@subprocesses...) ->								# Process*
+		@__id = ObjID++
 		
-	replaceVariableWithValue: (varName, value) -> 
-		p.replaceVariableWithValue(varName, value) for p in @subprocesses
+	setCCS: (@ccs) -> p.setCCS(@ccs) for p in @subprocesses
+	_setCCS: (@ccs) -> @
+	
+	replaceIdentifierWithValue: (identifier, value) -> 
+		p.replaceIdentifierWithValue(identifier, value) for p in @subprocesses
+	getApplicapleRules: -> []
+	getPossibleSteps: () -> (rule.getPossibleSteps(this) for rule in @getApplicapleRules()).concatChildren()
+		
+	needsBracketsForSubprocess: (process) -> 
+		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
 	stringForSubprocess: (process) ->
-		if @getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
+		if @needsBracketsForSubprocess process
 			"(#{process.toString()})"
 		else
 			"#{process.toString()}"
-	getApplicapleRules: -> []
-	getPossibleSteps: (env) -> (rule.getPossibleSteps(this, env) for rule in @getApplicapleRules()).concatChildren()
-	performStep: (step) -> throw "Not implemented!"
-			
+	
+	
 
-class Restriction extends Process
-	constructor: (@process, @restrictedActions) -> super @process	# Process x SimpleAction
+# - Stop
+class Stop extends Process
+	getPrecedence: -> 12
+	toString: -> "0"
+	copy: -> (new Stop())._setCCS(@ccs)
 	
-	#Properties
-	getProcess: -> @process
-	getRestrictedActions: -> @restrictedActions
-	getPrecedence: -> 1
-	getApplicapleRules: -> [ResRule]
-	
-	toString: -> "#{@stringForSubprocess @process} \\ {#{(a.toString() for a in @restrictedActions).join ", "}}"
-	copy: -> new Restriction(@process.copy(), @restrictedActions)
 
-class Sequence extends Process
-	constructor: (@left, @right) -> super @left, @right		# Process x Process
-	
-	#Properties
-	getLeft: -> @left
-	getRight: -> @right
-	getPrecedence: -> 3
-	getApplicapleRules: -> [Seq1Rule, Seq2Rule]
-	
-	toString: -> "#{@stringForSubprocess @left} ; #{@stringForSubprocess @right}"
-	copy: -> new Sequence (@left.copy(), @right.copy())
+# - Exit
+class Exit extends Process
+	getPrecedence: -> 12
+	getApplicapleRules: -> [ExitRule]
+	toString: -> "1"
+	copy: -> (new Exit())._setCCS(@ccs)
 	
 	
 	
-class Parallel extends Process
-	constructor: (@left, @right) -> super @left, @right		# Process x Process
+# - ProcessApplication
+class ProcessApplication extends Process
+	constructor: (@processName, @valuesToPass) -> super()		# string x Expression list
 	
-	#Properties
-	getLeft: -> @left
-	getRight: -> @right
-	getPrecedence: -> 6
-	getApplicapleRules: -> [ParLRule, ParRRule, SyncRule, SyncExitRule]
+	getArgCount: -> if !@valuesToPass then 0 else @valuesToPass.length
+	getProcess: -> 
+		return @process if @process
+		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
+		@process = pd.process.copy()
+		@process
+	getPrecedence: -> 12
+	getApplicapleRules: -> [ExtendRule]
+	###getProxy: -> 	# ToDo: cache result
+		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
+		new ProcessApplicationProxy(@, pd.process.copy())###
 	
-	toString: -> "#{@stringForSubprocess @left} | #{@stringForSubprocess @right}"
-	copy: -> new Sequence (@left.copy(), @right.copy())
-	
+	toString: -> 
+		result = @processName
+		result += "[#{(e.toString() for e in @valuesToPass).join ", "}]" if @valuesToPass
+		return result
+	copy: -> (new ProcessApplication(@processName, @valuesToPass))._setCCS(@ccs)
 
 
 
+### - ProcessApplicationProxy			
+# (Required to support moving back and forth between process name and definition in step view)
+class ProcessApplicationProxy extends Process
+	constructor: (@processApplication, @subprocess) -> super @subprocess
+	
+	getPrecedence: -> @subprocess.getPrecedence()
+	getApplicapleRules: -> [ProxyForwardRule, CollapseRule]
+	
+	toString: -> @subprocess.toString()
+	copy: -> (new ProcessApplicationProxy(@processApplication, @subprocess))._setCCS(@ccs)
+	###
+
+# - Prefix
+class Prefix extends Process
+	constructor: (@action, @process) -> super @process		# Action x Process
+	
+	getPrecedence: -> 12
+	getApplicapleRules: -> [PrefixRule, OutputRule, InputRule, MatchRule]
+	
+	replaceIdentifierWithValue: (identifier, value) ->
+		super identifier, value if @action.replaceIdentifierWithValue(identifier, value) 
+	
+	toString: -> "#{@action}.#{@stringForSubprocess @process}"
+	copy: -> (new Prefix(@action.copy(), @process.copy()))._setCCS(@ccs)
+
+
+# - Condition
+class Condition extends Process
+	constructor: (@expression, @process) -> super @process		# Expression x Process
+	
+	getPrecedence: -> 12
+	getApplicapleRules: -> [CondRule]
+	
+	toString: -> "when (#{@expression.toString()}) #{@stringForSubprocess @process}"
+	copy: -> (new Condition(@expression.copy(), @process.copy()))._setCCS(@ccs)
+
+
+# - Choice
 class Choice extends Process
 	constructor: (@left, @right) -> super @left, @right		# Process x Process
 	
-	#Properties
-	getLeft: -> @left
-	getRight: -> @right
 	getPrecedence: -> 9
 	getApplicapleRules: -> [ChoiceLRule, ChoiceRRule]
 	
 	toString: -> "#{@stringForSubprocess @left} + #{@stringForSubprocess @right}"
-	copy: -> new Sequence (@left.copy(), @right.copy())
+	copy: -> (new Choice(@left.copy(), @right.copy()))._setCCS(@ccs)
+
+
+# - Parallel
+class Parallel extends Process
+	constructor: (@left, @right) -> super @left, @right		# Process x Process
+	
+	getPrecedence: -> 6
+	getApplicapleRules: -> [ParLRule, ParRRule, SyncRule, SyncExitRule]
+	
+	toString: -> "#{@stringForSubprocess @left} | #{@stringForSubprocess @right}"
+	copy: -> (new Parallel(@left.copy(), @right.copy()))._setCCS(@ccs)
+
+
+# - Sequence
+class Sequence extends Process
+	constructor: (@left, @right) -> super @left, @right		# Process x Process
+	
+	getPrecedence: -> 3
+	getApplicapleRules: -> [Seq1Rule, Seq2Rule]
+	
+	toString: -> "#{@stringForSubprocess @left} ; #{@stringForSubprocess @right}"
+	copy: -> (new Sequence(@left.copy(), @right.copy()))._setCCS(@ccs)
+
+
+# - Restriction		
+class Restriction extends Process
+	constructor: (@process, @restrictedActions) -> super @process	# Process x SimpleAction
+	
+	getPrecedence: -> 1
+	getApplicapleRules: -> [ResRule]
+	
+	toString: -> "#{@stringForSubprocess @process} \\ {#{(a.toString() for a in @restrictedActions).join ", "}}"
+	copy: -> (new Restriction(@process.copy(), @restrictedActions))._setCCS(@ccs)
 	
 
 
-
-class Prefix extends Process
-	constructor: (@action, @process) -> super @process		# Action x Process
-	
-	#Properties
-	getAction: -> @action
-	getProcess: -> @process
-	getPrecedence: -> 12
-	getApplicapleRules: -> [PrefixRule, OutputRule, InputRule, MatchRule]
-	
-	toString: -> "#{@action}.#{@stringForSubprocess @process}"
-	copy: -> new Prefix (@action.copy(), @process.copy())
 	
 
-class Condition extends Process
-	constructor: (@expression, @process) -> super @process		# Expression x Process
-	
-	#Properties
-	getExpression: -> @expression
-	getProcess: -> @process
-	getPrecedence: -> 12
-	getApplicapleRules: -> [CondRule]
-	
-	toString: -> "when (#{@expression()}) #{@stringForSubprocess @process}"
-	copy: -> new Condition (@expression.copy(), @process.copy())
+# --------------------
 
-
+# -- Action (abstract class)
 class Action
 	constructor: (@channel) ->		# string
 		if @channel == "i"
@@ -156,8 +195,6 @@ class Action
 			if !@isSimpleAction() then throw "Exit channel e is only allowed as simple action!"
 			@channel = CCSExitChannel
 	
-	#Properties
-	getChannel: -> @channel
 	isSimpleAction: -> false
 	isInputAction: -> false
 	isMatchAction: -> false
@@ -165,94 +202,79 @@ class Action
 	
 	toString: -> @channel
 	isSyncableWithAction: (action) -> false
+	replaceIdentifierWithValue: (identifier, value) -> true		# returns true if prefix should continue replacing the variable in its subprocess
 
 
+# - Simple Action
 class SimpleAction extends Action
 	isSimpleAction: -> true
 	copy: -> new SimpleAction(@channel)
 
 
+# - Input
 class Input extends Action
 	constructor: (channel, @variable, @range) -> super channel		# string x string x {int x int) ; range must be copy in!
 	
-	#Properties
-	getVariable: -> @variable
 	isInputAction: -> true
 	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel == this.channel and action.supportsValuePassing() == this.supportsValuePassing()
+	replaceIdentifierWithValue: (identifier, value) -> @variable != identifier	# stop replacing if identifier is equal to its own variable name
 	
 	toString: -> "#{super}?#{@variable}"
 	copy: -> new Input(@channel, @variable, @range)
 
 
+# - Match
 class Match extends Action
 	constructor: (channel, @expression) -> super channel	# string x Expression
 	
-	#Properties
-	getExpression: -> @expression
 	isMatchAction: -> true
 	supportsValuePassing: -> true
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel == this.channel and action.supportsValuePassing() and action.expression.evaluate() == this.expression.evaluate()
+	replaceIdentifierWithValue: (identifier, value) -> 
+		@expression.replaceIdentifierWithValue(identifier, value)
+		true
 	
-	toString: -> "#{super}?=#{@expression.toString()}"
-	copy: -> new Match(@channel, @expression.copy())
+	toString: -> "#{super}?=#{if @expression then @expression.toString() else ""}"
+	copy: -> new Match(@channel, @expression?.copy())
 	
-	
+
+# - Output
 class Output extends Action
 	constructor: (channel, @expression) -> super channel	# string x Expression
 	
-	#Properties
-	getExpression: -> @expression
-	isOutputAction: ->true
+	isOutputAction: -> true
 	supportsValuePassing: -> typeof @expression == "string" and @expression.length > 0
 	isSyncableWithAction: (action) -> 
 		if action?.isInputAction() or action.isMatchAction()
 			action.isSyncableWithAction(this)
 		else
 			false
+	replaceIdentifierWithValue: (identifier, value) -> 
+		@expression?.replaceIdentifierWithValue(identifier, value)
+		true
 			
-	toString: -> "#{super}!#{@expression.toString()}"
-	copy: -> new Output(@channel, @expression.copy())
+	toString: -> "#{super}!#{if @expression then @expression.toString() else ""}"
+	copy: -> new Output(@channel, (@expression?.copy()))
 	
 
+# -- Expression
 class Expression
-	constructor: (@evaluationCode, @userCode) ->			# javascript x javascript	ToDo: Environment!?
+	constructor: (@evaluationCode, @userCode) ->			# javascript x javascript
 	
-	#Properties
+	replaceIdentifierWithValue: (identifier, value) -> 
+		@evaluationCode.replaceAll("__env(#{identifier})", value)
+		@userCode.replaceAll("__env(#{identifier})", value)
+		
 	evaluateCodeInEnvironment:(code, env) -> `(function(__env,__code){return eval(__code)})(env,code)`
-	getExpressionString: (env) -> @evaluateCodeInEnvironment(@userCode, env)
+	getExpressionString: -> @evaluateCodeInEnvironment(@userCode, (a)->a)
+	evaluate: -> @evaluateCodeInEnvironment(@evaluationCode,((v)->throw 'Unknown identifier "#{v}"'))
 	
-	evaluate: -> @evaluateCodeInEnvironment(@evaluationCode, env)
-	
-	toString: -> @getExpressionString((a)->a)
+	toString: -> @getExpressionString()
 	copy: -> new Expression(@evaluationCode, @userCode)
 
 
-class ProcessApplication extends Process
-	constructor: (@process, @valuesToPass=null) ->		# string x Expression list
-	
-	#Properties
-	getProcess: -> @process
-	getValuesToPass: -> @valuesToPass
-	getPrecedence: -> 12
-	
-	toString: -> 
-		result = @process
-		result += "[#{(e.toString() for e in @valuesToPass).join ", "}]" if @valuesToPass
-		return result
-	copy: -> new ProcessApplication(@process, @valuesToPass)
-	
-	
-class Stop extends Process
-	getPrecedence: -> 12
-	toString: -> "0"
-	copy: -> new Stop()
-	
-class Exit extends Process
-	getPrecedence: -> 12
-	toString: -> "1"
-	copy: -> new Exit()
-	getApplicapleRules: -> [ExitRule]
+
 	
 	
 	

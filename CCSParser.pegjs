@@ -92,7 +92,7 @@ Condition
 Match
   = a:action _ "?" _ "=" _ e:expression
 									{ 
-										return new Match(a, e); 
+										return new Match(a, (e == "") ? null : e); 
 									}
   								
 
@@ -106,7 +106,7 @@ Input
 Output
   = a:action _ "!" e:(_ t:expression { return t; })?
 	  								{ 
-	  									return new Output(a, e); 
+	  									return new Output(a, (e == "") ? null : e); 
 	  								}
 
 
@@ -209,7 +209,7 @@ expression
  	concatenatingExpression
  		= left:additiveExpression 
  			concat:( ___ '^' ___ right:additiveExpression 
- 				{ return ['+' + '(' + right[0] + ')', '+"'+op+'"+'+right[1]]; } )*
+ 				{ return ['+' + '(' + right[0] + ')', '+"^"+'+right[1]]; } )*
  		{ 
  			if (concat == "") return left;
  			concat.unshift(['""+(' + left[0] + ')', '""+'+left[1]]);
