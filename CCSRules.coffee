@@ -42,8 +42,11 @@ InputRule =
 		then [new CCSBaseStep(prefix, @)]
 		else []
 	performStep: (step) ->
-		throw new Error("Not implemented")
-		step.process.process
+		if !step.process.action.incommingValue
+			throw new Error("Input action's incomming value was not set!")
+		result = step.process.process
+		result.replaceIdentifierWithValue(step.process.action.variable, step.process.action.incommingValue)
+		result
 
 # - MatchRule
 MatchRule = 
@@ -103,6 +106,17 @@ SyncRule =
 		) for l in left
 		return result
 	performStep: (step) -> 
+		inp = null
+		out = null
+		prefix = step.substeps[0].getLeaveProcesses()[0]
+		if prefix.action.supportsValuePassing()
+			if prefix.action.isInputAction()
+				inp = prefix
+				out = step.substeps[1].getLeaveProcesses()[0]
+			else
+				out = prefix
+				inp = step.substeps[1].getLeaveProcesses()[0]
+			inp.action.incommingValue = out.action.expression.evaluate()
 		step.process.left = step.substeps[0].perform()
 		step.process.right = step.substeps[1].perform()
 		step.process
@@ -175,8 +189,11 @@ Seq2Rule =
 # - RecRule
 RecRule = 
 	getPossibleSteps: (application) ->
-		
-
+		steps = application.getProcess().getPossibleSteps()
+		c = 0 
+		new CCSStep(c++, application, step.action, @, null, step) for step in steps
+	performStep: (step) -> 
+		step.substeps[0].perform()
 
 
 

@@ -15,11 +15,11 @@ class CCS
 	
 	getProcessDefinition: (name, argCount) -> 
 		result = null
-		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pn, pd of @processDefinitions
+		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pd in @processDefinitions
 		return result
 	getPossibleSteps: (env) -> @system.getPossibleSteps(env)
 	
-	toString: -> "#{ (process.toString() for name, process of @processDefinitions).join("") }\n#{ @system.toString() }";
+	toString: -> "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
 
 
 # - ProcessDefinition
@@ -42,7 +42,7 @@ class Process
 		@__id = ObjID++
 		
 	setCCS: (@ccs) -> p.setCCS(@ccs) for p in @subprocesses
-	_setCCS: (@ccs) -> @
+	_setCCS: (@ccs) -> throw "no ccs" if !@ccs; @
 	
 	replaceIdentifierWithValue: (identifier, value) -> 
 		p.replaceIdentifierWithValue(identifier, value) for p in @subprocesses
@@ -56,6 +56,7 @@ class Process
 			"(#{process.toString()})"
 		else
 			"#{process.toString()}"
+	getPrefixes: -> (p.getPrefixes() for p in @subprocesses).concatChildren()
 	
 	
 
@@ -77,25 +78,33 @@ class Exit extends Process
 	
 # - ProcessApplication
 class ProcessApplication extends Process
-	constructor: (@processName, @valuesToPass) -> super()		# string x Expression list
+	constructor: (@processName, @valuesToPass=[]) -> super()		# string x Expression list
 	
-	getArgCount: -> if !@valuesToPass then 0 else @valuesToPass.length
+	getArgCount: -> @valuesToPass.length
 	getProcess: -> 
 		return @process if @process
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		@process = pd.process.copy()
+		((
+			id = pd.params[i]
+			val = @valuesToPass[i].evaluate()
+			@process.replaceIdentifierWithValue(id, val)
+		) for i in [0..pd.params.length-1] ) if pd.params
 		@process
 	getPrecedence: -> 12
-	getApplicapleRules: -> [ExtendRule]
+	getApplicapleRules: -> [RecRule]
+	getPrefixes : -> @getProcess().getPrefixes()
+	replaceIdentifierWithValue: (identifier, value) -> 
+		e.replaceIdentifierWithValue(identifier, value) for e in @valuesToPass
 	###getProxy: -> 	# ToDo: cache result
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		new ProcessApplicationProxy(@, pd.process.copy())###
 	
 	toString: -> 
 		result = @processName
-		result += "[#{(e.toString() for e in @valuesToPass).join ", "}]" if @valuesToPass
+		result += "[#{(e.toString() for e in @valuesToPass).join ", "}]" if @getArgCount()>0
 		return result
-	copy: -> (new ProcessApplication(@processName, @valuesToPass))._setCCS(@ccs)
+	copy: -> (new ProcessApplication(@processName, v.copy() for v in @valuesToPass))._setCCS(@ccs)
 
 
 
@@ -120,6 +129,7 @@ class Prefix extends Process
 	
 	replaceIdentifierWithValue: (identifier, value) ->
 		super identifier, value if @action.replaceIdentifierWithValue(identifier, value) 
+	getPrefixes: -> return [@]
 	
 	toString: -> "#{@action}.#{@stringForSubprocess @process}"
 	copy: -> (new Prefix(@action.copy(), @process.copy()))._setCCS(@ccs)
@@ -213,7 +223,9 @@ class SimpleAction extends Action
 
 # - Input
 class Input extends Action
-	constructor: (channel, @variable, @range) -> super channel		# string x string x {int x int) ; range must be copy in!
+	constructor: (channel, @variable, @range) -> 		# string x string x {int x int) ; range must be copy in!
+		super channel
+		@incommingValue = null
 	
 	isInputAction: -> true
 	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
@@ -244,7 +256,7 @@ class Output extends Action
 	constructor: (channel, @expression) -> super channel	# string x Expression
 	
 	isOutputAction: -> true
-	supportsValuePassing: -> typeof @expression == "string" and @expression.length > 0
+	supportsValuePassing: -> @expression instanceof Expression
 	isSyncableWithAction: (action) -> 
 		if action?.isInputAction() or action.isMatchAction()
 			action.isSyncableWithAction(this)
@@ -263,8 +275,8 @@ class Expression
 	constructor: (@evaluationCode, @userCode) ->			# javascript x javascript
 	
 	replaceIdentifierWithValue: (identifier, value) -> 
-		@evaluationCode.replaceAll("__env(#{identifier})", value)
-		@userCode.replaceAll("__env(#{identifier})", value)
+		@evaluationCode = @evaluationCode.replaceAll('__env("' + identifier + '")', value)
+		@userCode = @userCode.replaceAll('__env("' + identifier + '")', value)
 		
 	evaluateCodeInEnvironment:(code, env) -> `(function(__env,__code){return eval(__code)})(env,code)`
 	getExpressionString: -> @evaluateCodeInEnvironment(@userCode, (a)->a)

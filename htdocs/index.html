@@ -80,8 +80,8 @@ function reloadScripts() {
 <body onload="init();">
 <h1>Test Playground</h1>
 <p>Enter your CCS code here:</p>
-<div style="float:left; width:45%">
-<textarea id="inputField" style="width: 100%; height: 525px;" oninput="parse();">Train[t] := is_empty!.
+<div style="float:left; width:45%; margin-bottom:10px">
+<textarea id="inputField" style="width: 100%; height: 325px;" oninput="parse();">Train[t] := is_empty!.
 put_stone!.
 enter_pass!t.
 exit_pass!t.
@@ -99,9 +99,9 @@ Full := take_stone?. Basket
 </div>
 
 <pre id ="resultField" style="float: right; width:45%;"></pre>
-<div style="float: right; width:45%;" id="ccsView">
+<div style="clear:both; margin-top:10px;" id="ccsView">
 <p class="ccs_view">
-<span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P</span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?</a>.<span>b?.<span>0</span></span></span></span>
+<span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P<sup class="ccs_badge">3</sup></span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?x</a>=<input id="test" type="text" value="0" class="ccs_input" />.<span>b?.<span>0</span></span></span></span>
 </p>
 </div>
 </body>

@@ -1,6 +1,7 @@
 
 .ccs_view {
 	font-family: Monaco, "Courier New";
+	font-size: 13px;
 }
 
 .ccs_step {
@@ -8,12 +9,22 @@
 	color: #e79f1c;
 }
 
+.ccs_input {
+	width: 20px;
+}
+
 .ccs_toggle_process {
 	text-decoration: none;
 	color: #86B600;
 	margin-right: 6px;
-	padding-bottom: 14px;
 	font-size: 18px;
+}
+
+.ccs_badge {
+	color: red;
+	margin-left: 4px;
+	vertical-align: top;
+	font-size: 11px;
 }
 
 

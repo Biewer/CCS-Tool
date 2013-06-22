@@ -3,9 +3,9 @@ start = C:CCS { return C; }
 CCS
   = PDefs:(Process)* _ System:Restriction _
 		                                { 
-		                                	var defs = {};
+		                                	var defs = [];
 		                                  	for (var i = 0; i < PDefs.length; i++) {
-		                                  		defs[PDefs[i].name] = PDefs[i];
+		                                  		defs.push(PDefs[i]);
 		                                  	}
 		                                  	return new CCS(defs, System);
 		                                }

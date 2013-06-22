@@ -208,9 +208,9 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, PDefs, System) { 
-        		                                	var defs = {};
+        		                                	var defs = [];
         		                                  	for (var i = 0; i < PDefs.length; i++) {
-        		                                  		defs[PDefs[i].name] = PDefs[i];
+        		                                  		defs.push(PDefs[i]);
         		                                  	}
         		                                  	return new CCS(defs, System);
         		                                })(pos0.offset, pos0.line, pos0.column, result0[0], result0[2]);
