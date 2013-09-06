@@ -13,7 +13,7 @@
 		<key>StateType</key>
 		<string>ProjectWindow</string>
 		<key>TopLeftPoint</key>
-		<string>{53, 1149}</string>
+		<string>{-1299, 868}</string>
 	</dict>
 	<key>com.macrabbit.Espresso.FileManager.DisclosureCollapsed</key>
 	<false/>
@@ -63,6 +63,18 @@
 			<dict>
 				<key>DocumentURL</key>
 				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSParser.pegjs</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/htdocs/CCS.js</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PseuCo.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>

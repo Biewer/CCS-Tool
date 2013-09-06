@@ -25,7 +25,7 @@ PrefixRule =
 		if prefix?.action.isSimpleAction() or !prefix.action.supportsValuePassing() 
 		then [(new CCSBaseStep(prefix, @))] 
 		else []
-	performStep: (step) -> step.process.process
+	performStep: (step) -> step.process.getProcess()
 
 # - OutputRule
 OutputRule = 
@@ -33,7 +33,7 @@ OutputRule =
 		if prefix?.action.isOutputAction() and prefix.action.supportsValuePassing()
 		then [new CCSBaseStep(prefix, @)]
 		else []
-	performStep: (step) -> step.process.process
+	performStep: (step) -> step.process.getProcess()
 
 # - InputRule
 InputRule = 
@@ -42,9 +42,9 @@ InputRule =
 		then [new CCSBaseStep(prefix, @)]
 		else []
 	performStep: (step) ->
-		if !step.process.action.incommingValue
+		if step.process.action.incommingValue == undefined
 			throw new Error("Input action's incomming value was not set!")
-		result = step.process.process
+		result = step.process.getProcess()
 		result.replaceIdentifierWithValue(step.process.action.variable, step.process.action.incommingValue)
 		result
 
@@ -52,21 +52,21 @@ InputRule =
 MatchRule = 
 	getPossibleSteps: (prefix) -> # ToDo: Check if evaluatable!
 		if prefix?.action.isMatchAction() then [new CCSBaseStep(prefix, @)] else []
-	performStep: (step) -> step.process.process
+	performStep: (step) -> step.process.getProcess()
 
 
 # - ChoiceLRule
 ChoiceLRule = 
 	getPossibleSteps: (choice) -> 
 		i = 0
-		new CCSStep(i++, choice, step.action, @, null, step) for step in choice.left.getPossibleSteps().filterActVPPlusSteps()
+		new CCSStep(i++, choice, step.action, @, null, step) for step in choice.getLeft().getPossibleSteps().filterActVPPlusSteps()
 	performStep: (step) -> step.substeps[0].perform()
 
 # - ChoiceRRule
 ChoiceRRule = 
 	getPossibleSteps: (choice) ->
 		i = 0
-		new CCSStep(i++, choice, step.action, @, null, step) for step in choice.right.getPossibleSteps().filterActVPPlusSteps()
+		new CCSStep(i++, choice, step.action, @, null, step) for step in choice.getRight().getPossibleSteps().filterActVPPlusSteps()
 	performStep: (step) -> step.substeps[0].perform()
 
 
@@ -74,18 +74,18 @@ ChoiceRRule =
 ParLRule = 
 	getPossibleSteps: (parallel) ->
 		i = 0
-		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.left.getPossibleSteps().filterActVPSteps()
+		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getLeft().getPossibleSteps().filterActVPSteps()
 	performStep: (step) -> 
-		step.process.left = step.substeps[0].perform()
+		step.process.setLeft(step.substeps[0].perform())
 		step.process
 
 # - ParRRule
 ParRRule = 
 	getPossibleSteps: (parallel) ->
 		i = 0
-		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.right.getPossibleSteps().filterActVPSteps()
+		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getRight().getPossibleSteps().filterActVPSteps()
 	performStep: (step) -> 
-		step.process.right = step.substeps[0].perform()
+		step.process.setRight(step.substeps[0].perform())
 		step.process
 
 # - SyncRule
@@ -96,8 +96,8 @@ SyncRule =
 		return result
 
 	getPossibleSteps: (parallel) ->
-		left = parallel.left.getPossibleSteps()
-		right = parallel.right.getPossibleSteps()
+		left = parallel.getLeft().getPossibleSteps()
+		right = parallel.getRight().getPossibleSteps()
 		result = []
 		c = 0
 		(
@@ -117,22 +117,27 @@ SyncRule =
 				out = prefix
 				inp = step.substeps[1].getLeaveProcesses()[0]
 			inp.action.incommingValue = out.action.expression.evaluate()
-		step.process.left = step.substeps[0].perform()
-		step.process.right = step.substeps[1].perform()
+		step.process.setLeft(step.substeps[0].perform())
+		step.process.setRight(step.substeps[1].perform())
 		step.process
 
 
 # - ResRule
 ResRule =
+	shouldRestrictChannel: (chan, restr) ->
+		return false if chan == CCSInternalChannel or chan == CCSExitChannel
+		return false if restr.length == 0
+		return true if restr[0] == "*"
+		restr.indexOf(chan) != -1
 	getPossibleSteps: (restriction) ->
-		steps = restriction.process.getPossibleSteps().filterActVPPlusSteps()
+		steps = restriction.getProcess().getPossibleSteps().filterActVPPlusSteps()
 		result = []
 		c = 0
-		restr = (a.channel for a in restriction.restrictedActions) 
-		(result.push(new CCSStep(c++, restriction, step.action, @, null, step)) if restr.indexOf(step.action.channel) == -1) for step in steps
+		restr = (a.channel for a in restriction.restrictedActions)
+		(result.push(new CCSStep(c++, restriction, step.action, @, null, step)) if  !@shouldRestrictChannel(step.action.channel.name, restr)) for step in steps
 		return result
 	performStep: (step) -> 
-		step.process.process = step.substeps[0].perform()
+		step.process.setProcess(step.substeps[0].perform())
 		step.process
 
 
@@ -155,8 +160,8 @@ ExitRule =
 SyncExitRule =
 	getPossibleSteps: (parallel) ->
 		filter = (step) -> step.action.channel == CCSExitChannel
-		left = parallel.left.getPossibleSteps().filter(filter)
-		right = parallel.right.getPossibleSteps().filter(filter)
+		left = parallel.getLeft().getPossibleSteps().filter(filter)
+		right = parallel.getRight().getPossibleSteps().filter(filter)
 		c = 0
 		result = []
 		(
@@ -170,20 +175,22 @@ SyncExitRule =
 Seq1Rule = 
 	getPossibleSteps: (sequence) -> 
 		c = 0
-		(new CCSStep(c++, sequence, step.action, @, null, step)) for step in sequence.left.getPossibleSteps().filterActVPSteps()
-	performStep: (step) -> step.process.left = step.substeps[0].perform()
+		(new CCSStep(c++, sequence, step.action, @, null, step)) for step in sequence.getLeft().getPossibleSteps().filterActVPSteps()
+	performStep: (step) -> 
+		step.process.setLeft(step.substeps[0].perform())
+		step.process
 
 
 # - Seq2Rule
 Seq2Rule =
 	getPossibleSteps: (sequence) ->
 		filter = (step) -> step.action.channel == CCSExitChannel
-		rhos = sequence.left.getPossibleSteps().filter(filter)
+		rhos = sequence.getLeft().getPossibleSteps().filter(filter)
 		result = []
 		c = 0
 		(result.push(new CCSStep(c++, sequence, new SimpleAction(CCSInternalChannel), @, "[#{CCSExitChannel}]", rho))) for rho in rhos
 		return result
-	performStep: (step) -> step.process.right
+	performStep: (step) -> step.process.getRight()
 
 
 # - RecRule
@@ -197,42 +204,6 @@ RecRule =
 
 
 
-###
-# - ExtendRule
-ExtendRule = 
-	getPossibleSteps: (application) ->
-		pd = application.ccs.getProcessDefinition(application.processName, application.getArgCount())
-		if pd 
-		then [new CCSStep(0, application, new SimpleAction(CCSUIChannel), @, "[#{application.processName}]")]
-		else []
-	performStep: (step) ->
-		pd = step.process.ccs.getProcessDefinition(step.process.processName, step.process.getArgCount())
-		p = step.process.getProxy()
-		((
-			id = pd.params[i]
-			val = step.process.valuesToPass[i].evaluate()
-			p.replaceIdentifierWithValue(id, val)
-		) for i in [0..pd.params.length-1] ) if pd.params
-		return p
-
-
-# - CollapseRule
-CollapseRule = 
-	getPossibleSteps: (proxy) ->
-		[new CCSStep(0, proxy, new SimpleAction(CCSUIChannel), @, "[\u21aa #{proxy.processApplication.processName}]")]
-	performStep: (step) -> step.process.processApplication
-
-
-# - ProxyForwardRule
-ProxyForwardRule =
-	getPossibleSteps: (proxy) ->
-		steps = proxy.subprocess.getPossibleSteps().filterActVPPlusSteps()
-		c = 0 
-		new CCSStep(c++, proxy, step.action, @, null, step) for step in steps
-	performStep: (step) -> 
-		step.substeps[0].perform()
-		
-###
 
 
 

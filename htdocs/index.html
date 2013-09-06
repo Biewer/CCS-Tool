@@ -70,7 +70,7 @@ function reloadScripts() {
 	_parserScript.setAttribute("src", "CCSParser.js?x" + Math.ceil(Math.random()*10000));
 	document.head.appendChild(_parserScript);
 	
-	window.setTimeout(parse, 50);
+	window.setTimeout(parse, (location.host == "" ? 50 : 200));
 }
 
 </script>
@@ -95,7 +95,7 @@ Full := take_stone?. Basket
 
 (Basket | Train[1] | Train[2])\{is_empty,put_stone,take_stone}</textarea>
 <p id="errorField">&nbsp;</p>
-<input type="button" name="" value="Reload Scripts!" onclick="reloadScripts();" />
+<input type="button" name="" value="Reload Scripts!" onclick="reloadScripts();" /> <a href="http://splodge.com/imprint.html"><input type="button" name="" value="Impressum" /></a>
 </div>
 
 <pre id ="resultField" style="float: right; width:45%;"></pre>

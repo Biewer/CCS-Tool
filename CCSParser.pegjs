@@ -20,8 +20,8 @@ Process
 
 
 
-Restriction
-  = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:action as2:(_ "," _ a2:action { return new SimpleAction(a2); })* { as2.unshift(new SimpleAction(a1)); return as2; } )? _ "}" { return as; })?
+Restriction	// ToDo: Fix: Star in combination with following actions is possible!
+  = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return new SimpleAction(a2); })* { as2.unshift(new SimpleAction(a1)); return as2; } )? _ "}" { return  as; })?
   										{
   											return res == "" ? P : new Restriction(P, res);
   										}
@@ -72,8 +72,8 @@ Choice
 
 Prefix
   = Condition
-  	/ _ A:(Match
-		/ Input
+  	/ _ A:(/*Match
+		*/ Input
 		/ Output
 		/ SimpleAction ) _ "." P:Prefix
 									{ 
@@ -89,22 +89,22 @@ Condition
 	  									return new Condition(e, P);
 	  								}
 
-Match
-  = a:action _ "?" _ "=" _ e:expression
+/*Match
+  = a:Action _ "?" _ "=" _ e:expression
 									{ 
 										return new Match(a, (e == "") ? null : e); 
-									}
+									}*/
   								
 
 Input
-  = a:action _ "?" v:(_ t:identifier { return t; })?
+  = a:Action _ "?" v:(_ t:identifier { return t; })?
 	  								{ 
 	  									return new Input(a, v); 
 	  								}
 
 
 Output
-  = a:action _ "!" e:(_ t:expression { return t; })?
+  = a:Action _ "!" e:(_ t:expression { return t; })?
 	  								{ 
 	  									return new Output(a, (e == "") ? null : e); 
 	  								}
@@ -112,10 +112,18 @@ Output
 
 
 SimpleAction
-  = a:action
+  = a:Action
 	                                { 
 	                                	return new SimpleAction(a); 
 	                                }
+
+
+Action
+  = c:channel e:( "(" e:expression? ")" { return e; } )?
+  									{
+  										if (e == "") e = null;
+  										return new Channel(c, e);
+  									}
 	                                
 	                                
 
@@ -146,7 +154,7 @@ name "name"
 identifier "identifier"
   = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
 
-action "action"
+channel "channel"
   = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
   
  int "integer"
@@ -182,61 +190,70 @@ __ "inline whitespace"
 // Expressions:
 
 expression
- 	= ___ result:equalityExpression ___ { return new Expression(result[0], result[1]); }
+ 	= ___ result:equalityExpression ___ { return result; }
  	
  	
  	equalityExpression
  		= left:relationalExpression 
  			equal:( ___ op:( '==' / '!=' ) ___ right:relationalExpression 
- 				{ return [op + '(' + right[0] + ')', '+"'+op+'"+'+right[1]]; } )*
+ 				{ return [op, right]; } )*
  		{ 
- 			if (equal == "") return left;
- 			equal.unshift(['(' + left[0] + ')', '""+'+left[1]]);
- 			return equal.joinChildren("");
+ 			while (equal.length > 0) {
+ 				t = equal.shift();
+ 				left = new EqualityExpression(left, t[1], t[0]);
+ 			}
+ 			return left;
  		}
  		
  	
  	relationalExpression
  		= left:concatenatingExpression 
  			relational:( ___ op:( '<''=' / '>''=' / '<' / '>' ) ___ right:concatenatingExpression
- 				{ return [op + '(' + right[0] + ')', '+"'+op+'"+'+right[1]]; } )*
+ 				{ return [op, right]; } )*
  		{ 
- 			if (relational == "") return left;
- 			relational.unshift(['(' + left[0] + ')', '""+'+left[1]]);
- 			return relational.joinChildren("");
+ 			while (relational.length > 0) {
+ 				t = relational.shift();
+ 				left = new EqualityExpression(left, t[1], t[0]);
+ 			}
+ 			return left;
  		}
  	
  	concatenatingExpression
  		= left:additiveExpression 
  			concat:( ___ '^' ___ right:additiveExpression 
- 				{ return ['+' + '(' + right[0] + ')', '+"^"+'+right[1]]; } )*
+ 				{ return right; } )*
  		{ 
- 			if (concat == "") return left;
- 			concat.unshift(['""+(' + left[0] + ')', '""+'+left[1]]);
- 			return concat.joinChildren("");
+ 			while (concat.length > 0) {
+ 				t = concat.shift();
+ 				left = new ConcatenatingExpression(left, t);
+ 			}
+ 			return left;
  		}
  		
  	
  	additiveExpression
  		= left:multiplicativeExpression 
  			addition:( ___ op:( '+' / '-' ) ___ right:multiplicativeExpression 
- 				{ return [op + 'parseInt(' + right[0] + ')', '+"'+op+'"+'+right[1]] } )*
+ 				{ return [op, right]; } )*
  		{
- 			if (addition == "") return left;
- 			addition.unshift(['parseInt(' + (left[0]) + ')', '""+'+left[1]]);
- 			return addition.joinChildren("");
+ 			while (addition.length > 0) {
+ 				t = addition.shift();
+ 				left = new AdditiveExpression(left, t[1], t[0]);
+ 			}
+ 			return left;
  		}
  	
  	
  	multiplicativeExpression
  		= left:primaryExpression 
  			multiplication:( ___ op:( '*' / '/' ) ___ right:primaryExpression 
- 				{ return [op + 'parseInt(' + right[0] + ')', '+"'+op+'"+'+right[1]] } )*
+ 				{ return [op, right]; } )*
  		{
- 			if (multiplication == "") return left;
- 			console.log((left));
- 			multiplication.unshift(['parseInt(' + (left[0]) + ')', '""+'+left[1]]);
- 			return multiplication.joinChildren("");
+ 			while (multiplication.length > 0) {
+ 				t = multiplication.shift();
+ 				left = new MultiplicativeExpression(left, t[1], t[0]);
+ 			}
+ 			return left;
  		}
  	
  	
@@ -246,18 +263,18 @@ expression
  		/ exp_string
  		/ exp_identifier
  		/ "(" ___ equality:equalityExpression ___ ")" 
- 			{ var res = equality; res[1] = "("+res[1]+")"; return res; }
+ 			{ return equality; }
  	
  	exp_identifier "identifier"
  	  = first:[a-z] rest:[A-Za-z0-9_]* 
- 	  	{ var res = '__env("' + first + rest.join('') + '")'; return [res, res]; }
+ 	  	{ return new VariableExpression(first + rest.join('')); }
  	
  	exp_boolean "boolean literal"
- 		= 'true' { return ["1", "true"]; }
- 		/ 'false' { return ["0", "false"]; }
+ 		= 'true' { return new ConstantExpression(true); }
+ 		/ 'false' { return new ConstantExpression(false); }
  	
  	exp_integer "integer literal"
- 		= digits:[0-9]+ { var res = digits.join(""); return [res, res]; }
+ 		= minus:('-')? digits:[0-9]+ { return new ConstantExpression(parseInt(minus + digits.join(""))); }
  		
  	
  	exp_string "string literal"
@@ -265,7 +282,7 @@ expression
  	        s:(   exp_escapeSequence
  	        /   [^"]       
  	        )* 
- 	        '"' { var res = '"' + (s.join ? s.join("") : "") + '"'; return [res, "'"+res+"'"]; }
+ 	        '"' { return new ConstantExpression((s.join ? s.join("") : "")); }
  	
  	exp_escapeSequence 
  	    =   '\\' (

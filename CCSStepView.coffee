@@ -42,13 +42,19 @@ class CCSExitView extends CCSProcessView
 		@a = document.createElement("A")
 		@span.appendChild(@a)
 		@a.setAttribute("HREF", "javascript:void(0)")
+		@a.__this = @
 		@_setEnabled(false)
 		t = document.createTextNode("1")
 		@a.appendChild(t)
 		return @span
 	_setEnabled: (enabled) ->
-		return @a?.setAttribute("CLASS", "ccs_step") if enabled
-		@a?.setAttribute("CLASS", "ccs_step disabled")
+		return if !@a
+		if enabled
+			@a.setAttribute("CLASS", "ccs_step")
+			@a.addEventListener("click", @_handleClick)
+		else
+			@a.setAttribute("CLASS", "ccs_step disabled")
+			@a.removeEventListener("click", @_handleClick)
 	setPossibleSteps: (steps) -> 
 		@steps = []
 		(
@@ -56,6 +62,7 @@ class CCSExitView extends CCSProcessView
 		) for [p, s] in steps
 		@_setEnabled(@steps.length > 0)
 	setPossibleSyncableSteps: (steps) -> @setPossibleSteps steps
+	_handleClick: (event) -> this.__this.stepView._handleExitSelection(this.__this)
 
 
 # - CCSProcessApplicationView
@@ -70,7 +77,7 @@ class CCSProcessApplicationView extends CCSProcessView	#ToDo: Possible steps bad
 		sup.appendChild(@toggleA)
 		@toggleA.setAttribute("HREF", "javascript:void(0)")
 		@toggleA.setAttribute("CLASS", "ccs_toggle_process")
-		@toggleA.innerText = "\u21e3"
+		@toggleA.innerHTML = "\u21e3"
 		@toggleA.__this = @
 		@toggleA.addEventListener("click", @_handleClick)
 		@_setEnabled(false)
@@ -88,7 +95,7 @@ class CCSProcessApplicationView extends CCSProcessView	#ToDo: Possible steps bad
 		@toggleA.style.display = "none"
 	_setBadge: (num) ->
 		@badge.style.display = if num <= 0 then "none" else "inline"
-		@badge.innerText = num
+		@badge.innerHTML = num
 	setShowsProcess: (flag) ->
 		return if flag == @showsProcess
 		@showsProcess = flag
@@ -97,12 +104,12 @@ class CCSProcessApplicationView extends CCSProcessView	#ToDo: Possible steps bad
 			@subviews[0] = CCSProcessCreateView(@stepView, @process.getProcess(), false) if !@subviews[0]
 			@subspan.appendChild(@subviews[0].getNode())
 			@_setBadge 0
-			@toggleA.innerText = "\u21e1"
+			@toggleA.innerHTML = "\u21e1"
 			@setPossibleSteps @steps, true
 		else
 			@subspan.appendChild(document.createTextNode(@process.toString()))
 			@_setBadge @steps.length
-			@toggleA.innerText = "\u21e3"
+			@toggleA.innerHTML = "\u21e3"
 	_isProcessResponsibleForStep: (step) ->
 		return true if step.process == @process
 		(return true if @_isProcessResponsibleForStep s) for s in step.substeps
@@ -111,9 +118,10 @@ class CCSProcessApplicationView extends CCSProcessView	#ToDo: Possible steps bad
 		return super steps if superonly
 		@_setEnabled(steps.length > 0)	# if steps reach this function, we are top level so we allow extending
 		prefixes = @process.getPrefixes()
+		exits = @process.getExits()
 		@steps = []
 		(
-			@steps.push([p,s]) if prefixes.indexOf(p) != -1
+			@steps.push([p,s]) if prefixes.indexOf(p) != -1 or exits.indexOf(p) != -1
 		) for [p, s] in steps
 		return super steps if @showsProcess
 		@_setBadge @steps.length
@@ -132,7 +140,7 @@ class CCSProcessApplicationProxyView extends CCSProcessView
 		sup.appendChild(@toggleA)
 		@toggleA.setAttribute("HREF", "javascript:void(0)")
 		@toggleA.setAttribute("CLASS", "ccs_toggle_process")
-		@toggleA.innerText = "\u21e1"
+		@toggleA.innerHTML = "\u21e1"
 		@toggleA.__this = @
 		@toggleA.addEventListener("click", @_handleClick)
 		@_setEnabled(false)
@@ -155,7 +163,7 @@ class CCSProcessApplicationProxyView extends CCSProcessView
 # - CCSPrefixView
 class CCSPrefixView extends CCSProcessView
 	constructor: (stepView, prefix) -> 
-		super stepView, prefix, false, CCSProcessCreateView(stepView, prefix.process)
+		super stepView, prefix, false, CCSProcessCreateView(stepView, prefix.getProcess())
 		@allowsInternalActions = true
 	getNode: ->
 		return @span if @span
@@ -222,8 +230,8 @@ class CCSConditionView extends CCSProcessView
 # - CCSChoiceView
 class CCSChoiceView extends CCSProcessView
 	constructor: (stepView, choice, needsBrackets) -> 
-		lv = CCSProcessCreateView(stepView, choice.left, choice.needsBracketsForSubprocess(choice.left))
-		rv = CCSProcessCreateView(stepView, choice.right, choice.needsBracketsForSubprocess(choice.left))
+		lv = CCSProcessCreateView(stepView, choice.getLeft(), choice.needsBracketsForSubprocess(choice.getLeft()))
+		rv = CCSProcessCreateView(stepView, choice.getRight(), choice.needsBracketsForSubprocess(choice.getRight()))
 		super stepView, choice, needsBrackets, lv, rv
 	getNode: ->
 		return @span if @span
@@ -240,8 +248,8 @@ class CCSChoiceView extends CCSProcessView
 # - CCSParallelView
 class CCSParallelView extends CCSProcessView
 	constructor: (stepView, parallel, needsBrackets) -> 
-		lv = CCSProcessCreateView(stepView, parallel.left, parallel.needsBracketsForSubprocess(parallel.left))
-		rv = CCSProcessCreateView(stepView, parallel.right, parallel.needsBracketsForSubprocess(parallel.left))
+		lv = CCSProcessCreateView(stepView, parallel.getLeft(), parallel.needsBracketsForSubprocess(parallel.getLeft()))
+		rv = CCSProcessCreateView(stepView, parallel.getRight(), parallel.needsBracketsForSubprocess(parallel.getRight()))
 		super stepView, parallel, needsBrackets, lv, rv
 	getNode: ->
 		return @span if @span
@@ -260,7 +268,7 @@ class CCSParallelView extends CCSProcessView
 # - CCSSequenceView
 class CCSSequenceView extends CCSProcessView
 	constructor: (stepView, sequence, needsBrackets) -> 
-		super stepView, sequence, needsBrackets, CCSProcessCreateView(stepView, sequence.left), CCSProcessCreateView(@stepView, sequence.right)
+		super stepView, sequence, needsBrackets, CCSProcessCreateView(stepView, sequence.getLeft()), CCSProcessCreateView(@stepView, sequence.getRight())
 	getNode: ->
 		return @span if @span
 		@span = document.createElement("SPAN")
@@ -271,12 +279,13 @@ class CCSSequenceView extends CCSProcessView
 		@span.appendChild(t)
 		@span.appendChild(@rightSpan)
 		return @span
+	setPossibleSteps: (steps) -> @subviews[0].setPossibleSteps(steps)
 
 
 # - CCSRestriction
 class CCSRestrictionView extends CCSProcessView
 	constructor: (stepView, restriction, needsBrackets) ->
-		super stepView, restriction, needsBrackets, CCSProcessCreateView(stepView, restriction.process)
+		super stepView, restriction, needsBrackets, CCSProcessCreateView(stepView, restriction.getProcess())
 	getNode: ->
 		return @span if @span
 		@span = document.createElement("SPAN")
@@ -316,10 +325,8 @@ class CCSStepView
 		@rootView.setPossibleSteps @steps
 	_setPossibleSyncableSteps: (steps) ->		# process extension and collapse ignore this call
 		@syncableSteps = ((
-			console.log s.getLeaveProcesses()
 			(([p, s]) for p in s.getLeaveProcesses())
 		) for s in steps).concatChildren()		# list of tuples: leave process x root action
-		console.log @syncableSteps
 		@rootView.setPossibleSteps @syncableSteps
 	
 	_handleActionSelection: (@prefixView) ->
@@ -333,15 +340,10 @@ class CCSStepView
 		else
 			@prefixView.allowsInternalActions = false
 			@_setPossibleSyncableSteps (s for [p,s] in @prefixView.steps)
-	_handleProcessExtension: (@pappView) ->
-		if @pappView.steps.length != 1
-			console.warn "Process application view doesn't have one possible step: " + @pappView.steps
-		@system = @pappView.steps[0][1].perform()
-		@_checkSystemChanges()
-	_handleProcessCollapse: (@proxy) ->
-		if @proxy.steps.length != 1
-			console.warn "Process application proxy view doesn't have one possible step: " + @proxy.steps
-		@system = @proxy.steps[0][1].perform()
+	_handleExitSelection: (exitView) ->
+		if exitView.steps.length != 1
+			console.warn "Exit view has more than one possible step: " + exitView.steps
+		@system = exitView.steps[0][1].perform()
 		@_checkSystemChanges()
 	
 	_checkSystemChanges: ->

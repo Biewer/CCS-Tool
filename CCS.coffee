@@ -6,12 +6,21 @@ CCSUIChannel = "\u03c8"			# psi
 ObjID = 1
 _DEBUG = []
 
+CCSTypeUnknown = 0
+CCSTypeChannel = 1
+CCSTypeValue = 2
+CCSGetMostGeneralType = (t1, t2) ->
+	return t1 if t2 == CCSTypeUnknown
+	return t2 if t1 == CCSTypeUnknown
+	return t1 if t1 == t2
+	throw new Error("Incopatible Types: #{t1} and #{t2}!");
+
 
 # - CCS
 class CCS
 	constructor: (@processDefinitions, @system) ->
 		@system.setCCS @
-		pd.setCCS @ for pd in @processDefinitions
+		(pd.setCCS @; pd.getArgTypes()) for pd in @processDefinitions
 	
 	getProcessDefinition: (name, argCount) -> 
 		result = null
@@ -25,9 +34,15 @@ class CCS
 # - ProcessDefinition
 class ProcessDefinition
 	constructor: (@name, @process, @params) ->					# string x Process x string*
+		(@types = (CCSTypeUnknown for p in @params)) if @params	# init with default value
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (ccs) -> @process.setCCS ccs
+	getArgTypes: ->
+		return null if !@params
+		@types = ((								# ToDo: Repeat until types won't change anymore
+			@process.getTypeOfIdentifier x, CCSTypeUnknown
+		) for x in @params)
 	
 	toString: -> 
 		result = @name
@@ -43,9 +58,20 @@ class Process
 		
 	setCCS: (@ccs) -> p.setCCS(@ccs) for p in @subprocesses
 	_setCCS: (@ccs) -> throw "no ccs" if !@ccs; @
+	getLeft: -> @subprocesses[0]
+	getRight: -> @subprocesses[1]
+	setLeft: (left) -> @subprocesses[0] = left
+	setRight: (right) -> @subprocesses[1] = right
 	
 	replaceIdentifierWithValue: (identifier, value) -> 
 		p.replaceIdentifierWithValue(identifier, value) for p in @subprocesses
+	replaceIdentifier: (old, newID) ->
+		p.replaceIdentifier(old, newID) for p in @subprocesses
+	getTypeOfIdentifier: (identifier, type) ->
+		(
+			type = CCSGetMostGeneralType(type, t)
+		) for t in (p.getTypeOfIdentifier(identifier, type) for p in @subprocesses)
+		type
 	getApplicapleRules: -> []
 	getPossibleSteps: () -> (rule.getPossibleSteps(this) for rule in @getApplicapleRules()).concatChildren()
 		
@@ -57,7 +83,8 @@ class Process
 		else
 			"#{process.toString()}"
 	getPrefixes: -> (p.getPrefixes() for p in @subprocesses).concatChildren()
-	
+	getExits: -> (p.getExits() for p in @subprocesses).concatChildren()
+
 	
 
 # - Stop
@@ -71,6 +98,7 @@ class Stop extends Process
 class Exit extends Process
 	getPrecedence: -> 12
 	getApplicapleRules: -> [ExitRule]
+	getExits: -> [@]
 	toString: -> "1"
 	copy: -> (new Exit())._setCCS(@ccs)
 	
@@ -87,15 +115,27 @@ class ProcessApplication extends Process
 		@process = pd.process.copy()
 		((
 			id = pd.params[i]
-			val = @valuesToPass[i].evaluate()
-			@process.replaceIdentifierWithValue(id, val)
+			if pd.types[i] == CCSTypeChannel
+				@process.replaceIdentifier(id, @valuesToPass[i].variableName)
+			else
+				@process.replaceIdentifierWithValue(id, @valuesToPass[i].evaluate())			
 		) for i in [0..pd.params.length-1] ) if pd.params
 		@process
 	getPrecedence: -> 12
+	getTypeOfIdentifier: (identifier, type) ->
+		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
+		((
+			type = CCSGetMostGeneralType(type, @valuesToPass[i].getType(identifier))
+			type = CCSGetMostGeneralType(type, pd.types[i])
+		) for i in [0..pd.params.length-1] ) if pd.params
+		type
 	getApplicapleRules: -> [RecRule]
-	getPrefixes : -> @getProcess().getPrefixes()
+	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
+	getExits: -> if @process then @process.getExits() else []
 	replaceIdentifierWithValue: (identifier, value) -> 
-		e.replaceIdentifierWithValue(identifier, value) for e in @valuesToPass
+		@valuesToPass = (e.replaceIdentifierWithValue(identifier, value) for e in @valuesToPass)
+	replaceIdentifier: (old, newID) -> 
+		e.replaceIdentifier(old, newID) for e in @valuesToPass
 	###getProxy: -> 	# ToDo: cache result
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		new ProcessApplicationProxy(@, pd.process.copy())###
@@ -108,31 +148,27 @@ class ProcessApplication extends Process
 
 
 
-### - ProcessApplicationProxy			
-# (Required to support moving back and forth between process name and definition in step view)
-class ProcessApplicationProxy extends Process
-	constructor: (@processApplication, @subprocess) -> super @subprocess
-	
-	getPrecedence: -> @subprocess.getPrecedence()
-	getApplicapleRules: -> [ProxyForwardRule, CollapseRule]
-	
-	toString: -> @subprocess.toString()
-	copy: -> (new ProcessApplicationProxy(@processApplication, @subprocess))._setCCS(@ccs)
-	###
-
 # - Prefix
 class Prefix extends Process
-	constructor: (@action, @process) -> super @process		# Action x Process
+	constructor: (@action, process) -> super process		# Action x Process
 	
 	getPrecedence: -> 12
-	getApplicapleRules: -> [PrefixRule, OutputRule, InputRule, MatchRule]
+	getApplicapleRules: -> [PrefixRule, OutputRule, InputRule]
+	getProcess: -> @subprocesses[0]
 	
 	replaceIdentifierWithValue: (identifier, value) ->
-		super identifier, value if @action.replaceIdentifierWithValue(identifier, value) 
+		@action.replaceIdentifierWithValue(identifier, value)
+		super identifier, value if @action.replaceIdentifierWithValue(identifier, value)
+	replaceIdentifier: (old, newID) ->
+		@action.replaceIdentifier(old, newID)
+		super old, newID if @action.replaceIdentifier(old, newID)
 	getPrefixes: -> return [@]
-	
-	toString: -> "#{@action}.#{@stringForSubprocess @process}"
-	copy: -> (new Prefix(@action.copy(), @process.copy()))._setCCS(@ccs)
+	getTypeOfIdentifier: (identifier, type) ->
+		type = CCSGetMostGeneralType(type, @action.getTypeOfIdentifier(identifier, type))
+		return type if @action.isInputAction() and @action.variable == "identifier"
+		super identifier, type
+	toString: -> "#{@action.toString()}.#{@stringForSubprocess @getProcess()}"
+	copy: -> (new Prefix(@action.copy(), @getProcess().copy()))._setCCS(@ccs)
 
 
 # - Condition
@@ -148,61 +184,91 @@ class Condition extends Process
 
 # - Choice
 class Choice extends Process
-	constructor: (@left, @right) -> super @left, @right		# Process x Process
+	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 9
 	getApplicapleRules: -> [ChoiceLRule, ChoiceRRule]
 	
-	toString: -> "#{@stringForSubprocess @left} + #{@stringForSubprocess @right}"
-	copy: -> (new Choice(@left.copy(), @right.copy()))._setCCS(@ccs)
+	toString: -> "#{@stringForSubprocess @getLeft()} + #{@stringForSubprocess @getRight()}"
+	copy: -> (new Choice(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
 # - Parallel
 class Parallel extends Process
-	constructor: (@left, @right) -> super @left, @right		# Process x Process
+	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 6
 	getApplicapleRules: -> [ParLRule, ParRRule, SyncRule, SyncExitRule]
 	
-	toString: -> "#{@stringForSubprocess @left} | #{@stringForSubprocess @right}"
-	copy: -> (new Parallel(@left.copy(), @right.copy()))._setCCS(@ccs)
+	toString: -> "#{@stringForSubprocess @getLeft()} | #{@stringForSubprocess @getRight()}"
+	copy: -> (new Parallel(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
 # - Sequence
 class Sequence extends Process
-	constructor: (@left, @right) -> super @left, @right		# Process x Process
+	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 3
 	getApplicapleRules: -> [Seq1Rule, Seq2Rule]
+	getPrefixes: -> @getLeft().getPrefixes()
+	getExits: -> @getLeft().getExits()
 	
-	toString: -> "#{@stringForSubprocess @left} ; #{@stringForSubprocess @right}"
-	copy: -> (new Sequence(@left.copy(), @right.copy()))._setCCS(@ccs)
+	toString: -> "#{@stringForSubprocess @getLeft()} ; #{@stringForSubprocess @getRight()}"
+	copy: -> (new Sequence(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
 # - Restriction		
 class Restriction extends Process
-	constructor: (@process, @restrictedActions) -> super @process	# Process x SimpleAction
+	constructor: (process, @restrictedActions) -> super process	# Process x SimpleAction
 	
 	getPrecedence: -> 1
 	getApplicapleRules: -> [ResRule]
+	getProcess: -> @subprocesses[0]
+	setProcess: (process) -> @subprocesses[0] = process 
 	
-	toString: -> "#{@stringForSubprocess @process} \\ {#{(a.toString() for a in @restrictedActions).join ", "}}"
-	copy: -> (new Restriction(@process.copy(), @restrictedActions))._setCCS(@ccs)
+	toString: -> "#{@stringForSubprocess @getProcess()} \\ {#{(a.toString() for a in @restrictedActions).join ", "}}"
+	copy: -> (new Restriction(@getProcess().copy(), @restrictedActions))._setCCS(@ccs)
 	
 
 
 	
 
 # --------------------
+# - Channel
+
+class Channel
+	constructor: (@name, @expression) ->
+	
+	isEqual: (channel) ->
+		return false if channel.name != @name
+		return true if channel.expression == null and @expression == null
+		return false if channel.expression == null or @expression == null
+		return channel.expression.evaluate() == @expression.evaluate()
+	replaceIdentifierWithValue: (identifier, value) ->
+		@expression = @expression.replaceIdentifierWithValue(identifier, value) if @expression
+	replaceIdentifier: (old, newID) ->
+		@name = newID if @name == old
+	getTypeOfIdentifier: (identifier, type) ->
+		type = CCSGetMostGeneralType(type, CCSTypeChannel) if @name == identifier
+		type = CCSGetMostGeneralType(type, @expression.getType()) if @expression
+		type
+	toString: ->
+		result = "" + @name
+		if @expression
+				if @expression.isEvaluatable()
+					result += "(#{@expression.evaluate();})"
+				else
+					result += "(#{@expression.toString();})"
+		result
 
 # -- Action (abstract class)
 class Action
-	constructor: (@channel) ->		# string
+	constructor: (@channel) ->		# string x Expression
 		if @channel == "i"
-			if !@isSimpleAction() then throw "Internal channel i is only allowed as simple action!"
+			if !@isSimpleAction() then throw new Error("Internal channel i is only allowed as simple action!")
 			@channel = CCSInternalChannel
 		else if @channel == "e"
-			if !@isSimpleAction() then throw "Exit channel e is only allowed as simple action!"
+			if !@isSimpleAction() then throw new Error("Exit channel e is only allowed as simple action!")
 			@channel = CCSExitChannel
 	
 	isSimpleAction: -> false
@@ -210,9 +276,14 @@ class Action
 	isMatchAction: -> false
 	isOutputAction: ->false
 	
-	toString: -> @channel
+	
+	toString: -> @channel.toString()
 	isSyncableWithAction: (action) -> false
-	replaceIdentifierWithValue: (identifier, value) -> true		# returns true if prefix should continue replacing the variable in its subprocess
+	replaceIdentifierWithValue: (identifier, value) ->		# returns true if prefix should continue replacing the variable in its subprocess
+		@channel.replaceIdentifierWithValue(identifier, value)
+		true
+	replaceIdentifier: (old, newID) -> @channel.replaceIdentifier old, newID
+	getTypeOfIdentifier: (identifier, type) -> @channel.getTypeOfIdentifier(identifier, type)
 
 
 # - Simple Action
@@ -229,8 +300,16 @@ class Input extends Action
 	
 	isInputAction: -> true
 	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
-	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel == this.channel and action.supportsValuePassing() == this.supportsValuePassing()
-	replaceIdentifierWithValue: (identifier, value) -> @variable != identifier	# stop replacing if identifier is equal to its own variable name
+	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and action.supportsValuePassing() == this.supportsValuePassing()
+	replaceIdentifierWithValue: (identifier, value) -> 
+		super identifier, value
+		@variable != identifier	# stop replacing if identifier is equal to its own variable name
+	replaceIdentifier: (old, newID) -> 
+		super old, newID
+		@variable != old
+	getTypeOfIdentifier: (identifier, type) -> 
+		type = CCSGetMostGeneralType(type, CCSTypeValue) if @variable == identifier
+		super identifier, type
 	
 	toString: -> "#{super}?#{@variable}"
 	copy: -> new Input(@channel, @variable, @range)
@@ -242,10 +321,18 @@ class Match extends Action
 	
 	isMatchAction: -> true
 	supportsValuePassing: -> true
-	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel == this.channel and action.supportsValuePassing() and action.expression.evaluate() == this.expression.evaluate()
+	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and action.supportsValuePassing() and action.expression.evaluate() == this.expression.evaluate()
 	replaceIdentifierWithValue: (identifier, value) -> 
-		@expression.replaceIdentifierWithValue(identifier, value)
+		super identifier, value
+		@expression = @expression.replaceIdentifierWithValue(identifier, value)
 		true
+	replaceIdentifier: (old, newID) -> 
+		super old, newID
+		@expression.replaceIdentifier(old, newID)
+		true
+	getTypeOfIdentifier: (identifier, type) -> 
+		type = CCSGetMostGeneralType(type, @expression.getType(identifier)) if @expression
+		super identifier, type
 	
 	toString: -> "#{super}?=#{if @expression then @expression.toString() else ""}"
 	copy: -> new Match(@channel, @expression?.copy())
@@ -263,8 +350,16 @@ class Output extends Action
 		else
 			false
 	replaceIdentifierWithValue: (identifier, value) -> 
-		@expression?.replaceIdentifierWithValue(identifier, value)
+		super identifier, value
+		@expression = @expression.replaceIdentifierWithValue(identifier, value) if @expression
 		true
+	replaceIdentifier: (old, newID) -> 
+		super old, newID
+		@expression?.replaceIdentifier(old, newID)
+		true
+	getTypeOfIdentifier: (identifier, type) -> 
+		type = CCSGetMostGeneralType(type, @expression.getType(identifier)) if @expression
+		super identifier, type
 			
 	toString: -> "#{super}!#{if @expression then @expression.toString() else ""}"
 	copy: -> new Output(@channel, (@expression?.copy()))
@@ -272,20 +367,143 @@ class Output extends Action
 
 # -- Expression
 class Expression
-	constructor: (@evaluationCode, @userCode) ->			# javascript x javascript
+	constructor: (@subExps...) ->			# Expression*
 	
+	getLeft: -> @subExps[0]
+	getRight: -> @subExps[1]
 	replaceIdentifierWithValue: (identifier, value) -> 
-		@evaluationCode = @evaluationCode.replaceAll('__env("' + identifier + '")', value)
-		@userCode = @userCode.replaceAll('__env("' + identifier + '")', value)
-		
-	evaluateCodeInEnvironment:(code, env) -> `(function(__env,__code){return eval(__code)})(env,code)`
-	getExpressionString: -> @evaluateCodeInEnvironment(@userCode, (a)->a)
-	evaluate: -> @evaluateCodeInEnvironment(@evaluationCode,((v)->throw 'Unknown identifier "#{v}"'))
+		@subExps = ((
+			exp.replaceIdentifierWithValue(identifier, value)
+		) for exp in @subExps)
+		@
+	replaceIdentifier: (old, newID) -> 
+		exp.replaceIdentifier(old, newID) for exp in @subExps
 	
-	toString: -> @getExpressionString()
-	copy: -> new Expression(@evaluationCode, @userCode)
+	usesIdentifier: (identifier) ->
+		result = false;
+		(result || e.usesIdentifier()) for e in @subExps	# Returns false if root is the requested identifier: then its type is unknown
+		result
+	getType: (identifier) ->
+		CCSTypeValue if @usesIdentifier(identifier)
+		CCSTypeUnknown
+	evaluate: -> throw new Error("Abstract method!")
+	isEvaluatable: -> false
+		
+	needsBracketsForSubExp: (exp) -> 
+		@getPrecedence? and exp.getPrecedence? and exp.getPrecedence() < @getPrecedence()
+	stringForSubExp: (exp) ->
+		if @needsBracketsForSubExp exp
+			"(#{exp.toString()})"
+		else
+			"#{exp.toString()}"
+	toString: -> throw new Error("Abstract method not implemented!")
+	copy: -> throw new Error("Abstract method not implemented!")
 
 
+# - ConstantExpression
+class ConstantExpression extends Expression
+	constructor: (@value) -> super()
+	
+	getPrecedence: -> 18
+	evaluate: -> 
+		if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
+	isEvaluatable: -> true
+	toString: -> if typeof @value == "string" then '"'+@value+'"' else "" + @value
+	copy: -> new ConstantExpression(@value)
+	
+
+# - VariableExpression
+class VariableExpression extends Expression
+	constructor: (@variableName) -> 
+		super()
+	
+	getPrecedence: -> 18
+	replaceIdentifierWithValue: (identifier, value) -> 
+		if identifier == @variableName then new ConstantExpression(value) else @
+	replaceIdentifier: (old, newID) ->
+		@variableName = newID if @variableName == old
+	evaluate: -> throw new Error('Unbound identifier!')
+	isEvaluatable: -> false
+	toString: -> @variableName
+	
+	copy: -> new VariableExpression(@variableName)
+
+
+# - AdditiveExpression
+class AdditiveExpression extends Expression
+	constructor: (left, right, @op) -> super left, right
+	
+	getPrecedence: -> 15
+	evaluate: ->
+		l = parseInt(@getLeft().evaluate())
+		r = parseInt(@getRight().evaluate())
+		if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!")
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	
+	copy: -> new AdditiveExpression(@getLeft().copy(), @getRight().copy(), @op)
+
+
+# - MultiplicativeExpression
+class MultiplicativeExpression extends Expression
+	constructor: (left, right, @op) -> super left, right
+	
+	getPrecedence: -> 12
+	evaluate: ->
+		l = parseInt(@getLeft().evaluate())
+		r = parseInt(@getRight().evaluate())
+		if @op == "*" then l * r else if @op == "/" then Math.floor(l/r) 
+		else throw new Error("Invalid operator!")
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	
+	copy: -> new MultiplicativeExpression(@getLeft().copy(), @getRight().copy(), @op)
+	
+
+# - ConcatenatingExpression
+class ConcatenatingExpression extends Expression
+	constructor: (left, right, @op) -> super left, right
+	
+	getPrecedence: -> 9
+	evaluate: -> "" + @getLeft().evaluate() + @getRight().evaluate()
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	toString: -> @stringForSubExp(@getLeft()) + "^" + @stringForSubExp(@getRight())
+	
+	copy: -> new ConcatenatingExpression(@getLeft().copy(), @getRight().copy())
+
+
+# - RelationalExpression
+class RelationalExpression extends Expression
+	constructor: (left, right, @op) -> super left, right
+	
+	getPrecedence: -> 6
+	evaluate: ->
+		l = parseInt(@getLeft().evaluate())
+		r = parseInt(@getRight().evaluate())
+		if @op == "<" then l < r else if @op == "<=" then l <= r
+		else if @op == ">" then l > r else if @op == ">=" then l >= r
+		else throw new Error("Invalid operator!")
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	
+	copy: -> new RelationalExpression(@getLeft().copy(), @getRight().copy(), @op)
+	
+
+# - EqualityExpression
+class EqualityExpression extends Expression
+	constructor: (left, right, @op) -> super left, right
+	
+	getPrecedence: -> 3
+	evaluate: ->
+		l = parseInt(@getLeft().evaluate())
+		r = parseInt(@getRight().evaluate())
+		if @op == "==" then l == r else if @op == "!=" then l != r 
+		else throw new Error("Invalid operator!")
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	
+	copy: -> new EqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
+	
 
 	
 	
