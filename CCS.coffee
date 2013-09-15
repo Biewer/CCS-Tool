@@ -32,7 +32,7 @@ class CCS
 
 
 # - ProcessDefinition
-class ProcessDefinition
+class CCSProcessDefinition
 	constructor: (@name, @process, @params) ->					# string x Process x string*
 		(@types = (CCSTypeUnknown for p in @params)) if @params	# init with default value
 	
@@ -52,7 +52,7 @@ class ProcessDefinition
 
 
 # - Process (abstract class)
-class Process
+class CCSProcess
 	constructor: (@subprocesses...) ->								# Process*
 		@__id = ObjID++
 		
@@ -88,14 +88,14 @@ class Process
 	
 
 # - Stop
-class Stop extends Process
+class CCSStop extends Process
 	getPrecedence: -> 12
 	toString: -> "0"
 	copy: -> (new Stop())._setCCS(@ccs)
 	
 
 # - Exit
-class Exit extends Process
+class CCSExit extends Process
 	getPrecedence: -> 12
 	getApplicapleRules: -> [ExitRule]
 	getExits: -> [@]
@@ -105,7 +105,7 @@ class Exit extends Process
 	
 	
 # - ProcessApplication
-class ProcessApplication extends Process
+class CCSProcessApplication extends Process
 	constructor: (@processName, @valuesToPass=[]) -> super()		# string x Expression list
 	
 	getArgCount: -> @valuesToPass.length
@@ -118,7 +118,7 @@ class ProcessApplication extends Process
 			if pd.types[i] == CCSTypeChannel
 				@process.replaceIdentifier(id, @valuesToPass[i].variableName)
 			else
-				@process.replaceIdentifierWithValue(id, @valuesToPass[i].evaluate())			
+				@process.replaceIdentifierWithValue(id, @valuesToPass[i].evaluate())	# NoNoNo! Do not evaluate!!!!????			
 		) for i in [0..pd.params.length-1] ) if pd.params
 		@process
 	getPrecedence: -> 12
@@ -149,7 +149,7 @@ class ProcessApplication extends Process
 
 
 # - Prefix
-class Prefix extends Process
+class CCSPrefix extends Process
 	constructor: (@action, process) -> super process		# Action x Process
 	
 	getPrecedence: -> 12
@@ -172,18 +172,19 @@ class Prefix extends Process
 
 
 # - Condition
-class Condition extends Process
-	constructor: (@expression, @process) -> super @process		# Expression x Process
+class CCSCondition extends Process
+	constructor: (@expression, process) -> super process		# Expression x Process
 	
 	getPrecedence: -> 12
 	getApplicapleRules: -> [CondRule]
+	getProcess: -> @subprocesses[0]
 	
-	toString: -> "when (#{@expression.toString()}) #{@stringForSubprocess @process}"
-	copy: -> (new Condition(@expression.copy(), @process.copy()))._setCCS(@ccs)
+	toString: -> "when (#{@expression.toString()}) #{@stringForSubprocess @getProcess()}"
+	copy: -> (new Condition(@expression.copy(), @getProcess().copy()))._setCCS(@ccs)
 
 
 # - Choice
-class Choice extends Process
+class CCSChoice extends Process
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 9
@@ -194,7 +195,7 @@ class Choice extends Process
 
 
 # - Parallel
-class Parallel extends Process
+class CCSParallel extends Process
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 6
@@ -205,7 +206,7 @@ class Parallel extends Process
 
 
 # - Sequence
-class Sequence extends Process
+class CCSSequence extends Process
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 3
@@ -218,7 +219,7 @@ class Sequence extends Process
 
 
 # - Restriction		
-class Restriction extends Process
+class CCSRestriction extends Process	# ToDo: Use strings instead of simple actions!
 	constructor: (process, @restrictedActions) -> super process	# Process x SimpleAction
 	
 	getPrecedence: -> 1
@@ -236,8 +237,8 @@ class Restriction extends Process
 # --------------------
 # - Channel
 
-class Channel
-	constructor: (@name, @expression) ->
+class CCSChannel
+	constructor: (@name, @expression) ->	# string x Expression
 	
 	isEqual: (channel) ->
 		return false if channel.name != @name
@@ -262,8 +263,8 @@ class Channel
 		result
 
 # -- Action (abstract class)
-class Action
-	constructor: (@channel) ->		# string x Expression
+class CCSAction
+	constructor: (@channel) ->		# CCSChannel
 		if @channel == "i"
 			if !@isSimpleAction() then throw new Error("Internal channel i is only allowed as simple action!")
 			@channel = CCSInternalChannel
@@ -287,14 +288,14 @@ class Action
 
 
 # - Simple Action
-class SimpleAction extends Action
+class CCSSimpleAction extends Action
 	isSimpleAction: -> true
 	copy: -> new SimpleAction(@channel)
 
 
 # - Input
-class Input extends Action
-	constructor: (channel, @variable, @range) -> 		# string x string x {int x int) ; range must be copy in!
+class CCSInput extends Action
+	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x {int x int) ; range must be copy in!
 		super channel
 		@incommingValue = null
 	
@@ -316,8 +317,8 @@ class Input extends Action
 
 
 # - Match
-class Match extends Action
-	constructor: (channel, @expression) -> super channel	# string x Expression
+class CCSMatch extends Action
+	constructor: (channel, @expression) -> super channel	# CCSChannel x Expression
 	
 	isMatchAction: -> true
 	supportsValuePassing: -> true
@@ -339,8 +340,8 @@ class Match extends Action
 	
 
 # - Output
-class Output extends Action
-	constructor: (channel, @expression) -> super channel	# string x Expression
+class CCSOutput extends Action
+	constructor: (channel, @expression) -> super channel	# CCSChannel x Expression
 	
 	isOutputAction: -> true
 	supportsValuePassing: -> @expression instanceof Expression
@@ -366,7 +367,7 @@ class Output extends Action
 	
 
 # -- Expression
-class Expression
+class CCSExpression
 	constructor: (@subExps...) ->			# Expression*
 	
 	getLeft: -> @subExps[0]
@@ -401,7 +402,7 @@ class Expression
 
 
 # - ConstantExpression
-class ConstantExpression extends Expression
+class CCSConstantExpression extends Expression
 	constructor: (@value) -> super()
 	
 	getPrecedence: -> 18
@@ -413,7 +414,7 @@ class ConstantExpression extends Expression
 	
 
 # - VariableExpression
-class VariableExpression extends Expression
+class CCSVariableExpression extends Expression
 	constructor: (@variableName) -> 
 		super()
 	
@@ -430,7 +431,7 @@ class VariableExpression extends Expression
 
 
 # - AdditiveExpression
-class AdditiveExpression extends Expression
+class CCSAdditiveExpression extends Expression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 15
@@ -445,7 +446,7 @@ class AdditiveExpression extends Expression
 
 
 # - MultiplicativeExpression
-class MultiplicativeExpression extends Expression
+class CCSMultiplicativeExpression extends Expression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 12
@@ -461,7 +462,7 @@ class MultiplicativeExpression extends Expression
 	
 
 # - ConcatenatingExpression
-class ConcatenatingExpression extends Expression
+class CCSConcatenatingExpression extends Expression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 9
@@ -473,7 +474,7 @@ class ConcatenatingExpression extends Expression
 
 
 # - RelationalExpression
-class RelationalExpression extends Expression
+class CCSRelationalExpression extends Expression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 6
@@ -490,7 +491,7 @@ class RelationalExpression extends Expression
 	
 
 # - EqualityExpression
-class EqualityExpression extends Expression
+class CCSEqualityExpression extends Expression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 3
@@ -560,9 +561,10 @@ Array::filterActVPPlusSteps = -> this
 Array.prototype.concatChildren = function() {
 	if (this.length == 0)
 		return [];
-	var result = this.shift().concat([]);	// Result should always be a copy
-	while (this.length > 0) {
-		result = result.concat(this.shift());
+	var target = this.concat([]);	// Copy
+	var result = target.shift().concat([]);	// Result should always be a copy
+	while (target.length > 0) {
+		result = result.concat(target.shift());
 	}
 	return result;
 }

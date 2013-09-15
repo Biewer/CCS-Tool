@@ -7,13 +7,13 @@
 	<key>ESProjectWindowState</key>
 	<dict>
 		<key>ContentSize</key>
-		<string>{1245, 727}</string>
+		<string>{1440, 727}</string>
 		<key>ProjectURL</key>
 		<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/Editor.esproj/</string>
 		<key>StateType</key>
 		<string>ProjectWindow</string>
 		<key>TopLeftPoint</key>
-		<string>{-1299, 868}</string>
+		<string>{424, 1068}</string>
 	</dict>
 	<key>com.macrabbit.Espresso.FileManager.DisclosureCollapsed</key>
 	<false/>
@@ -75,6 +75,42 @@
 			<dict>
 				<key>DocumentURL</key>
 				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PseuCo.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/Translater.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCProcessFrame.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCCompiler.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCProgramController.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCContainer.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCCompilerStack.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>

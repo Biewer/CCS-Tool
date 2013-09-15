@@ -1,4 +1,6 @@
 
+PCIndent = "   "
+
 class PCNode
 	constructor: (@children...) -> 
 		@parent = null
@@ -7,54 +9,91 @@ class PCNode
 
 # - Program
 class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDecl)+
+	toString: -> (o.toString("") for o in @children).join("\n")
 
 # - MainAgent Decl
 class PCMainAgent extends PCNode	# "mainAgent" PCStmtBlock
+	toString: -> "mainAgent " + @children[0].toString("")
 
 # - Procedure Decl
 class PCProcedure extends PCNode	# Children: PCFormalParameter objects
 	constructor: (resultType, @name, body, parameters...) ->
 		parameters.unshift(resultType, body)
 		super parameters...
+	getResultType: -> @children[0]
+	getBody: -> @children[1]
+	getArgumentCount: -> @children.length-2
+	getArgumentAtIndex: (index) -> @children[index+2]
+	
+	toString: (indent) -> "#{indent}#{@getResultType().toString()} #{@name}(#{((@getArgumentAtIndex(i).toString() for i in [0...@getArgumentCount()] by 1).join(", "))}) #{@getBody().toString(indent)}"
 
 # - Formal Parameter
 class PCFormalParameter extends PCNode
 	constructor: (type, @identifier) -> super type
+	
+	toString: -> @children[0].toString() + " " + @identifier
 
 # - Monitor Decl
 class PCMonitor extends PCNode	# "monitor" <id> "{" (Procedure decl, condition decl or variable decl)+ "}"
 	constructor: (@name, declarations...) -> super declarations...
+	
+	toString: -> "monitor #{@name} {\n#{ (o.toString(PCIndent) for o in @children).join("\n") }\n}"
 
 # - Struct Decl
 class PCStruct extends PCNode	# "struct" <id> "{" (Procedure decl or variable decl)+ "}"
 	constructor: (@name, declarations...) -> super declarations...
+	
+	toString: -> "struct #{@name} {\n#{ (o.toString(PCIndent) for o in @children).join("\n") }\n}"
 
 # - Condition Decl
 class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 	constructor: (@name, expression) -> super expression
+	getExpression: -> @children[0]
+	
+	toString: (indent) -> "#{indent}condition #{@name} with #{@children[0].toString()};"
 
 # - Variable Decl
 class PCDecl extends PCNode	# Children: Type and variable declarator(s)
+	toString: (indent) -> indent + @children[0].toString() + " " + @children[1].toString()	# ToDo: Multiple declarators
 
 class PCDeclStmt extends PCDecl
+	toString: (indent) -> super + ";"
 
 # - Variable Declarator
 class PCVariableDeclarator extends PCNode	# Identifier and optional initializer
-	constructor: (@name, initializer) -> super initializer
+	constructor: (@name, initializer) -> (if initializer then super initializer else super []...)
+	
+	toString: -> 
+		res = @name
+		res += " #{@children[0].toString()}" if @children.length > 0
+		res
 
 class PCVariableInitializer extends PCNode	# array initialization >= 1 child initializers, otherwise 1 child expression
-
+	constructor: (@isUncompletedArray=false, children...) -> super children...
+	toString: ->
+		if @children[0] instanceof PCExpression
+			"= #{@children[0].toString()}"
+		else
+			"{#{ (o.toString() for o in @children).join(", ") }#{ if @isUncompletedArray then "," else "" }}"
 
 # -- TYPES --
 
-class PCArrayType extends PCNode	# n-dimensional array of non-array type
-	constructor: (baseType, @arrayIndices) -> super baseType
+class PCArrayType extends PCNode	# array of type baseType
+	constructor: (baseType, @size) -> super baseType
+	
+	toString: -> "#{@children[0]}[#{@size}]"
 
 # - Non-Array Type
 class PCBaseType extends PCNode	# abstract (?)
+	constructor: -> super []...
 
 class PCSimpleType extends PCBaseType
-	constructor: (@type) -> throw "Unknown type" if @type < 0 or @type > 5
+	constructor: (@type) -> 
+		throw "Unknown type" if @type < 0 or @type > 5
+		super
+	
+	toString: -> @typeToString()
+		
 
 PCSimpleType::VOID = 0
 PCSimpleType::BOOL = 1
@@ -62,146 +101,226 @@ PCSimpleType::INT = 2
 PCSimpleType::STRING = 3
 PCSimpleType::MUTEX = 4
 PCSimpleType::AGENT = 5
+PCSimpleType::typeToString = (type=@type) ->
+	switch type
+		when PCSimpleType::VOID then "void"
+		when PCSimpleType::BOOL then "bool"
+		when PCSimpleType::INT then "int"
+		when PCSimpleType::STRING then "string"
+		when PCSimpleType::MUTEX then "mutex"
+		when PCSimpleType::AGENT then "agent"
 
 
 # - Channel Type
-class PCChannelType extends PCBaseType
-	constructor:(@valueType, @capacity) ->
+class PCChannelType extends PCNode
+	constructor:(@valueType, @capacity) -> super []...
+	
+	toString: -> "#{PCSimpleType::typeToString(@valueType)}chan#{ if @capacity != PCChannelType::CAPACITY_UNKNOWN then @capacity else "" }"
 
 PCChannelType::CAPACITY_UNKNOWN = -1
 
 # - Encapsulating Type
 class PCClassType extends PCBaseType
 	constructor: (@className) -> super
-
+	
+	toString: -> @className
 
 
 # -- EXPRESSIONS --
 class PCExpression extends PCNode		# abstract
-
-# - Expression List
-class PCExpressionList extends PCNode
+	childToString: (i=0, diff=0) ->			# diff helps to consider implicit left or right breaks. e.g.: a + b -> diff(a)==0 (implicit left) and diff(b)==1
+		res = @children[i].toString()
+		res = "(#{res})" if @getPrecedence()+diff > @children[i].getPrecedence()
+		res
 
 # - Start Expression
 class PCStartExpression extends PCExpression	# One child: procedure or monitor call
+	getPrecedence: -> 42
+	toString: -> "start #{@childToString(0)}"
 
 # - Assign Expression
 class PCAssignExpression extends PCExpression
 	constructor: (destination, @operator, expression) -> super destination, expression
+	getDestination: -> @children[0]
+	getExpression: -> @children[1]
+	
+	getPrecedence: -> 39
+	toString: -> "#{@getDestination().toString()} #{@operator} #{@childToString(1)}"
 
 # - Assign Destination
 class PCAssignDestination extends PCNode	# Variable or array element
 	constructor: (@identifier, arrayIndexExpressions...) -> super arrayIndexExpressions...
+	
+	toString: -> "#{@identifier}#{("[#{o.toString()}]" for o in @children).join("")}"
 
 # - Send Expression
 class PCSendExpression extends PCExpression	# Children: First: The expression that returns the channel; Second: The expression that returns the value to send
+	getPrecedence: -> 39
+	toString: -> "#{@childToString(0, 1)} <! #{@childToString(1)}"
 
 # - Conditional Expression
 class PCConditionalExpression extends PCExpression	# Three children
+	getPrecedence: -> 45
+	toString: -> "#{@childToString(0)} ? #{@children[1].toString()} : #{@children[2].toString()}"
 
 # - Or Expression
 class PCOrExpression extends PCExpression # 2 children
+	getPrecedence: -> 48
+	toString: -> "#{@childToString(0)} || #{@childToString(1, 1)}"
 
 # - And Expression
 class PCAndExpression extends PCExpression # 2 children
+	getPrecedence: -> 51
+	toString: -> "#{@childToString(0)} && #{@childToString(1, 1)}"
 
 # - Equality Expression
 class PCEqualityExpression extends PCExpression
 	constructor: (left, @operator, right) -> super left, right
+	getPrecedence: -> 54
+	toString: -> "#{@childToString(0)} #{@operator} #{@childToString(1, 1)}"
 
 # - Relational Expression
 class PCRelationalExpression extends PCExpression
 	constructor: (left, @operator, right) -> super left, right
+	getPrecedence: -> 57
+	toString: -> "#{@childToString(0)} #{@operator} #{@childToString(1, 1)}"
 
 # - Additive Expression
 class PCAdditiveExpression extends PCExpression
 	constructor: (left, @operator, right) -> super left, right
+	getPrecedence: -> 60
+	toString: -> "#{@childToString(0)} #{@operator} #{@childToString(1, 1)}"
 
 # - Multiplicative Expression
 class PCMultiplicativeExpression extends PCExpression
 	constructor: (left, @operator, right) -> super left, right
+	getPrecedence: -> 63
+	toString: -> "#{@childToString(0)} #{@operator} #{@childToString(1, 1)}"
 
 # - Unary Expression
 class PCUnaryExpression extends PCExpression
 	constructor: (@operator, expression) -> super expression
+	getPrecedence: -> 66
+	toString: -> "#{@operator}#{@childToString(0)}"
 
 # - Postfix Expression
 class PCPostfixExpression extends PCExpression
 	constructor: (assignDestination, @operator) -> super assignDestination
+	getPrecedence: -> 69
+	toString: -> "#{@childToString(0)}#{@operator}"
 
 # - Receive Expression
 class PCReceiveExpression extends PCExpression	# 1 child
+	getPrecedence: -> 72
+	toString: -> "<? #{@childToString(0)}"
 
 # - Prcedure Call
 class PCProcedureCall extends PCExpression
 	constructor: (@procedureName, args...) -> super args...	# arguments are expressions
+	getPrecedence: -> 75
+	toString: -> "#{@procedureName}(#{(o.toString() for o in @children).join(", ")})"
 
 # - Class Call
 class PCClassCall extends PCExpression	# 2 children: expression that returns class and procedure call on that class
+	getPrecedence: -> 78
+	toString: -> "#{@children[0].toString()}.#{@children[1].toString()}"
 
 # - Array Expression
 class PCArrayExpression extends PCExpression	# 2 children 
+	getPrecedence: -> 81
+	toString: -> "#{@children[0].toString()}[#{@children[1].toString()}]"
 
 # - Literal Expression
 class PCLiteralExpression extends PCExpression
-	constructor: (@value) -> super
+	constructor: (@value) -> super []...
+	getPrecedence: -> 84
+	toString: ->
+		switch (typeof @value)
+			when "boolean" then (if @value then "true" else "false")
+			when "string" then "\"#{@value}\""
+			else "#{@value}"
 
 # - Identifier Expression
 class PCIdentifierExpression extends PCExpression
-	constructor: (@identifier) -> super
+	constructor: (@identifier) -> super []...
+	getPrecedence: -> 84
+	toString: -> @identifier
 
 
 # -- STATEMENTS --
 
-class PCStatement extends PCNode	# empty statement
+class PCStatement extends PCNode	# We need this for instanceof check, empty statement and to add semicolon to expression stmt
+	toString: (indent, expectsNewBlock) ->
+		addIndent = expectsNewBlock == true && (@children.length == 0 || !(@children[0] instanceof PCStmtBlock))
+		indent += PCIndent if addIndent
+		if @children.length == 0
+			res = indent + ";"
+		else
+			res = @children[0].toString(indent)
+			res += ";" if @children[0] instanceof PCStmtExpression
+		res = "\n" + res if addIndent
+		res
 
 # - Break Statement
-class PCBreakStmt extends PCStatement
-	constructor: -> super
+class PCBreakStmt extends PCNode
+	constructor: -> super []...
+	toString: (indent) -> indent + "break"
 
 # - Continue Statement
-class PCContinueStmt extends PCStatement
-	constructor: -> super
+class PCContinueStmt extends PCNode
+	constructor: -> super []...
+	toString: (indent) -> indent + "continue"
 
 # - Statement Block
-class PCStmtBlock extends PCStatement
+class PCStmtBlock extends PCNode
+	toString: (indent) -> "{\n#{(o.toString(indent+PCIndent) for o in @children).join("\n")}\n#{indent}}"
 
 # - Statement Expression
-class PCStmtExpression extends PCStatement
+class PCStmtExpression extends PCNode	# We need this for instanceof check
+	toString: (indent) -> indent + @children[0].toString()
 
 # - Select Statement
-class PCSelectStmt extends PCStatement	# children are cases
+class PCSelectStmt extends PCNode	# children are cases
+	toString: (indent) -> "#{indent}select {\n#{(o.toString(indent+PCIndent) for o in @children).join("\n")}#{indent}\n}"
 
 # - Case
 class PCCase extends PCNode
-	constructor: (execution, condition) -> super execution, condition
+	constructor: (execution, condition) -> if condition then super execution, condition else super execution
+	toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0].toString()}"
 
 # - If Statement
-class PCIfStmt extends PCStatement
+class PCIfStmt extends PCNode
+	toString: (indent) -> "#{indent}if (#{@children[0].toString()}) #{@children[1].toString(indent, true)}#{if @children[2] then " #{@children[2].toString(indent, true)}" else ""}"
 
 # - While Statement
-class PCWhileStmt extends PCStatement
+class PCWhileStmt extends PCNode
+	toString: (indent) -> "#{indent}while (#{@children[0].toString()}) #{@children[1].toString(indent, true)}"
 
 # - Do Statement
-class PCDoStmt extends PCStatement
+class PCDoStmt extends PCNode
+	toString: (indent) -> "#{indent}do #{@children[0].toString(indent, true)}\n#{indent}while (#{@children[1].toString()})"
 
 # - For Statement
-class PCForStmt extends PCStatement		# Add PCForUpdate class?
-	constructor:(@init, @expression, @update...) ->
-		children = @update.concat([])
+class PCForStmt extends PCNode		# Add PCForUpdate class?
+	constructor:(@body, @init, @expression, @update...) ->
+		children = @update.concat([@body])
 		children.unshift(@expression) if @expression
 		children.unshift(@init) if @init
 		super children
+	toString: (indent) -> "#{indent}for (#{if @init then @init.toString() else ""}; #{if @expression then @expression.toString() else ""}; #{(o.toString("") for o in @update).join(", ")}) #{@body.toString(indent, true)}"
 
 # - For loop initialization
 class PCForInit extends PCNode
+	toString: -> "#{(o.toString("") for o in @children).join(", ")}"
 
 # - Return Statement
-class PCReturnStmt extends PCStatement
+class PCReturnStmt extends PCNode
+	toString: (indent) -> "#{indent}return#{if @children.length  == 1 then " #{@children[0].toString()}" else ""};"
 
 # - Primitive Statements
-class PCPrimitiveStmt extends PCStatement
+class PCPrimitiveStmt extends PCNode
 	constructor: (@kind, expression) -> super expression
+	toString: (indent) -> "#{indent}#{@kindToString()}#{if @children.length  == 1 then " #{@children[0].toString()}" else ""};"
 
 PCPrimitiveStmt::JOIN = 0
 PCPrimitiveStmt::LOCK = 1
@@ -209,9 +328,19 @@ PCPrimitiveStmt::UNLOCK = 2
 PCPrimitiveStmt::WAIT = 3
 PCPrimitiveStmt::SIGNAL = 4
 PCPrimitiveStmt::SIGNAL_ALL = 5
+PCPrimitiveStmt::kindToString = (kind=@kind) ->
+	switch kind
+		when PCPrimitiveStmt::JOIN then "join"
+		when PCPrimitiveStmt::LOCK then "lock"
+		when PCPrimitiveStmt::UNLOCK then "unlock"
+		when PCPrimitiveStmt::WAIT then "waitForCondition"
+		when PCPrimitiveStmt::SIGNAL then "signal"
+		when PCPrimitiveStmt::SIGNAL_ALL then "signal all"
+		
 
 # - Println Statement
-class PCPrintStmt extends PCStatement
+class PCPrintStmt extends PCNode
+	toString: (indent) -> "#{indent}println(#{(o.toString() for o in @children).join(", ")});"
 
 
 
