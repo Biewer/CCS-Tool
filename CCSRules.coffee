@@ -6,9 +6,9 @@ class CCSStep
 		if !@actionDetails
 			@actionDetails = if @substeps.length == 1 then @substeps[0].actionDetails else ""
 	
-	getLeaveProcesses: ->
+	getLeafProcesses: ->
 		if @substeps.length == 0 then [@process]
-		else (step.getLeaveProcesses() for step in @substeps).concatChildren()
+		else (step.getLeafProcesses() for step in @substeps).concatChildren()
 	perform : -> @rule.performStep @
 	toString: -> @action.toString() + (if @actionDetails.length>0 then " #{@actionDetails}" else "")
 
@@ -20,7 +20,7 @@ class CCSBaseStep extends CCSStep
 
 
 # - PrefixRule
-PrefixRule =
+CCSPrefixRule =
 	getPossibleSteps: (prefix) -> 
 		if prefix?.action.isSimpleAction() or !prefix.action.supportsValuePassing() 
 		then [(new CCSBaseStep(prefix, @))] 
@@ -28,7 +28,7 @@ PrefixRule =
 	performStep: (step) -> step.process.getProcess()
 
 # - OutputRule
-OutputRule = 
+CCSOutputRule = 
 	getPossibleSteps: (prefix) -> # ToDo: Check if evaluatable!
 		if prefix?.action.isOutputAction() and prefix.action.supportsValuePassing()
 		then [new CCSBaseStep(prefix, @)]
@@ -36,7 +36,7 @@ OutputRule =
 	performStep: (step) -> step.process.getProcess()
 
 # - InputRule
-InputRule = 
+CCSInputRule = 
 	getPossibleSteps: (prefix) ->
 		if prefix?.action.isInputAction() and prefix.action.supportsValuePassing()
 		then [new CCSBaseStep(prefix, @)]
@@ -49,21 +49,21 @@ InputRule =
 		result
 
 # - MatchRule
-MatchRule = 
+CCSMatchRule = 
 	getPossibleSteps: (prefix) -> # ToDo: Check if evaluatable!
 		if prefix?.action.isMatchAction() then [new CCSBaseStep(prefix, @)] else []
 	performStep: (step) -> step.process.getProcess()
 
 
 # - ChoiceLRule
-ChoiceLRule = 
+CCSChoiceLRule = 
 	getPossibleSteps: (choice) -> 
 		i = 0
 		new CCSStep(i++, choice, step.action, @, null, step) for step in choice.getLeft().getPossibleSteps().filterActVPPlusSteps()
 	performStep: (step) -> step.substeps[0].perform()
 
 # - ChoiceRRule
-ChoiceRRule = 
+CCSChoiceRRule = 
 	getPossibleSteps: (choice) ->
 		i = 0
 		new CCSStep(i++, choice, step.action, @, null, step) for step in choice.getRight().getPossibleSteps().filterActVPPlusSteps()
@@ -71,7 +71,7 @@ ChoiceRRule =
 
 
 # - ParLRule
-ParLRule = 
+CCSParLRule = 
 	getPossibleSteps: (parallel) ->
 		i = 0
 		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getLeft().getPossibleSteps().filterActVPSteps()
@@ -80,7 +80,7 @@ ParLRule =
 		step.process
 
 # - ParRRule
-ParRRule = 
+CCSParRRule = 
 	getPossibleSteps: (parallel) ->
 		i = 0
 		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getRight().getPossibleSteps().filterActVPSteps()
@@ -89,7 +89,7 @@ ParRRule =
 		step.process
 
 # - SyncRule
-SyncRule =
+CCSSyncRule =
 	filterStepsSyncableWithStep: (step, steps) ->
 		result = []
 		(if s.action.isSyncableWithAction(step.action) then result.push(s)) for s in steps
@@ -101,8 +101,8 @@ SyncRule =
 		result = []
 		c = 0
 		(
-			_right = SyncRule.filterStepsSyncableWithStep(l, right)
-			(result.push(new CCSStep(c++, parallel, new SimpleAction(CCSInternalChannel), @, "[#{l.toString()}, #{r.toString()}]", l, r))) for r in _right
+			_right = CCSSyncRule.filterStepsSyncableWithStep(l, right)
+			(result.push(new CCSStep(c++, parallel, new CCSInternalActionCreate(CCSInternalChannel), @, "[#{l.toString()}, #{r.toString()}]", l, r))) for r in _right
 		) for l in left
 		return result
 	performStep: (step) -> 
@@ -123,18 +123,16 @@ SyncRule =
 
 
 # - ResRule
-ResRule =
+CCSResRule =
 	shouldRestrictChannel: (chan, restr) ->
 		return false if chan == CCSInternalChannel or chan == CCSExitChannel
 		return false if restr.length == 0
-		return true if restr[0] == "*"
-		restr.indexOf(chan) != -1
+		if restr[0] == "*" then restr.indexOf(chan) == -1 else restr.indexOf(chan) != -1
 	getPossibleSteps: (restriction) ->
 		steps = restriction.getProcess().getPossibleSteps().filterActVPPlusSteps()
 		result = []
 		c = 0
-		restr = (a.channel for a in restriction.restrictedActions)
-		(result.push(new CCSStep(c++, restriction, step.action, @, null, step)) if  !@shouldRestrictChannel(step.action.channel.name, restr)) for step in steps
+		(result.push(new CCSStep(c++, restriction, step.action, @, null, step)) if  !@shouldRestrictChannel(step.action.channel.name, restriction.restrictedChannels)) for step in steps
 		return result
 	performStep: (step) -> 
 		step.process.setProcess(step.substeps[0].perform())
@@ -142,7 +140,7 @@ ResRule =
 
 
 # - CondRule
-CondRule =
+CCSCondRule =
 	getPossibleSteps: (condition) ->
 		if condition.expression.evaluate() 
 		then condition.process.getPossibleSteps().filterActVPPlusSteps() 
@@ -151,28 +149,28 @@ CondRule =
 
 
 # - ExitRule
-ExitRule = 
-	getPossibleSteps: (exit) -> [new CCSStep(0, exit, new SimpleAction(CCSExitChannel), @)]
+CCSExitRule = 
+	getPossibleSteps: (exit) -> [new CCSStep(0, exit, new CCSInternalActionCreate(CCSExitChannel), @)]
 	performStep: (step) -> new Stop()
 
 
 # - SyncExitRule
-SyncExitRule =
+CCSSyncExitRule =
 	getPossibleSteps: (parallel) ->
-		filter = (step) -> step.action.channel == CCSExitChannel
+		filter = (step) -> step.action.channel.name == CCSExitChannel
 		left = parallel.getLeft().getPossibleSteps().filter(filter)
 		right = parallel.getRight().getPossibleSteps().filter(filter)
 		c = 0
 		result = []
 		(
-			(result.push(new CCSStep(c++, parallel, new SimpleAction(CCSExitChannel), @, "[#{l.toString()}, #{r.toString()}]", l, r))) for r in right
+			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, "[#{l.toString()}, #{r.toString()}]", l, r))) for r in right
 		) for l in left
 		return result
 	performStep: (step) -> SyncRule.performStep step
 
 
 # - Seq1Rule
-Seq1Rule = 
+CCSSeq1Rule = 
 	getPossibleSteps: (sequence) -> 
 		c = 0
 		(new CCSStep(c++, sequence, step.action, @, null, step)) for step in sequence.getLeft().getPossibleSteps().filterActVPSteps()
@@ -182,19 +180,19 @@ Seq1Rule =
 
 
 # - Seq2Rule
-Seq2Rule =
+CCSSeq2Rule =
 	getPossibleSteps: (sequence) ->
-		filter = (step) -> step.action.channel == CCSExitChannel
+		filter = (step) -> step.action.channel.name == CCSExitChannel
 		rhos = sequence.getLeft().getPossibleSteps().filter(filter)
 		result = []
 		c = 0
-		(result.push(new CCSStep(c++, sequence, new SimpleAction(CCSInternalChannel), @, "[#{CCSExitChannel}]", rho))) for rho in rhos
+		(result.push(new CCSStep(c++, sequence, new CCSInternalActionCreate(CCSInternalChannel), @, "[#{CCSExitChannel}]", rho))) for rho in rhos
 		return result
 	performStep: (step) -> step.process.getRight()
 
 
 # - RecRule
-RecRule = 
+CCSRecRule = 
 	getPossibleSteps: (application) ->
 		steps = application.getProcess().getPossibleSteps()
 		c = 0 

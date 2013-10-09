@@ -1,16 +1,16 @@
 
 # - Global initializer
 CCSProcessCreateView = (stepView, process, needsBrackets) -> 
-	if process instanceof Prefix then (if process.action.isInputAction() and process.action.supportsValuePassing() then new CCSInputView(stepView, process) else new CCSPrefixView(stepView, process))
-	else if process instanceof Condition then new CCSConditionView(stepView, process)
-	else if process instanceof Stop then new CCSStopView(stepView, process)
-	else if process instanceof Exit then new CCSExitView(stepView, process)
-	else if process instanceof ProcessApplication then new CCSProcessApplicationView(stepView, process)
+	if process instanceof CCSPrefix then (if process.action.isInputAction() and process.action.supportsValuePassing() then new CCSInputView(stepView, process) else new CCSPrefixView(stepView, process))
+	else if process instanceof CCSCondition then new CCSConditionView(stepView, process)
+	else if process instanceof CCSStop then new CCSStopView(stepView, process)
+	else if process instanceof CCSExit then new CCSExitView(stepView, process)
+	else if process instanceof CCSProcessApplication then new CCSProcessApplicationView(stepView, process)
 	#else if process instanceof ProcessApplicationProxy then new CCSProcessApplicationProxyView(stepView, process)
-	else if process instanceof Choice then new CCSChoiceView(stepView, process, needsBrackets)
-	else if process instanceof Parallel then new CCSParallelView(stepView, process, needsBrackets)
-	else if process instanceof Sequence then new CCSSequenceView(stepView, process, needsBrackets)
-	else if process instanceof Restriction then new CCSRestrictionView(stepView, process, needsBrackets)
+	else if process instanceof CCSChoice then new CCSChoiceView(stepView, process, needsBrackets)
+	else if process instanceof CCSParallel then new CCSParallelView(stepView, process, needsBrackets)
+	else if process instanceof CCSSequence then new CCSSequenceView(stepView, process, needsBrackets)
+	else if process instanceof CCSRestriction then new CCSRestrictionView(stepView, process, needsBrackets)
 	else throw new Error("Process view could not be created for unknown process!")
 
 
@@ -291,7 +291,7 @@ class CCSRestrictionView extends CCSProcessView
 		@span = document.createElement("SPAN")
 		@subSpan = @subviews[0].getNode()
 		@span.appendChild(@subSpan)
-		t = document.createTextNode(" \\ {#{(a.toString() for a in @process.restrictedActions).join ", "}}")
+		t = document.createTextNode(" \\ {#{@process.restrictedChannels.join ", "}}")
 		@span.appendChild(t)
 		return @span
 

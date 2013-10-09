@@ -46,7 +46,7 @@ class CCSProcessDefinition
 	
 	toString: -> 
 		result = @name
-		result += "[#{@params.join ", "}]" if @params?
+		result += "[#{@params.join ", "}]" if @params?.length > 0
 		result +=" := #{@process.toString()}\n"
 		return result;
 
@@ -88,24 +88,24 @@ class CCSProcess
 	
 
 # - Stop
-class CCSStop extends Process
+class CCSStop extends CCSProcess
 	getPrecedence: -> 12
 	toString: -> "0"
-	copy: -> (new Stop())._setCCS(@ccs)
+	copy: -> (new CCSStop())._setCCS(@ccs)
 	
 
 # - Exit
-class CCSExit extends Process
+class CCSExit extends CCSProcess
 	getPrecedence: -> 12
-	getApplicapleRules: -> [ExitRule]
+	getApplicapleRules: -> [CCSExitRule]
 	getExits: -> [@]
 	toString: -> "1"
-	copy: -> (new Exit())._setCCS(@ccs)
+	copy: -> (new CCSExit())._setCCS(@ccs)
 	
 	
 	
 # - ProcessApplication
-class CCSProcessApplication extends Process
+class CCSProcessApplication extends CCSProcess
 	constructor: (@processName, @valuesToPass=[]) -> super()		# string x Expression list
 	
 	getArgCount: -> @valuesToPass.length
@@ -125,11 +125,11 @@ class CCSProcessApplication extends Process
 	getTypeOfIdentifier: (identifier, type) ->
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		((
-			type = CCSGetMostGeneralType(type, @valuesToPass[i].getType(identifier))
+			type = CCSGetMostGeneralType(type, @valuesToPass[i].getType(identifier))	# ??? getType?
 			type = CCSGetMostGeneralType(type, pd.types[i])
 		) for i in [0..pd.params.length-1] ) if pd.params
 		type
-	getApplicapleRules: -> [RecRule]
+	getApplicapleRules: -> [CCSRecRule]
 	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
 	getExits: -> if @process then @process.getExits() else []
 	replaceIdentifierWithValue: (identifier, value) -> 
@@ -144,16 +144,16 @@ class CCSProcessApplication extends Process
 		result = @processName
 		result += "[#{(e.toString() for e in @valuesToPass).join ", "}]" if @getArgCount()>0
 		return result
-	copy: -> (new ProcessApplication(@processName, v.copy() for v in @valuesToPass))._setCCS(@ccs)
+	copy: -> (new CCSProcessApplication(@processName, v.copy() for v in @valuesToPass))._setCCS(@ccs)
 
 
 
 # - Prefix
-class CCSPrefix extends Process
+class CCSPrefix extends CCSProcess
 	constructor: (@action, process) -> super process		# Action x Process
 	
 	getPrecedence: -> 12
-	getApplicapleRules: -> [PrefixRule, OutputRule, InputRule]
+	getApplicapleRules: -> [CCSPrefixRule, CCSOutputRule, CCSInputRule]
 	getProcess: -> @subprocesses[0]
 	
 	replaceIdentifierWithValue: (identifier, value) ->
@@ -165,70 +165,70 @@ class CCSPrefix extends Process
 	getPrefixes: -> return [@]
 	getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, @action.getTypeOfIdentifier(identifier, type))
-		return type if @action.isInputAction() and @action.variable == "identifier"
+		return type if @action.isInputAction() and @action.variable == "identifier"	#???
 		super identifier, type
 	toString: -> "#{@action.toString()}.#{@stringForSubprocess @getProcess()}"
-	copy: -> (new Prefix(@action.copy(), @getProcess().copy()))._setCCS(@ccs)
+	copy: -> (new CCSPrefix(@action.copy(), @getProcess().copy()))._setCCS(@ccs)
 
 
 # - Condition
-class CCSCondition extends Process
+class CCSCondition extends CCSProcess
 	constructor: (@expression, process) -> super process		# Expression x Process
 	
 	getPrecedence: -> 12
-	getApplicapleRules: -> [CondRule]
+	getApplicapleRules: -> [CCSCondRule]
 	getProcess: -> @subprocesses[0]
 	
 	toString: -> "when (#{@expression.toString()}) #{@stringForSubprocess @getProcess()}"
-	copy: -> (new Condition(@expression.copy(), @getProcess().copy()))._setCCS(@ccs)
+	copy: -> (new CCSCondition(@expression.copy(), @getProcess().copy()))._setCCS(@ccs)
 
 
 # - Choice
-class CCSChoice extends Process
+class CCSChoice extends CCSProcess
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 9
-	getApplicapleRules: -> [ChoiceLRule, ChoiceRRule]
+	getApplicapleRules: -> [CCSChoiceLRule, CCSChoiceRRule]
 	
 	toString: -> "#{@stringForSubprocess @getLeft()} + #{@stringForSubprocess @getRight()}"
-	copy: -> (new Choice(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
+	copy: -> (new CCSChoice(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
 # - Parallel
-class CCSParallel extends Process
+class CCSParallel extends CCSProcess
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 6
-	getApplicapleRules: -> [ParLRule, ParRRule, SyncRule, SyncExitRule]
+	getApplicapleRules: -> [CCSParLRule, CCSParRRule, CCSSyncRule, CCSSyncExitRule]
 	
 	toString: -> "#{@stringForSubprocess @getLeft()} | #{@stringForSubprocess @getRight()}"
-	copy: -> (new Parallel(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
+	copy: -> (new CCSParallel(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
 # - Sequence
-class CCSSequence extends Process
+class CCSSequence extends CCSProcess
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 3
-	getApplicapleRules: -> [Seq1Rule, Seq2Rule]
+	getApplicapleRules: -> [CCSSeq1Rule, CCSSeq2Rule]
 	getPrefixes: -> @getLeft().getPrefixes()
 	getExits: -> @getLeft().getExits()
 	
 	toString: -> "#{@stringForSubprocess @getLeft()} ; #{@stringForSubprocess @getRight()}"
-	copy: -> (new Sequence(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
+	copy: -> (new CCSSequence(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
 # - Restriction		
-class CCSRestriction extends Process	# ToDo: Use strings instead of simple actions!
-	constructor: (process, @restrictedActions) -> super process	# Process x SimpleAction
+class CCSRestriction extends CCSProcess
+	constructor: (process, @restrictedChannels) -> super process	# Process x string*
 	
 	getPrecedence: -> 1
-	getApplicapleRules: -> [ResRule]
+	getApplicapleRules: -> [CCSResRule]
 	getProcess: -> @subprocesses[0]
 	setProcess: (process) -> @subprocesses[0] = process 
 	
-	toString: -> "#{@stringForSubprocess @getProcess()} \\ {#{(a.toString() for a in @restrictedActions).join ", "}}"
-	copy: -> (new Restriction(@getProcess().copy(), @restrictedActions))._setCCS(@ccs)
+	toString: -> "#{@stringForSubprocess @getProcess()} \\ {#{@restrictedChannels.join ", "}}"
+	copy: -> (new CCSRestriction(@getProcess().copy(), @restrictedChannels))._setCCS(@ccs)
 	
 
 
@@ -247,8 +247,10 @@ class CCSChannel
 		return channel.expression.evaluate() == @expression.evaluate()
 	replaceIdentifierWithValue: (identifier, value) ->
 		@expression = @expression.replaceIdentifierWithValue(identifier, value) if @expression
+		null
 	replaceIdentifier: (old, newID) ->
 		@name = newID if @name == old
+		null
 	getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, CCSTypeChannel) if @name == identifier
 		type = CCSGetMostGeneralType(type, @expression.getType()) if @expression
@@ -261,6 +263,21 @@ class CCSChannel
 				else
 					result += "(#{@expression.toString();})"
 		result
+
+###
+class CCSInternalChannel extends CCSChannel
+	constructor: (name) ->
+		if name != CCSInternalChannel or name != CCSExitChannel
+			throw new Error("Only internal channel names are allowed!")
+		super name, null
+	isEqual: (channel) -> channel.name == @name and channel.expression == null
+	replaceIdentifierWithValue: (identifier, value) -> null
+	replaceIdentifier: (old, newID) -> null
+	getTypeOfIdentifier: (identifier, type) -> type
+	toString: -> @name
+	###
+	
+	
 
 # -- Action (abstract class)
 class CCSAction
@@ -288,13 +305,18 @@ class CCSAction
 
 
 # - Simple Action
-class CCSSimpleAction extends Action
+class CCSSimpleAction extends CCSAction
 	isSimpleAction: -> true
-	copy: -> new SimpleAction(@channel)
+	copy: -> new CCSSimpleAction(@channel)
+
+CCSInternalActionCreate = (name) -> 
+	if name != CCSInternalChannel and name != CCSExitChannel
+		throw new Error("Only internal channel names are allowed!")
+	new CCSSimpleAction(new CCSChannel(name, null))
 
 
 # - Input
-class CCSInput extends Action
+class CCSInput extends CCSAction
 	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x {int x int) ; range must be copy in!
 		super channel
 		@incommingValue = null
@@ -312,12 +334,12 @@ class CCSInput extends Action
 		type = CCSGetMostGeneralType(type, CCSTypeValue) if @variable == identifier
 		super identifier, type
 	
-	toString: -> "#{super}?#{@variable}"
-	copy: -> new Input(@channel, @variable, @range)
+	toString: -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
+	copy: -> new CCSInput(@channel, @variable, @range)
 
 
 # - Match
-class CCSMatch extends Action
+class CCSMatch extends CCSAction
 	constructor: (channel, @expression) -> super channel	# CCSChannel x Expression
 	
 	isMatchAction: -> true
@@ -336,15 +358,15 @@ class CCSMatch extends Action
 		super identifier, type
 	
 	toString: -> "#{super}?=#{if @expression then @expression.toString() else ""}"
-	copy: -> new Match(@channel, @expression?.copy())
+	copy: -> new CCSMatch(@channel, @expression?.copy())
 	
 
 # - Output
-class CCSOutput extends Action
+class CCSOutput extends CCSAction
 	constructor: (channel, @expression) -> super channel	# CCSChannel x Expression
 	
 	isOutputAction: -> true
-	supportsValuePassing: -> @expression instanceof Expression
+	supportsValuePassing: -> @expression instanceof CCSExpression
 	isSyncableWithAction: (action) -> 
 		if action?.isInputAction() or action.isMatchAction()
 			action.isSyncableWithAction(this)
@@ -363,7 +385,7 @@ class CCSOutput extends Action
 		super identifier, type
 			
 	toString: -> "#{super}!#{if @expression then @expression.toString() else ""}"
-	copy: -> new Output(@channel, (@expression?.copy()))
+	copy: -> new CCSOutput(@channel, (@expression?.copy()))
 	
 
 # -- Expression
@@ -402,7 +424,7 @@ class CCSExpression
 
 
 # - ConstantExpression
-class CCSConstantExpression extends Expression
+class CCSConstantExpression extends CCSExpression
 	constructor: (@value) -> super()
 	
 	getPrecedence: -> 18
@@ -410,28 +432,28 @@ class CCSConstantExpression extends Expression
 		if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
 	isEvaluatable: -> true
 	toString: -> if typeof @value == "string" then '"'+@value+'"' else "" + @value
-	copy: -> new ConstantExpression(@value)
+	copy: -> new CCSConstantExpression(@value)
 	
 
 # - VariableExpression
-class CCSVariableExpression extends Expression
+class CCSVariableExpression extends CCSExpression
 	constructor: (@variableName) -> 
 		super()
 	
 	getPrecedence: -> 18
 	replaceIdentifierWithValue: (identifier, value) -> 
-		if identifier == @variableName then new ConstantExpression(value) else @
+		if identifier == @variableName then new CCSConstantExpression(value) else @
 	replaceIdentifier: (old, newID) ->
 		@variableName = newID if @variableName == old
 	evaluate: -> throw new Error('Unbound identifier!')
 	isEvaluatable: -> false
 	toString: -> @variableName
 	
-	copy: -> new VariableExpression(@variableName)
+	copy: -> new CCSVariableExpression(@variableName)
 
 
 # - AdditiveExpression
-class CCSAdditiveExpression extends Expression
+class CCSAdditiveExpression extends CCSExpression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 15
@@ -442,11 +464,11 @@ class CCSAdditiveExpression extends Expression
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
-	copy: -> new AdditiveExpression(@getLeft().copy(), @getRight().copy(), @op)
+	copy: -> new CCSAdditiveExpression(@getLeft().copy(), @getRight().copy(), @op)
 
 
 # - MultiplicativeExpression
-class CCSMultiplicativeExpression extends Expression
+class CCSMultiplicativeExpression extends CCSExpression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 12
@@ -458,23 +480,23 @@ class CCSMultiplicativeExpression extends Expression
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
-	copy: -> new MultiplicativeExpression(@getLeft().copy(), @getRight().copy(), @op)
+	copy: -> new CCSMultiplicativeExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
 
 # - ConcatenatingExpression
-class CCSConcatenatingExpression extends Expression
-	constructor: (left, right, @op) -> super left, right
+class CCSConcatenatingExpression extends CCSExpression
+	constructor: (left, right) -> super left, right
 	
 	getPrecedence: -> 9
 	evaluate: -> "" + @getLeft().evaluate() + @getRight().evaluate()
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + "^" + @stringForSubExp(@getRight())
 	
-	copy: -> new ConcatenatingExpression(@getLeft().copy(), @getRight().copy())
+	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
 
 
 # - RelationalExpression
-class CCSRelationalExpression extends Expression
+class CCSRelationalExpression extends CCSExpression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 6
@@ -487,11 +509,11 @@ class CCSRelationalExpression extends Expression
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
-	copy: -> new RelationalExpression(@getLeft().copy(), @getRight().copy(), @op)
+	copy: -> new CCSRelationalExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
 
 # - EqualityExpression
-class CCSEqualityExpression extends Expression
+class CCSEqualityExpression extends CCSExpression
 	constructor: (left, right, @op) -> super left, right
 	
 	getPrecedence: -> 3
@@ -503,7 +525,7 @@ class CCSEqualityExpression extends Expression
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
-	copy: -> new EqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
+	copy: -> new CCSEqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
 
 	
@@ -583,4 +605,6 @@ Array.prototype.joinChildren = function(separator) {
 	}
 	return result;
 }`
+Array::assertNonNull = ->
+	(throw new Error("Null element found!") if typeof e == "undefined" or e == null) for e in @
 	
