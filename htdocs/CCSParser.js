@@ -446,7 +446,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, n, params, P) { 
-        		                                  return new ProcessDefinition(n.name, P, params == "" ? null : params);
+        		                                  return new CCSProcessDefinition(n.name, P, params == "" ? null : params);
         		                                })(pos0.offset, pos0.line, pos0.column, result0[1], result0[3], result0[5]);
         }
         if (result0 === null) {
@@ -545,7 +545,7 @@ CCSParser = (function(){
                           pos = clone(pos7);
                         }
                         if (result9 !== null) {
-                          result9 = (function(offset, line, column, a2) { return new SimpleAction(a2); })(pos6.offset, pos6.line, pos6.column, result9[3]);
+                          result9 = (function(offset, line, column, a2) { return a2; })(pos6.offset, pos6.line, pos6.column, result9[3]);
                         }
                         if (result9 === null) {
                           pos = clone(pos6);
@@ -588,7 +588,7 @@ CCSParser = (function(){
                             pos = clone(pos7);
                           }
                           if (result9 !== null) {
-                            result9 = (function(offset, line, column, a2) { return new SimpleAction(a2); })(pos6.offset, pos6.line, pos6.column, result9[3]);
+                            result9 = (function(offset, line, column, a2) { return a2; })(pos6.offset, pos6.line, pos6.column, result9[3]);
                           }
                           if (result9 === null) {
                             pos = clone(pos6);
@@ -609,7 +609,7 @@ CCSParser = (function(){
                       pos = clone(pos5);
                     }
                     if (result6 !== null) {
-                      result6 = (function(offset, line, column, a1, as2) { as2.unshift(new SimpleAction(a1)); return as2; })(pos4.offset, pos4.line, pos4.column, result6[1], result6[2]);
+                      result6 = (function(offset, line, column, a1, as2) { as2.unshift(a1); return as2; })(pos4.offset, pos4.line, pos4.column, result6[1], result6[2]);
                     }
                     if (result6 === null) {
                       pos = clone(pos4);
@@ -680,7 +680,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, P, res) {
-          											return res == "" ? P : new Restriction(P, res);
+          											return res == "" ? P : new CCSRestriction(P, res);
           										})(pos0.offset, pos0.line, pos0.column, result0[1], result0[2]);
         }
         if (result0 === null) {
@@ -793,7 +793,7 @@ CCSParser = (function(){
         		                                  while(Ps.length > 1){
         		                                    var p = Ps.shift();
         		                                    var q = Ps.shift();
-        		                                    Ps.unshift(new Sequence(p,q));
+        		                                    Ps.unshift(new CCSSequence(p,q));
         		                                  }
         		                                  return Ps[0];
         		                                })(pos0.offset, pos0.line, pos0.column, result0[1], result0[2]);
@@ -908,7 +908,7 @@ CCSParser = (function(){
         		                                  while(Ps.length > 1){
         		                                    var p = Ps.shift();
         		                                    var q = Ps.shift();
-        		                                    Ps.unshift(new Parallel(p,q));
+        		                                    Ps.unshift(new CCSParallel(p,q));
         		                                  }
         		                                  return Ps[0];
         		                                })(pos0.offset, pos0.line, pos0.column, result0[1], result0[2]);
@@ -1023,7 +1023,7 @@ CCSParser = (function(){
         									    while(Ps.length > 1){
         									      var p = Ps.shift();
         									      var q = Ps.shift();
-        									      Ps.unshift(new Choice(p,q));
+        									      Ps.unshift(new CCSChoice(p,q));
         									    }
         									    return Ps[0];
         									  })(pos0.offset, pos0.line, pos0.column, result0[1], result0[2]);
@@ -1089,7 +1089,7 @@ CCSParser = (function(){
           }
           if (result0 !== null) {
             result0 = (function(offset, line, column, A, P) { 
-          										return new Prefix(A, P); 
+          										return new CCSPrefix(A, P); 
           									})(pos0.offset, pos0.line, pos0.column, result0[1], result0[4]);
           }
           if (result0 === null) {
@@ -1195,7 +1195,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, e, P) {
-        	  									return new Condition(e, P);
+        	  									return new CCSCondition(e, P);
         	  								})(pos0.offset, pos0.line, pos0.column, result0[5], result0[9]);
         }
         if (result0 === null) {
@@ -1266,7 +1266,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, a, v) { 
-        	  									return new Input(a, v); 
+        	  									return new CCSInput(a, v); 
         	  								})(pos0.offset, pos0.line, pos0.column, result0[0], result0[3]);
         }
         if (result0 === null) {
@@ -1337,7 +1337,7 @@ CCSParser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, line, column, a, e) { 
-        	  									return new Output(a, (e == "") ? null : e); 
+        	  									return new CCSOutput(a, (e == "") ? null : e); 
         	  								})(pos0.offset, pos0.line, pos0.column, result0[0], result0[3]);
         }
         if (result0 === null) {
@@ -1354,7 +1354,7 @@ CCSParser = (function(){
         result0 = parse_Action();
         if (result0 !== null) {
           result0 = (function(offset, line, column, a) { 
-        	                                	return new SimpleAction(a); 
+        	                                	return new CCSSimpleAction(a); 
         	                                })(pos0.offset, pos0.line, pos0.column, result0);
         }
         if (result0 === null) {
@@ -1429,7 +1429,7 @@ CCSParser = (function(){
         if (result0 !== null) {
           result0 = (function(offset, line, column, c, e) {
           										if (e == "") e = null;
-          										return new Channel(c, e);
+          										return new CCSChannel(c, e);
           									})(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
         }
         if (result0 === null) {
@@ -1525,7 +1525,7 @@ CCSParser = (function(){
           }
           if (result0 !== null) {
             result0 = (function(offset, line, column) { 
-            										return new Stop(); 
+            										return new CCSStop(); 
             									})(pos0.offset, pos0.line, pos0.column);
           }
           if (result0 === null) {
@@ -1557,7 +1557,7 @@ CCSParser = (function(){
             }
             if (result0 !== null) {
               result0 = (function(offset, line, column) { 
-              										return new Exit(); 
+              										return new CCSExit(); 
               									})(pos0.offset, pos0.line, pos0.column);
             }
             if (result0 === null) {
@@ -1739,7 +1739,7 @@ CCSParser = (function(){
               }
               if (result0 !== null) {
                 result0 = (function(offset, line, column, n, args) { 
-                                                		return new ProcessApplication(n.name, (typeof args == "string" ? null : args));
+                                                		return new CCSProcessApplication(n.name, (typeof args == "string" ? null : args));
                                               	})(pos0.offset, pos0.line, pos0.column, result0[1], result0[2]);
               }
               if (result0 === null) {
@@ -2496,7 +2496,7 @@ CCSParser = (function(){
           result0 = (function(offset, line, column, left, equal) { 
          			while (equal.length > 0) {
          				t = equal.shift();
-         				left = new EqualityExpression(left, t[1], t[0]);
+         				left = new CCSEqualityExpression(left, t[1], t[0]);
          			}
          			return left;
          		})(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
@@ -2765,7 +2765,7 @@ CCSParser = (function(){
           result0 = (function(offset, line, column, left, relational) { 
          			while (relational.length > 0) {
          				t = relational.shift();
-         				left = new EqualityExpression(left, t[1], t[0]);
+         				left = new CCSEqualityExpression(left, t[1], t[0]);
          			}
          			return left;
          		})(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
@@ -2884,7 +2884,7 @@ CCSParser = (function(){
           result0 = (function(offset, line, column, left, concat) { 
          			while (concat.length > 0) {
          				t = concat.shift();
-         				left = new ConcatenatingExpression(left, t);
+         				left = new CCSConcatenatingExpression(left, t);
          			}
          			return left;
          		})(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
@@ -3025,7 +3025,7 @@ CCSParser = (function(){
           result0 = (function(offset, line, column, left, addition) {
          			while (addition.length > 0) {
          				t = addition.shift();
-         				left = new AdditiveExpression(left, t[1], t[0]);
+         				left = new CCSAdditiveExpression(left, t[1], t[0]);
          			}
          			return left;
          		})(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
@@ -3166,7 +3166,7 @@ CCSParser = (function(){
           result0 = (function(offset, line, column, left, multiplication) {
          			while (multiplication.length > 0) {
          				t = multiplication.shift();
-         				left = new MultiplicativeExpression(left, t[1], t[0]);
+         				left = new CCSMultiplicativeExpression(left, t[1], t[0]);
          			}
          			return left;
          		})(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
@@ -3301,7 +3301,7 @@ CCSParser = (function(){
           pos = clone(pos1);
         }
         if (result0 !== null) {
-          result0 = (function(offset, line, column, first, rest) { return new VariableExpression(first + rest.join('')); })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
+          result0 = (function(offset, line, column, first, rest) { return new CCSVariableExpression(first + rest.join('')); })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
         }
         if (result0 === null) {
           pos = clone(pos0);
@@ -3329,7 +3329,7 @@ CCSParser = (function(){
           }
         }
         if (result0 !== null) {
-          result0 = (function(offset, line, column) { return new ConstantExpression(true); })(pos0.offset, pos0.line, pos0.column);
+          result0 = (function(offset, line, column) { return new CCSConstantExpression(true); })(pos0.offset, pos0.line, pos0.column);
         }
         if (result0 === null) {
           pos = clone(pos0);
@@ -3346,7 +3346,7 @@ CCSParser = (function(){
             }
           }
           if (result0 !== null) {
-            result0 = (function(offset, line, column) { return new ConstantExpression(false); })(pos0.offset, pos0.line, pos0.column);
+            result0 = (function(offset, line, column) { return new CCSConstantExpression(false); })(pos0.offset, pos0.line, pos0.column);
           }
           if (result0 === null) {
             pos = clone(pos0);
@@ -3414,7 +3414,7 @@ CCSParser = (function(){
           pos = clone(pos1);
         }
         if (result0 !== null) {
-          result0 = (function(offset, line, column, minus, digits) { return new ConstantExpression(parseInt(minus + digits.join(""))); })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
+          result0 = (function(offset, line, column, minus, digits) { return new CCSConstantExpression(parseInt(minus + digits.join(""))); })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
         }
         if (result0 === null) {
           pos = clone(pos0);
@@ -3496,7 +3496,7 @@ CCSParser = (function(){
           pos = clone(pos1);
         }
         if (result0 !== null) {
-          result0 = (function(offset, line, column, s) { return new ConstantExpression((s.join ? s.join("") : "")); })(pos0.offset, pos0.line, pos0.column, result0[1]);
+          result0 = (function(offset, line, column, s) { return new CCSConstantExpression((s.join ? s.join("") : "")); })(pos0.offset, pos0.line, pos0.column, result0[1]);
         }
         if (result0 === null) {
           pos = clone(pos0);

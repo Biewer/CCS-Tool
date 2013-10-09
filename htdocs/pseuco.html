@@ -78,8 +78,12 @@ function reloadScripts() {
 function testPseuCo() {
 	try {
 		var obj = eval("__t = " + _inputField.value);
-		if (obj)
-			_resultField.innerText = obj.tree.toString();
+		if (obj) {
+			//_resultField.innerText = obj.tree.toString();
+			compiler = new PCCCompiler(obj.tree);
+			ccs = compiler.compile()
+			_resultField.innerText = ccs.toString()
+		}
 	} catch (e) {
 		col = (e.column) ? ", column " + e.column : ""
 		_errorField.innerText = "Line " + e.line + col + ": " + e.message;

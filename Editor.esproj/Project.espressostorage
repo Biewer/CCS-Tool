@@ -5,53 +5,33 @@
 	<key>com.macrabbit.Espresso.Publisher.PublishServers</key>
 	<array>
 		<dict>
-			<key>ESPublishServerStateAskForPasswordWhenConnectingKey</key>
-			<false/>
-			<key>ESPublishServerStateDeriveServerTimeOffsetAutomaticallyKey</key>
-			<true/>
+			<key>ConnectionType</key>
+			<string>com.macrabbit.coreconnection.sftp</string>
 			<key>ESPublishServerStateHostKey</key>
 			<string>w00aab5a.kasserver.com</string>
-			<key>ESPublishServerStateMaximumAllowedConnectionsKey</key>
-			<integer>16</integer>
-			<key>ESPublishServerStateMinimumUpdateTimeDifferenceKey</key>
-			<real>60</real>
-			<key>ESPublishServerStateModeKey</key>
-			<integer>0</integer>
 			<key>ESPublishServerStateNameKey</key>
 			<string>Splodge Research Server</string>
-			<key>ESPublishServerStateOptionsKey</key>
-			<dict>
-				<key>FSFTPTransferModeOptionKey</key>
-				<string>FSFTPAutomaticTransferMode</string>
-			</dict>
 			<key>ESPublishServerStatePathKey</key>
 			<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS</string>
 			<key>ESPublishServerStatePortKey</key>
 			<integer>22</integer>
-			<key>ESPublishServerStateSavedMergeOperationMasksKey</key>
-			<dict>
-				<key>sftp://ssh-w00aab5a@w00aab5a.kasserver.com:22</key>
-				<dict>
-					<key>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCS.coffee</key>
-					<integer>1073741824</integer>
-					<key>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCSParser.pegjs</key>
-					<integer>1073741824</integer>
-					<key>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCSRules.coffee</key>
-					<integer>1073741824</integer>
-					<key>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCSStepView.coffee</key>
-					<integer>1073741824</integer>
-					<key>/www/htdocs/w00aab5a/SplodgeResearch/CCS/README.md</key>
-					<integer>1073741824</integer>
-					<key>/www/htdocs/w00aab5a/SplodgeResearch/CCS/wccs.coffee</key>
-					<integer>1073741824</integer>
-				</dict>
-			</dict>
-			<key>ESPublishServerStateServerTimeOffsetKey</key>
-			<real>-3600</real>
 			<key>ESPublishServerStateTypeKey</key>
 			<string>SFTP</string>
 			<key>ESPublishServerStateUserKey</key>
 			<string>ssh-w00aab5a</string>
+			<key>Name</key>
+			<string>Splodge Research Server</string>
+			<key>SkippedSyncServerPaths</key>
+			<array>
+				<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCSRules.coffee</string>
+				<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS/README.md</string>
+				<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCSStepView.coffee</string>
+				<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCSParser.pegjs</string>
+				<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS/wccs.coffee</string>
+				<string>/www/htdocs/w00aab5a/SplodgeResearch/CCS/CCS.coffee</string>
+			</array>
+			<key>UUID</key>
+			<string>C170E5E2-959D-4908-A9C0-553EA4AA4C51</string>
 		</dict>
 	</array>
 	<key>com.macrabbit.Espresso.Publisher.PublishServers.Order</key>

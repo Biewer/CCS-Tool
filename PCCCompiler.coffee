@@ -5,168 +5,201 @@
 
 
 class PCCCompiler
-	construct: (@program) ->
+	constructor: (@program) ->
 		@controller = null
-		
-		@curClass = null				# We can have only one class, so we don't need an array
-		@procedures = []				# Procedure stack (procedures that are being compiled)
-		
-		@statements = []				# Statement stack (statements that are being compiled)
-		@expressions = []				# Expression stack (expressions that are being compiled)
-		
-		@frames = []					# Process frame stack (Process frames (usually unfinished) to be managed by this compiler)
-		@processDefinitionStack = []	# Process definition stack (process definition of frames and custom definitions)
-		@processStack = []				# Stack of managed CCS processes; emitCCSProcess appends processes to the last element
-		
-		@definitionStorage =			# The dictionary to save process definitions ordered by kind
-			global:
-				environment: []
-				procedures: []
-			classes:
-				monitors: []
-				structs: []
-		
-		
-	
-	_initController: ->
-		@controller = newPCCProgramController(@program)
-		@program.collectVarsAndProcs(@controller)
+		@stack = null	
+		@groupElements = []	
+		@controller = new PCCProgramController(@program)
 	
 	compile: -> 
-		@_initController()
-		@program.compile()
+		@program.collectClasses(@controller)
+		@program.collectEnvironment(@controller)
+		@program.collectAgents(@controller)
+		global = new PCCGlobalStackElement(@controller.getGlobal())
+		@stack = new PCCCompilerStack(global)
+		usedTypes = @controller.getUsedTypes()
+		@compileMutex()
+		@compileWaitRoom()
+		@compileArrayManager()
+		@compileArrayWithCapacity(n) for n of usedTypes.arrays
+		@compileAgentTools()
+		p.emitAgentConstructor(@) for p in @controller.agents
+		cls.emitConstructor(@) for cls in @controller.getAllClasses()
+		@program.compile(@)
+		new CCS(@controller.root.collectPDefs(), new CCSStop())
 		# ToDo: return CCS tree
 	
 	
 	###
 		Delegates must implement the following methods:
-		 compilerGetVariable(compiler, identifier, instanceContainer)
-		 compilerGetProcedure(compiler, identifier, instanceContainer)
+		 compilerGetVariable(compiler, identifier)
+		 compilerGetProcedure(compiler, identifier)
 		 compilerHandleNewIdentifierWithDefaultValueCallback(compiler, identifier, callback, context)
 		When these methods are called, the receiver may modify the compiler state by emitting CCS processes, pushing processes, ...
 	###
-	_getAccessDelegates: ->
-		delegates = [PCCGlobalAccessDelegate]
-		delegates.push(@curClass) if @curClass
-		delegates.concat(@frames)
-		delegates
-	
-	_getTopAccessDelegate: ->
-		delegates = @_getAccessDelegates
-		delegates[delegates.length-1]
-	
-	getVariable: (identifier, className) ->
-		if className != null
-			return @controller.getClassWithname(className).compilerGetVariable(@, identifier)
-		delegates = @_getAccessDelegates()
-		result = null
-		while (result == null && delegates.length > 0)
-			result = delegates.pop().compilerGetVariable(@, identifier)
-		throw new Error("Could not resolve variable!") if result == null
-		result
-	
-	getProcedure: (identifier, className) ->
-		if className != null
-			return @controller.getClassWithname(className).compilerGetProcedure(@, identifier)
-		delegates = @_getAccessDelegates()
-		result = null
-		while (result == null && delegates.length > 0)
-			result = delegates.pop().compilerGetProcedure(@, identifier)
-		throw new Error("Could not resolve procedure!") if result == null
-		result
-	
-	getFreshContainer: -> @getProcessFrame().createContainer()
-	
-	handleNewIdentifierWithDefaultValueCallback: (identifier, callback, context) ->		# callback returns a container
-		@_getTopProcessDelegate().compilerHandleNewIdentifierWithDefaultValueCallback(@, identifier, callback, context)
 	
 	
+	getVariableWithName: (name, className, isInternal) ->
+		name = PCCVariableInfo.getNameForInternalVariableWithName(name) if isInternal
+		if className
+			return @controller.getClassWithName(className).compilerGetVariable(@, name)
+		@stack.compilerGetVariable(@, name)
 	
-	# Modifying the compiler state
-	_getCurrentDefinitionContainer: ->
-		if @curClass == null
-			target = @definitionStorage.global
-		else
-			classes = @definitionStorage.classes
-			target = (if @curClass instanceof PCCMonitor then classes.monitors else classes.structs)[@curClass.name]
-		if @procedures.length > 0 then target.procedures else target.environment
+	getProcedureWithName: (name, className) ->
+		if className
+			return @controller.getClassWithName(className).compilerGetProcedure(@, name)
+		@stack.compilerGetProcedure(@, name)
 	
-	pushProcessFrame: (processFrame) ->
-		@frames.push(processFrame)
-		@pushCCSProcessDefinition(processFrame.createProcessDefinition())
+	getClassWithName: (name) -> @controller.getClassWithName name
+	getCurrentClass: ->
+		for e in @groupElements
+			return e.classInfo if (e instanceof PCCClassStackElement)
+	
+	getGlobal: -> @controller.getGlobal()
+	
+	getFreshContainer: (ccsType, wish) -> @getProcessFrame().createContainer(ccsType, wish)
+	
+	handleNewVariableWithDefaultValueCallback: (variable, callback, context) ->		# callback returns a container
+		@stack.compilerHandleNewVariableWithDefaultValueCallback(@, variable, callback, context)
+	
+	
+	_getControlElement: -> @stack.getCurrentControlElement()
+	
+	_handleStackResult: (resultContainer, controlElement) ->
+		console.log "Saving results to #{controlElement.__proto__.constructor}"
+		(if result.type == PCCStackResult.TYPE_CCSPROCESS_DEFINITION
+			controlElement.compilerPushPDef(result.data)
+		) for result in resultContainer.results
+	
+	beginProcessGroup: (groupable, variables) ->
+		frame = new PCCProcessFrame(groupable, variables)
+		element = new PCCProcessFrameStackElement(frame)
+		@groupElements.push(element)
+		@stack.pushElement(element)
+		frame.emitProcessDefinition(@)
 		
-	popProcessFrame: ->
-		@frames.pop()
-		@popCCSProcessDefinition()
-	
-	getProcessFrame: -> @frames[@frames.length-1]
-	
-	pushCCSProcessDefinition: (processDefinition) ->		# process is a CCS tree that is a valid (maybe empty, i.e. contains only stop) process definition; this process will be the new target for adding subprocesses via addCCSProcess
-		# Important: Do not use this method for procedures. Create procedureFrames instead and push the frames using pushProcedureFrame!
-		@processDefinitionStack.push(processDefinition)
-		@pushCCSProcess(processDefinition.process)
-		@_getCurrentDefinitionContainer().push(processDefinition)
-	
-	popCCSProcessDefinition: ->
-		@processDefinitionStack.pop().process = @popCCSProcess()
-	
-	pushCCSProcess: (process) ->
-		@processStack.push(process)
-	
-	popCCSProcess: (process) ->
-		@processStack.pop()
+	endProcessGroup: ->
+		frame = @groupElements.pop()
+		throw new Error("Unexpected stack element!") if not (frame instanceof PCCProcessFrameStackElement)
+		controlElement = @_getControlElement()
+		@_handleStackResult(frame.removeFromStack(), controlElement)
 		
-		
-	_appendProcessToProcess: (newProcess, existingProcess) ->
-		if existingProcess instanceof PCCPrefix
-			while existingProcess.getProcess() instanceof CCSPrefix
-				existingProcess = existingProcess.getProcess()
-			console.warn "PCCCompiler.emitCCSProcess: Final process was not 'stop'!" if !(existingProcess instanceof PCCStop)
-			existingProcess.subprocesses[0] = newProcess
-			existingProcess
-		else if existingProcess instanceof CCSCondition
-			existingProcess.subprocesses[0] = @_appendProcessToProcess(newProcess, existingProcess.getProcess())
-			existingProcess
-		else
-			console.warn "PCCCompiler.emitCCSProcess: Replaced process was not 'stop'!" if !(existingProcess instanceof PCCStop)
-			newProcess
+	getProcessFrame: -> @stack.getCurrentProcessFrame()
 	
-	emitCCSProcess: (process) ->		# For procedure (mostly expressions) compilation only (?). After emitting a process that is not prefix or stop you should push a new procedure frame or ccs process definition!
-		i = @processStack.length-1
-		@processStack[i] = @_appendProcessToProcess(process, @processStack[i])
-		process
-			
-		
+	addProcessGroupFrame: (nextFrame) ->
+		@stack.pushElement(new PCCProcessFrameStackElement(nextFrame))
+		nextFrame.emitProcessDefinition(@)
+		null
+	
+	emitNewScope: ->
+		frame = @getProcessFrame()
+		scope = frame.createNewScope()
+		@stack.pushElement(new PCCScopeStackElement(scope))
+		scope
+	
+	emitNextProcessFrame: ->
+		frame = @getProcessFrame()
+		next = frame.createFollowupFrame()
+		next.emitCallProcessFromFrame(@, frame)
+		@addProcessGroupFrame(next)
+		next
+	
+	emitMergeOfProcessFramesOfPlaceholders: (placeholders) ->
+		return null if placeholders.length == 0
+		frames = (p.frame for p in placeholders)
+		followup = PCCProcessFrame.createFollowupFrameForFrames(frames)
+		followup.emitCallProcessFromFrame(compiler, p.frame, p) for p in placeholders
+		@addProcessGroupFrame(followup)
+		followup
+	
+	protectContainer: (container) ->
+		@getProcessFrame().protectContainer(container)
+	
+	unprotectContainer: ->
+		@getProcessFrame().unprotectContainer()
+	
+	getProtectedContainer: ->
+		@getProcessFrame().getProtectedContainer()
 		
 	
 	
+	_silentlyAddProcessDefinition: (processName, argumentContainers) ->
+		element = new PCCProcessDefinitionStackElement(processName, argumentContainers)
+		@stack.pushElement(element)
+		element
+		
+	beginProcessDefinition: (processName, argumentContainers) ->
+		element = @_silentlyAddProcessDefinition(processName, argumentContainers)
+		@groupElements.push(element)
 	
+	isCurrentProcessCompleted: ->
+		@stack.isCurrentProcessCompleted()
 	
-	# Organising CCS structure
+	endProcessDefinition: ->
+		def = @groupElements.pop()
+		throw new Error("Unexpected stack element!") if not (def instanceof PCCProcessDefinitionStackElement)
+		controlElement = @_getControlElement()
+		@_handleStackResult(def.removeFromStack(), controlElement)
+
+
 	
 	beginClass: (className) ->
-		throw new Error("Class is already chosen!") if @curClass != null
-		@curClass = @controller.getClassWithName(className)
-		classes = @definitionStorage.classes
-		(if @curClass instanceof PCCMonitor then classes.monitors else classes.structs)[@curClass.name] = 
-			environment: []
-			procedures: []
+		@controller.beginClass(className)
+		curClass = @controller.getClassWithName(className)
+		throw new Error("Tried to begin unknown class!") if not curClass
+		element = new PCCClassStackElement(curClass)
+		@stack.pushElement(element)
+		@groupElements.push(element)
 		
 	endClass: ->
-		throw new Error("No class did begin!") if @curClass == null
-		@curClass = null
+		@controller.endClass()
+		cls = @groupElements.pop()
+		throw new Error("Unexpected stack element!") if not (cls instanceof PCCClassStackElement)
+		cls.removeFromStack()
+		# ToDo: Ich bin zu müde um zu entscheiden ob ich was handeln oder werfen muss?
+	
+	
+	beginProgram: ->
+		###
+		throw new Error("Stack already existed before beginning of program!") if @stack != null
+		global = new PCCGlobalStackElement(@controller.getGlobal())
+		@stack = new PCCCompilerStack(global)
+		@groupElements.push(global)
+		###
+	
+	endProgram: ->
+	###
+		global = @groupElements.pop()
+		throw new Error("Unexpected stack element!") if not (global instanceof PCCGlobalStackElement)
+		global.removeFromStack()
+		@stack = null
+		###
+	
+	
+	beginMainAgent: ->
+		@controller.beginMainAgent()
+		@beginProcessGroup(new PCCGroupable("MainAgent"))
+	
+	endMainAgent: ->
+		@controller.endMainAgent()
+		@endProcessGroup()
 	
 	beginProcedure: (procedureName) ->
-		procedure = @_getTopAccessDelegate().compilerGetProcedure(@, procedureName)
-		throw new Error("Tried to begin unknown procedure!") if procedure == null
-		@procedures.push(procedure)
-		processFrame = new PCCProcedureFrame(procedure)
-		@pushProcessFrame(processFrame)
-		processFrame
+		@controller.beginProcedure(procedureName)
+		procedure = @stack.compilerGetProcedure(@, procedureName)
+		throw new Error("Tried to begin unknown procedure!") if !procedure
+		frame = new PCCProcedureFrame(procedure)
+		element = new PCCProcedureStackElement(procedure)
+		@stack.pushElement(element)
+		@groupElements.push(element)
+		@addProcessGroupFrame(frame)
 	
 	endProcedure: ->
-		@popProcessFrame()
-		@procedures.pop()
+		@controller.endProcedure()
+		proc = @groupElements.pop()
+		throw new Error("Unexpected stack element!") if not (proc instanceof PCCProcedureStackElement)
+		controlElement = @_getControlElement()
+		@_handleStackResult(proc.removeFromStack(), controlElement)
 	
 	
 	beginStatement: (statement) ->
@@ -178,24 +211,256 @@ class PCCCompiler
 
 
 
-
-
-class PCCStackAssistant
-	constructor: (@compiler, @process) ->
-		@left = true
+	emitStop: -> @stack.pushElement(new PCCStopStackElement())
+	emitExit: -> @stack.pushElement(new PCCExitStackElement())
+	emitProcessApplication: (processName, argumentContainers=[]) -> 
+		@stack.pushElement(new PCCApplicationStackElement(processName, argumentContainers))
+	emitOutput: (channel, specificChannel, valueContainer) ->
+		@stack.pushElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
+	emitInput: (channel, specificChannel, container) ->
+		@stack.pushElement(new PCCInputStackElement(channel, specificChannel, container))
+	emitCondition: (condition) -> @stack.pushElement(new PCCConditionStackElement(condition))
+	emitChoice: -> 
+		res = new PCCChoiceStackElement()
+		@stack.pushElement(res)
+		@emitNewScope() if @groupElements.length > 1	# Change it to "if using frames"
+		res
+	emitParallel: -> 
+		res = new PCCParallelStackElement()
+		@stack.pushElement(res)
+		@emitNewScope() if @groupElements.length > 1	# Change it to "if using frames"
+		res
+	emitSequence: -> 
+		#@emitNextProcessFrame()	# start new process to avoid loosing input variables in right side of sequence received on left side
+		res = new PCCSequenceStackElement()
+		@stack.pushElement(res)
+		res
+	emitRestriction: (restrictedChannelNames) -> 
+		@stack.pushElement(new PCCRestrictionStackElement(restrictedChannelNames))
 	
-	setLeftTarget: ->
-		return if @left
-		@_checkStackConsistency()
+	emitProcessApplicationPlaceholder: ->
+		ph = new PCCApplicationPlaceholderStackElement(@getProcessFrame())
+		@stack.pushElement(ph)
+		ph
+	
+	
+	
+	
+	compileMutex: ->
+		i = new PCCVariableContainer("i", PCCType.INT)
+		@beginProcessDefinition("Mutex", [i])
+		@emitInput("lock", i, null)
+		@emitInput("unlock", i, null)
+		@emitProcessApplication("Mutex", [i])
+		@endProcessDefinition()
+		
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("Mutex_cons", [i])
+		@emitOutput("mutex_create", null, i)
+		control = @emitParallel()
+		@emitProcessApplication("Mutex_cons", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
+		control.setBranchFinished()
+		@emitProcessApplication("Mutex", [i])
+		control.setBranchFinished()
+		@endProcessDefinition()
+	
+	compileWaitRoom: ->
+		i = new PCCVariableContainer("i", PCCType.INT)
+		c = new PCCVariableContainer("c", PCCType.INT)
+		@beginProcessDefinition("WaitRoom", [i, c])
+		control1 = @emitChoice()
+		@emitInput("signal", i, null)
+		inner = @emitChoice()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), "=="))
+		@emitProcessApplication("WaitRoom", [i, c])
+		inner.setBranchFinished()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">"))
+		@emitInput("wait", i, null)
+		@emitProcessApplication("WaitRoom", [i, new PCCBinaryContainer(c, new PCCConstantContainer(1), "-")])
+		inner.setBranchFinished()
+		control1.setBranchFinished()
+		control2 = @emitChoice()
+		@emitInput("add", i, null)
+		@emitProcessApplication("WaitRoom", [i, new PCCBinaryContainer(c, new PCCConstantContainer(1), "+")])
+		control2.setBranchFinished()
+		control3 = @emitSequence()
+		@emitInput("signal_all", i, null)
+		@emitProcessApplication("WaitDistributor", [i, c])
+		control3.setBranchFinished()
+		@emitProcessApplication("WaitRoom", [i, new PCCConstantContainer(0)])
+		control3.setBranchFinished()
+		control2.setBranchFinished()
+		control1.setBranchFinished()
+		@endProcessDefinition()
+		
+		i = new PCCVariableContainer("i", PCCType.INT)
+		c = new PCCVariableContainer("c", PCCType.INT)
+		@beginProcessDefinition("WaitDistributor", [i, c])
+		control = @emitChoice()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), "<="))
+		@emitExit()
+		control.setBranchFinished()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">"))
+		@emitInput("wait", i, null)
+		@emitProcessApplication("WaitDistributor", [i, new PCCBinaryContainer(c, new PCCConstantContainer(1), "-")])
+		control.setBranchFinished()
+		@endProcessDefinition()
+		
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("WaitRoom_cons", [i])
+		@emitOutput("wait_create", null, i)
+		control = @emitParallel()
+		@emitProcessApplication("WaitRoom_cons", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
+		control.setBranchFinished()
+		@emitProcessApplication("WaitRoom", [i, new PCCConstantContainer(0)])
+		control.setBranchFinished()
+		@endProcessDefinition()
 		
 	
-	setRightTarget: ->
-		return if not @left
-		@_checkStackConsistency()
+	compileArrayWithCapacity: (size) ->
+		i = new PCCVariableContainer("i", PCCType.INT)
+		args = [i]
+		args.push(new PCCVariableContainer("v#{j}", PCCType.INT)) for j in [0...size]
+		@beginProcessDefinition("Array#{size}", args)
+		index = new PCCVariableContainer("index", PCCType.INT)
+		@emitInput("array_access", i, index)
+		emitAccessors = (compiler, i, size, j, args) ->
+			compiler.emitCondition(new PCCBinaryContainer(index, new PCCConstantContainer(j), "=="))
+			inner = compiler.emitChoice()
+			compiler.emitOutput("array_get", i, args[j+1])
+			compiler.emitProcessApplication("Array#{size}", args)
+			inner.setBranchFinished()
+			compiler.emitInput("array_set", i, args[j+1])
+			compiler.emitProcessApplication("Array#{size}", args)
+			inner.setBranchFinished()
+		for j in [0...size-1]
+			control = @emitChoice()
+			emitAccessors(@, i, size, j, args)
+			control.setBranchFinished()
+		emitAccessors(@, i, size, size-1, args)
+		@endProcessDefinition()
+		
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("Array#{size}_cons", [])
+		@emitInput("array_new", null, i)
+		def = new PCCVariableContainer("d", PCCType.VOID)
+		@emitOutput("array#{size}_create", null, i)
+		@emitInput("array_setDefault", i, def)
+		control = @emitParallel()
+		@emitProcessApplication("Array#{size}_cons", [])
+		control.setBranchFinished()
+		args = [i]
+		args.push(def) for j in [0...size]
+		@emitProcessApplication("Array#{size}", args)
+		control.setBranchFinished()
+		@endProcessDefinition()
+		
+	compileArrayManager: ->
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("ArrayManager", [i])
+		@emitOutput("array_new", null, i)
+		@emitProcessApplication("ArrayManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
+		@endProcessDefinition()
 	
-	_checkStackConsistency: ->
-		(return if @process == p) for p in @compiler.processStack
-		throw new Error("Assistant's process was not found on compiler's stack")
+	
+	compileAgentTools: ->
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("AgentManager", [i])
+		@emitOutput("agent_new", null, i)
+		@emitProcessApplication("AgentManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
+		@endProcessDefinition()
+		
+		a = new PCCVariableContainer("a", PCCType.INT)
+		c = new PCCVariableContainer("c", PCCType.INT)
+		@beginProcessDefinition("AgentJoiner", [a, c])
+		control = @emitChoice()
+		@emitInput("join_register", a, null)
+		@emitProcessApplication("AgentJoiner", [a, new PCCBinaryContainer(c, new PCCConstantContainer(1), "+")])
+		control.setBranchFinished()
+		@emitInput("agent_terminate", a, null)
+		@emitProcessApplication("JoinDistributor", [a, c])
+		control.setBranchFinished()
+		@endProcessDefinition()
+		
+		a = new PCCVariableContainer("a", PCCType.INT)
+		c = new PCCVariableContainer("c", PCCType.INT)
+		@beginProcessDefinition("JoinDistributor", [a, c])
+		control = @emitChoice()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), "<="))
+		@emitInput("join_register", a, null)
+		@emitInput("join", a, null)
+		@emitProcessApplication("JoinDistributor", [a, new PCCConstantContainer(0)])
+		control.setBranchFinished()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">"))
+		@emitInput("join", a, null)
+		@emitProcessApplication("JoinDistributor", [a, new PCCBinaryContainer(c, new PCCConstantContainer(1), "-")])
+		control.setBranchFinished()
+		@endProcessDefinition()
+		
+		
+		
+	
+	
+		
+		
+		
+		
+		
+		
+		
 
 
+
+PCEnvironmentNode::compilerPushPDef = (pdef) ->
+	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
+	@PCCCompilerPDefs.push(pdef)
+PCVariable::compilerPushPDef = PCEnvironmentNode::compilerPushPDef
+PCEnvironmentNode::collectPDefs = ->
+	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
+	@PCCCompilerPDefs.concat((c.collectPDefs() for c in @children).concatChildren())
+PCVariable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
+
+
+
+
+
+
+###
+PCStmtExpression::collectAgents = (env) -> 
+	@children[0].collectAgents(env)
+PCVariableDeclarator::collectEnvironment = (env, type) ->
+	@children.length > 0 and @children[0].collectEnvironment(env)
+PCVariableInitializer::collectEnvironment = (env) ->
+	!@isArray() and @children[0].collectEnvironment(env)
+PCExpression::collectEnvironment = (env) -> c.collectEnvironment(env) for c in @children
+PCStartExpression::collectEnvironment = (env) ->
+	env instanceof PCCProgramController and env.processProcedureAsAgent(@children[0].getProcedure(env))
+	###
+	
+
+
+
+class PCCConstructor
+	constructor: (@compiler, @delegate, @context) ->
+	emit: ->
+		envName = @delegate.constructorGetName(@, @context)
+		variables = @delegate.constructorGetArguments(@, compiler, @context)
+		compiler.beginProcessGroup(new PCCGroupable(envName+"_cons"), variables)
+		entry = compiler.getProcessFrame()
+		variables = (compiler.getVariableWithName(v.getName(), null, v.isInternal) for v in variables)	# local variables
+		envArgCount = @delegate.constructorProtectEnvironmentArguments(@, compiler, variables, @context)
+		vars = []
+		vars.unshift(compiler.unprotectContainer()) for i in [0...envArgCount]
+		recursion = @delegate.constructorShouldCallRecursively?(@, @context)
+		control = null
+		control = compiler.emitParallel() if recursion
+		compiler.emitProcessApplication(envName, vars)
+		if recursion
+			control.setBranchFinished()
+			@delegate.constructorUpdateVariablesForRecursiveCall(@, compiler, entry, variables, @context)
+			entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
+			control.setBranchFinished()
+		compiler.endProcessGroup()
+PCCConstructor.emitConstructor = (compiler, delegate, context) -> (new PCCConstructor(compiler, delegate, context)).emit()
+	
 

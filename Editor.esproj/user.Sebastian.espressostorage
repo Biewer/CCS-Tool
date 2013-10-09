@@ -7,13 +7,13 @@
 	<key>ESProjectWindowState</key>
 	<dict>
 		<key>ContentSize</key>
-		<string>{1440, 727}</string>
+		<string>{1267, 727}</string>
 		<key>ProjectURL</key>
 		<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/Editor.esproj/</string>
 		<key>StateType</key>
 		<string>ProjectWindow</string>
 		<key>TopLeftPoint</key>
-		<string>{424, 1068}</string>
+		<string>{198, 910}</string>
 	</dict>
 	<key>com.macrabbit.Espresso.FileManager.DisclosureCollapsed</key>
 	<false/>
@@ -44,31 +44,7 @@
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/htdocs/index.html</string>
-				<key>StateType</key>
-				<string>DefaultTab</string>
-			</dict>
-			<dict>
-				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/htdocs/screen.css</string>
-				<key>StateType</key>
-				<string>DefaultTab</string>
-			</dict>
-			<dict>
-				<key>DocumentURL</key>
 				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSStepView.coffee</string>
-				<key>StateType</key>
-				<string>DefaultTab</string>
-			</dict>
-			<dict>
-				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSParser.pegjs</string>
-				<key>StateType</key>
-				<string>DefaultTab</string>
-			</dict>
-			<dict>
-				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/htdocs/CCS.js</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
@@ -114,6 +90,30 @@
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PseuCo%2bCompiler.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCType.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCEnvironment.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSParser.pegjs</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
 		</array>
 	</dict>
 	<key>com.macrabbit.Espresso.WorkspaceTabs.DisclosureCollapsed</key>
@@ -121,54 +121,75 @@
 	<key>com.macrabbit.espresso.project.state</key>
 	<data>
 	YnBsaXN0MDDUAQIDBAUGHR5YJHZlcnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3AS
-	AAGGoKYHCA0UFxpVJG51bGzSCQoLDFdOUy5kYXRhViRjbGFzc08RA+FicGxpc3QwMNQB
-	AgMEBQZERVgkdmVyc2lvblgkb2JqZWN0c1kkYXJjaGl2ZXJUJHRvcBIAAYagrxAPBwgR
-	GhscHR4lLS42Nz9AVSRudWxs0gkKCxBaTlMub2JqZWN0c1YkY2xhc3OkDA0OD4ACgAiA
-	CoAMgA7TEgkKExYZV05TLmtleXOiFBWAA4AEohcYgAWABoAHW0RvY3VtZW50VVJMWVN0
-	YXRlVHlwZV8QZGZpbGU6Ly9sb2NhbGhvc3QvVXNlcnMvU2ViYXN0aWFuL0Ryb3Bib3gv
-	RG9rdW1lbnRlL1VuaS9Tb21tZXIlMjAyMDEzL0JhY2hlbG9yLUFyYmVpdC9Ub29sL0ND
-	Uy5jb2ZmZWVaRGVmYXVsdFRhYtIfICEiWiRjbGFzc25hbWVYJGNsYXNzZXNfEBNOU011
-	dGFibGVEaWN0aW9uYXJ5oyEjJFxOU0RpY3Rpb25hcnlYTlNPYmplY3TTEgkKJikZohQV
-	gAOABKIqGIAJgAaAB18QZ2ZpbGU6Ly9sb2NhbGhvc3QvVXNlcnMvU2ViYXN0aWFuL0Ry
-	b3Bib3gvRG9rdW1lbnRlL1VuaS9Tb21tZXIlMjAyMDEzL0JhY2hlbG9yLUFyYmVpdC9U
-	b29sL2h0ZG9jcy9DQ1MuanPTEgkKLzIZohQVgAOABKIzGIALgAaAB18Qa2ZpbGU6Ly9s
-	b2NhbGhvc3QvVXNlcnMvU2ViYXN0aWFuL0Ryb3Bib3gvRG9rdW1lbnRlL1VuaS9Tb21t
-	ZXIlMjAyMDEzL0JhY2hlbG9yLUFyYmVpdC9Ub29sL2h0ZG9jcy9pbmRleC5odG1s0xIJ
-	Cjg7GaIUFYADgASiPBiADYAGgAdfEGtmaWxlOi8vbG9jYWxob3N0L1VzZXJzL1NlYmFz
-	dGlhbi9Ecm9wYm94L0Rva3VtZW50ZS9VbmkvU29tbWVyJTIwMjAxMy9CYWNoZWxvci1B
-	cmJlaXQvVG9vbC9odGRvY3Mvc2NyZWVuLmNzc9IfIEFCXk5TTXV0YWJsZUFycmF5o0FD
-	JFdOU0FycmF5XxAPTlNLZXllZEFyY2hpdmVy0UZHWXRhYlN0YXRlc4ABAAgAEQAaACMA
-	LQAyADcASQBPAFQAXwBmAGsAbQBvAHEAcwB1AHwAhACHAIkAiwCOAJAAkgCUAKAAqgER
-	ARwBIQEsATUBSwFPAVwBZQFsAW8BcQFzAXYBeAF6AXwB5gHtAfAB8gH0AfcB+QH7Af0C
-	awJyAnUCdwJ5AnwCfgKAAoIC8AL1AwQDCAMQAyIDJQMvAAAAAAAAAgEAAAAAAAAASAAA
-	AAAAAAAAAAAAAAAAAzGAAtIODxARWiRjbGFzc25hbWVYJGNsYXNzZXNdTlNNdXRhYmxl
-	RGF0YaMQEhNWTlNEYXRhWE5TT2JqZWN00gkKFQxPEHxicGxpc3QwMNQBAgMEBQYICVgk
-	dmVyc2lvblgkb2JqZWN0c1kkYXJjaGl2ZXJUJHRvcBIAAYagoQdVJG51bGxfEA9OU0tl
-	eWVkQXJjaGl2ZXLQCBEaIy0yNzk/UQAAAAAAAAEBAAAAAAAAAAoAAAAAAAAAAAAAAAAA
-	AABSgALSCQoYDE8RAWticGxpc3QwMNQBAgMEBQYfIFgkdmVyc2lvblgkb2JqZWN0c1kk
-	YXJjaGl2ZXJUJHRvcBIAAYagpgcIERIVHFUkbnVsbNMJCgsMDhBXTlMua2V5c1pOUy5v
-	YmplY3RzViRjbGFzc6ENgAKhD4ADgAVdRXhwYW5kZWRJdGVtc9IKCxMUoIAE0hYXGBla
-	JGNsYXNzbmFtZVgkY2xhc3Nlc15OU011dGFibGVBcnJheaMYGhtXTlNBcnJheVhOU09i
-	amVjdNIWFx0eXE5TRGljdGlvbmFyeaIdG18QD05TS2V5ZWRBcmNoaXZlctEhIl8QFGJy
-	b3dzZXJDb25maWd1cmF0aW9ugAEACAARABoAIwAtADIANwA+AEQASwBTAF4AZQBnAGkA
-	awBtAG8AfQCCAIMAhQCKAJUAngCtALEAuQDCAMcA1ADXAOkA7AEDAAAAAAAAAgEAAAAA
-	AAAAIwAAAAAAAAAAAAAAAAAAAQWAAtIJChsMTxB8YnBsaXN0MDDUAQIDBAUGCAlYJHZl
+	AAGGoKYHCA0UFxpVJG51bGzSCQoLDFdOUy5kYXRhViRjbGFzc08RBHticGxpc3QwMNQB
+	AgMEBQZOT1gkdmVyc2lvblgkb2JqZWN0c1kkYXJjaGl2ZXJUJHRvcBIAAYagrxARBwgS
+	GxwdHh8mLi83OEBBSUpVJG51bGzSCQoLEVpOUy5vYmplY3RzViRjbGFzc6UMDQ4PEIAC
+	gAiACoAMgA6AENMTCQoUFxpXTlMua2V5c6IVFoADgASiGBmABYAGgAdbRG9jdW1lbnRV
+	UkxZU3RhdGVUeXBlXxBkZmlsZTovL2xvY2FsaG9zdC9Vc2Vycy9TZWJhc3RpYW4vRHJv
+	cGJveC9Eb2t1bWVudGUvVW5pL1NvbW1lciUyMDIwMTMvQmFjaGVsb3ItQXJiZWl0L1Rv
+	b2wvQ0NTLmNvZmZlZVpEZWZhdWx0VGFi0iAhIiNaJGNsYXNzbmFtZVgkY2xhc3Nlc18Q
+	E05TTXV0YWJsZURpY3Rpb25hcnmjIiQlXE5TRGljdGlvbmFyeVhOU09iamVjdNMTCQon
+	KhqiFRaAA4AEoisZgAmABoAHXxBnZmlsZTovL2xvY2FsaG9zdC9Vc2Vycy9TZWJhc3Rp
+	YW4vRHJvcGJveC9Eb2t1bWVudGUvVW5pL1NvbW1lciUyMDIwMTMvQmFjaGVsb3ItQXJi
+	ZWl0L1Rvb2wvaHRkb2NzL0NDUy5qc9MTCQowMxqiFRaAA4AEojQZgAuABoAHXxBrZmls
+	ZTovL2xvY2FsaG9zdC9Vc2Vycy9TZWJhc3RpYW4vRHJvcGJveC9Eb2t1bWVudGUvVW5p
+	L1NvbW1lciUyMDIwMTMvQmFjaGVsb3ItQXJiZWl0L1Rvb2wvaHRkb2NzL2luZGV4Lmh0
+	bWzTEwkKOTwaohUWgAOABKI9GYANgAaAB18Qa2ZpbGU6Ly9sb2NhbGhvc3QvVXNlcnMv
+	U2ViYXN0aWFuL0Ryb3Bib3gvRG9rdW1lbnRlL1VuaS9Tb21tZXIlMjAyMDEzL0JhY2hl
+	bG9yLUFyYmVpdC9Ub29sL2h0ZG9jcy9zY3JlZW4uY3Nz0xMJCkJFGqIVFoADgASiRhmA
+	D4AGgAdfEGdmaWxlOi8vbG9jYWxob3N0L1VzZXJzL1NlYmFzdGlhbi9Ecm9wYm94L0Rv
+	a3VtZW50ZS9VbmkvU29tbWVyJTIwMjAxMy9CYWNoZWxvci1BcmJlaXQvVG9vbC9Qc2V1
+	Q28uY29mZmVl0iAhS0xeTlNNdXRhYmxlQXJyYXmjS00lV05TQXJyYXlfEA9OU0tleWVk
+	QXJjaGl2ZXLRUFFZdGFiU3RhdGVzgAEACAARABoAIwAtADIANwBLAFEAVgBhAGgAbgBw
+	AHIAdAB2AHgAegCBAIkAjACOAJAAkwCVAJcAmQClAK8BFgEhASYBMQE6AVABVAFhAWoB
+	cQF0AXYBeAF7AX0BfwGBAesB8gH1AfcB+QH8Af4CAAICAnACdwJ6AnwCfgKBAoMChQKH
+	AvUC/AL/AwEDAwMGAwgDCgMMA3YDewOKA44DlgOoA6sDtQAAAAAAAAIBAAAAAAAAAFIA
+	AAAAAAAAAAAAAAAAAAO3gALSDg8QEVokY2xhc3NuYW1lWCRjbGFzc2VzXU5TTXV0YWJs
+	ZURhdGGjEBITVk5TRGF0YVhOU09iamVjdNIJChUMTxED/WJwbGlzdDAw1AECAwQFBhQV
+	WCR2ZXJzaW9uWCRvYmplY3RzWSRhcmNoaXZlclQkdG9wEgABhqCjBwgNVSRudWxs0gkK
+	CwxXTlMuZGF0YVYkY2xhc3NPEQKsYnBsaXN0MDDUAQIDBAUGFxhYJHZlcnNpb25YJG9i
+	amVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoKQHCA0UVSRudWxs0gkKCwxXTlMuZGF0YVYk
+	Y2xhc3NPEJ1icGxpc3QwMNQBAgMEBQYICVgkdmVyc2lvblgkb2JqZWN0c1kkYXJjaGl2
+	ZXJUJHRvcBIAAYagoQdVJG51bGxfEA9OU0tleWVkQXJjaGl2ZXLSCgsMDVtzeW5jT3B0
+	aW9uc1hzeW5jTW9kZRAAEAEIERojLTI3OT9RVmJrbQAAAAAAAAEBAAAAAAAAAA4AAAAA
+	AAAAAAAAAAAAAABvgALSDg8QEVokY2xhc3NuYW1lWCRjbGFzc2VzXU5TTXV0YWJsZURh
+	dGGjEBITVk5TRGF0YVhOU09iamVjdNIJChUMTxCUYnBsaXN0MDDUAQIDBAUGCAlYJHZl
 	cnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoKEHVSRudWxsXxAPTlNLZXll
-	ZEFyY2hpdmVy0AgRGiMtMjc5P1EAAAAAAAABAQAAAAAAAAAKAAAAAAAAAAAAAAAAAAAA
-	UoACXxAPTlNLZXllZEFyY2hpdmVy2R8gISIjJCUmJygpKCgsLS4vMF8QOGNvbS5tYWNy
-	YWJiaXQuRXNwcmVzc28uV29ya3NwYWNlVGFicy5EaXNjbG9zdXJlQ29sbGFwc2VkXxBK
-	c2VjdGlvbjpjb20ubWFjcmFiYml0LkVzcHJlc3NvLldvcmtzcGFjZVRhYnMoTVJWaWV3
-	Q29udHJvbGxlck1hbmFnZWRTdGF0ZSlfEDZjb20ubWFjcmFiYml0LkVzcHJlc3NvLkZp
-	bGVNYW5hZ2VyLkRpc2Nsb3N1cmVDb2xsYXBzZWRfEDRjb20ubWFjcmFiYml0LkVzcHJl
-	c3NvLlB1Ymxpc2hlci5EaXNjbG9zdXJlQ29sbGFwc2VkXxBMc2VjdGlvbjpjb20ubWFj
-	cmFiYml0LkVzcHJlc3NvLldvcmtzcGFjZVNlYXJjaChNUlZpZXdDb250cm9sbGVyTWFu
-	YWdlZFN0YXRlKV8QRnNlY3Rpb246Y29tLm1hY3JhYmJpdC5Fc3ByZXNzby5QdWJsaXNo
-	ZXIoTVJWaWV3Q29udHJvbGxlck1hbmFnZWRTdGF0ZSlfEEhzZWN0aW9uOmNvbS5tYWNy
-	YWJiaXQuRXNwcmVzc28uRmlsZU1hbmFnZXIoTVJWaWV3Q29udHJvbGxlck1hbmFnZWRT
-	dGF0ZSldV29ya3NwYWNlTW9kZVxzaWRlYmFyV2lkdGgIgAEICIAFgAOABBAAIkNcAAAA
-	CAARABoAIwAtADIANwA+AEQASQBRAFgEPQQ/BEQETwRYBGYEagRxBHoEfwT+BQAFBQZ0
-	BnYGewb6BvwHDgchB1wHqQfiCBkIaAixCPwJCgkXCRgJGgkbCRwJHgkgCSIJJAAAAAAA
-	AAIBAAAAAAAAADEAAAAAAAAAAAAAAAAAAAkp
+	ZEFyY2hpdmVy0QoLXxAPYnJvd3NlclZpZXdNb2RlEAAIERojLTI3OT9RVGYAAAAAAAAB
+	AQAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAaIACXxAPTlNLZXllZEFyY2hpdmVy0hkaGxxf
+	EC9zeW5jVGFiQ29udHJvbGxlcihNUlZpZXdDb250cm9sbGVyTWFuYWdlZFN0YXRlKV8Q
+	MWJyb3dzZVRhYkNvbnRyb2xsZXIoTVJWaWV3Q29udHJvbGxlck1hbmFnZWRTdGF0ZSmA
+	AYADAAgAEQAaACMALQAyADcAPABCAEcATwBWAPYA+AD9AQgBEQEfASMBKgEzATgBzwHR
+	AeMB6AIaAk4CUAAAAAAAAAIBAAAAAAAAAB0AAAAAAAAAAAAAAAAAAAJSgALSDg8QEVok
+	Y2xhc3NuYW1lWCRjbGFzc2VzXU5TTXV0YWJsZURhdGGjEBITVk5TRGF0YVhOU09iamVj
+	dF8QD05TS2V5ZWRBcmNoaXZlctEWF18QUWJvb2ttYXJrLXN0YXRlLkMxNzBFNUUyLTk1
+	OUQtNDkwOC1BOUMwLTU1M0VBNEFBNEM1MShNUlZpZXdDb250cm9sbGVyTWFuYWdlZFN0
+	YXRlKYABAAgAEQAaACMALQAyADcAOwBBAEYATgBVAwUDBwMMAxcDIAMuAzIDOQNCA1QD
+	VwOrAAAAAAAAAgEAAAAAAAAAGAAAAAAAAAAAAAAAAAAAA62AAtIJChgMTxEBa2JwbGlz
+	dDAw1AECAwQFBh8gWCR2ZXJzaW9uWCRvYmplY3RzWSRhcmNoaXZlclQkdG9wEgABhqCm
+	BwgREhUcVSRudWxs0wkKCwwOEFdOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzoQ2AAqEP
+	gAOABV1FeHBhbmRlZEl0ZW1z0goLExSggATSFhcYGVokY2xhc3NuYW1lWCRjbGFzc2Vz
+	Xk5TTXV0YWJsZUFycmF5oxgaG1dOU0FycmF5WE5TT2JqZWN00hYXHR5cTlNEaWN0aW9u
+	YXJ5oh0bXxAPTlNLZXllZEFyY2hpdmVy0SEiXxAUYnJvd3NlckNvbmZpZ3VyYXRpb26A
+	AQAIABEAGgAjAC0AMgA3AD4ARABLAFMAXgBlAGcAaQBrAG0AbwB9AIIAgwCFAIoAlQCe
+	AK0AsQC5AMIAxwDUANcA6QDsAQMAAAAAAAACAQAAAAAAAAAjAAAAAAAAAAAAAAAAAAAB
+	BYAC0gkKGwxPEHxicGxpc3QwMNQBAgMEBQYICVgkdmVyc2lvblgkb2JqZWN0c1kkYXJj
+	aGl2ZXJUJHRvcBIAAYagoQdVJG51bGxfEA9OU0tleWVkQXJjaGl2ZXLQCBEaIy0yNzk/
+	UQAAAAAAAAEBAAAAAAAAAAoAAAAAAAAAAAAAAAAAAABSgAJfEA9OU0tleWVkQXJjaGl2
+	ZXLZHyAhIiMkJSYnKCkoKCwtLi8wXxA4Y29tLm1hY3JhYmJpdC5Fc3ByZXNzby5Xb3Jr
+	c3BhY2VUYWJzLkRpc2Nsb3N1cmVDb2xsYXBzZWRfEEpzZWN0aW9uOmNvbS5tYWNyYWJi
+	aXQuRXNwcmVzc28uV29ya3NwYWNlVGFicyhNUlZpZXdDb250cm9sbGVyTWFuYWdlZFN0
+	YXRlKV8QNmNvbS5tYWNyYWJiaXQuRXNwcmVzc28uRmlsZU1hbmFnZXIuRGlzY2xvc3Vy
+	ZUNvbGxhcHNlZF8QNGNvbS5tYWNyYWJiaXQuRXNwcmVzc28uUHVibGlzaGVyLkRpc2Ns
+	b3N1cmVDb2xsYXBzZWRfEExzZWN0aW9uOmNvbS5tYWNyYWJiaXQuRXNwcmVzc28uV29y
+	a3NwYWNlU2VhcmNoKE1SVmlld0NvbnRyb2xsZXJNYW5hZ2VkU3RhdGUpXxBGc2VjdGlv
+	bjpjb20ubWFjcmFiYml0LkVzcHJlc3NvLlB1Ymxpc2hlcihNUlZpZXdDb250cm9sbGVy
+	TWFuYWdlZFN0YXRlKV8QSHNlY3Rpb246Y29tLm1hY3JhYmJpdC5Fc3ByZXNzby5GaWxl
+	TWFuYWdlcihNUlZpZXdDb250cm9sbGVyTWFuYWdlZFN0YXRlKV1Xb3Jrc3BhY2VNb2Rl
+	XHNpZGViYXJXaWR0aAiAAQgIgAWAA4AEEAAiQ1wAAAAIABEAGgAjAC0AMgA3AD4ARABJ
+	AFEAWATXBNkE3gTpBPIFAAUEBQsFFAUZCRoJHAkhCpAKkgqXCxYLGAsqCz0LeAvFC/4M
+	NQyEDM0NGA0mDTMNNA02DTcNOA06DTwNPg1AAAAAAAAAAgEAAAAAAAAAMQAAAAAAAAAA
+	AAAAAAAADUU=
 	</data>
 </dict>
 </plist>

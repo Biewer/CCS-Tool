@@ -10,32 +10,33 @@
 ###
 
 class PCCProcessFrame
-	constructor: (@groupable, @variables=[], @acceptTemp=false) ->
+	constructor: (@groupable, @variables=[], @tempTypes=[], autoInit=true) ->		# tempTypes for incoming temp values
+		@_freshInit() if autoInit
+		null
+	
+	_freshInit: ->	# no copy
 		@groupable.frameCount = 0 if @groupable.frameCount == undefined
 		@processID = @groupable.frameCount++
 		@containerIndex = 0
 		@usedContainers = []
 		@varTable = {}
-		(@varTable[v] = @createContainer(v)) for v in @variables
-		@tempContainer = if @acceptTemp then @createContainer("t") else null
+		(@varTable[v.getIdentifier()] = @createContainer(v.getCCSType(), v.getSuggestedContainerName())) for v in @variables
+		@protections = (@createContainer(@tempTypes[i], "t#{i}") for i in [0...@tempTypes.length] by 1)
 		@initialVariableCount = @variables.length
 	
 	
 	_argumentsForProcessDefinition: ->
-		args = @varTable[v].identifier for v in @variables
-		args.push(@tempContainer.identifier) if @acceptTemp
-		args
+		args = (@varTable[v.getIdentifier()] for v in @variables)
+		args.concat(@protections)
 	
-	createProcessDefinition: ->		# This should be the first call on frame objects!
+	emitProcessDefinition: (compiler) ->	
 		args = @_argumentsForProcessDefinition()
-		new CCSProcessDefinition(@_getprocessName(), new CCSStop(), args)
+		compiler._silentlyAddProcessDefinition(@_getProcessName(), args)
 	
 	_getProcessName: ->	"#{@groupable.getProcessName()}#{if @processID > 0 then "_#{@processID}" else ""}"
 	
-	_getProcessArgCount: ->
-		result = @initialVariableCount
-		result += 1 if @acceptTemp
-		result
+	_getProcessArgCount: -> @initialVariableCount + @tempTypes.length
+	#@initialVariableCount + @protections.length
 	
 	
 	
@@ -43,91 +44,149 @@ class PCCProcessFrame
 		(return true if c.identifier == id) for c in @usedContainers
 		false
 	
-	createContainer: (wish) ->
+	createContainer: (ccsType, wish) ->
 		if typeof wish is "string" and wish.length > 0 and wish.indexOf("f_") isnt 0 and not @_didAlreadyUseContainerWithIdentifier(wish)
 			id = wish
 		else
 			id = "f_#{@containerIndex++}"
-		container = new PCCVariableContainer(id)
+		container = new PCCVariableContainer(id, ccsType)
 		@usedContainers.push(container)
 		container
 		
 	getContainerForVariable: (identifier) ->
-		throw new Error("Unknown variable!") if @varTable[variable] == undefined
-		@varTable[variable]
+		throw new Error("Unknown variable!") if @varTable[identifier] == undefined
+		@varTable[identifier]
 	
-	assignContainerToVariable: (variable, container) ->
-		throw new Error("Unknown variable!") if @varTable[variable] == undefined
-		@varTable[variable] = container
+	assignContainerToVariable: (identifier, container) ->
+		throw new Error("Unknown variable!") if @varTable[identifier] == undefined
+		@varTable[identifier] = container
 	
 	addLocalVariable: (variable, container) ->
-		throw new Error("Variable already defined!") if @varTable[variable] != undefined
+		throw new Error("Variable already defined!") if @varTable[variable.getIdentifier()] != undefined
 		@variables.push(variable)
-		@varTable[variable] = container
+		@varTable[variable.getIdentifier()] = container
+	
+	
+	protectContainer: (container) ->
+		@protections.push(container)
+	
+	unprotectContainer: ->
+		@protections.pop()
+	
+	getProtectedContainer: ->
+		throw new Error("No protected containers available") if @protections.length == 0
+		@protections[@protections.length-1]
+		
+	isContainerLocalVariable: (container) ->
+		(return true if container.isEqual(c)) for v, c of @varTable
+		false
 	
 	
 		
 		
 	
 	createFollowupFrame: -> PCCProcessFrame.createFollowupFrameForFrames([@])
-	_createFollowupFrameAcceptingTempContainer: (acceptTemp) -> new PCCProcessFrame(@groupable, @variables, acceptTemp)
+	_createFollowupFrameAcceptingTempTypes: (tempTypes) -> new PCCProcessFrame(@groupable, @variables[..], tempTypes)
 	
+	createNewScope: -> @copy()
 	
 	
 	_checkHierarchyConsistency: (frame) ->
 		return if @parentFrame == frame or @ == frame
-		while frame.parentFrame != null
+		while frame.parentFrame
 			frame = frame.parentFrame
-			return if frame == @
+			return if frame == @parentFrame
 		throw new Error("Frame must be connected in hierarchy")
 	
 	_argumentsToCallProcessFromFrame: (frame) ->
-		args = frame.varTable[v] for v in @variables
-		args.push(frame.tempContainer) if @acceptTemp
-		args
+		args = (frame.varTable[v.getIdentifier()] for v in @variables)
+		args.concat(frame.protections[0...@tempTypes.length])
 	
-	createCallProcessFromFrame: (frame) ->
-		@_checkHierarchyConsistency (frame)
-		args = @__argumentsToCallProcessFromFrame (frame)
-		@createCallProcessWithArgumentContainers(args)
+	emitCallProcessFromFrame: (compiler, frame, appPlaceholder) ->
+		#@_checkHierarchyConsistency(frame)
+		args = @_argumentsToCallProcessFromFrame(frame)
+		@emitCallProcessWithArgumentContainers(compiler, args, appPlaceholder)
 		
-	createCallProcessWithArgumentContainers: (containers) ->
+	emitCallProcessWithArgumentContainers: (compiler, containers, appPlaceholder) ->
 		if containers.length != @_getProcessArgCount()
 			throw new Error("Number of argument containers does not match number of required arguments") 
-		new CCSProcessApplication(@_getProcessName(), (c.ccsTree() for c in containers))
+		if appPlaceholder
+			appPlaceholder.set(@_getProcessName(), containers)
+		else
+			compiler.emitProcessApplication(@_getProcessName(), containers)
 		
-		# Create procedure call without setting up a frame!?!?!?!
-		
+	copy: ->
+		res = new PCCProcessFrame(@groupable, @variables[..], @tempTypes, false)
+		@_copyVariablesToCopy(res)
+		res.parentFrame = @
+		res
+	
+	_copyVariablesToCopy: (res) ->
+		res.processID = @processID
+		res.containerIndex = @containerIndex
+		res.usedContainers = @usedContainers[..]
+		res.varTable = {}
+		(res.varTable[v.getIdentifier()] = @varTable[v.getIdentifier()]) for v in @variables
+		res.protections = @protections[..]
+		res.initialVariableCount = @initialVariableCount
+			
 		
 
-class PCCProcedureFrame
-	constructor: (procedure, variables=procedure.arguments, acceptTemp) -> super procedure, variables, acceptTemp
+class PCCProcedureFrame extends PCCProcessFrame
+	constructor: (procedure, variables, tempTypes, autoInit) -> 
+		if not variables
+			variables = procedure.arguments
+			if procedure.isClassProcedure()
+				variables.unshift(new PCCVariableInfo(null, "i", null, true)) 	#ToDo: add type
+			variables.unshift(new PCCVariableInfo(null, "r", null, true))
+			
+		super procedure, variables, tempTypes, autoInit
 		
 	getProcedure: -> @groupable
 	
-	_argumentsForProcessDefinition: ->
-		args = super
-		args.unshift(PCCContainer.GUARD()) if @groupable.isMonitorProcedure()
-		args.unshift(PCCContainer.INSTANCE()) if @groupable.isClassProcedure()
-		args.unshift(PCCContainer.RETURN())
-		args
+	#_argumentsForProcessDefinition: ->
+		#args = super
+		#args.unshift(PCCContainer.GUARD()) if @groupable.isMonitorProcedure()	# ???????
+		#args.unshift(PCCContainer.INSTANCE()) if @groupable.isClassProcedure()
+		#args.unshift(PCCContainer.RETURN())
+		#args
 	
-	_getProcessArgCount: ->
-		result = super + 1
-		result += 1 if @groupable.isMonitorProcedure()
-		result += 1 if @groupable.isClassProcedure()
-		result
+	#_getProcessArgCount: ->
+		#result = super + 1
+		#result += 1 if @groupable.isMonitorProcedure()
+		#result += 1 if @groupable.isClassProcedure()
+		#result
+	###
+	getContainerForVariable: (identifier) ->
+		if identifier == "i_r" then PCCContainer.RETURN()
+		else if identifier == "i_i" then PCCContainer.INSTANCE()
+		else if identifier == "i_g" then PCCContainer.GUARD()
+		else super
 	
+	assignContainerToVariable: (identifier, container) ->
+		throw new Error("Tried to assign read-only variable!") if identifier == "i_r" or identifier == "i_i" or identifier == "i_g"
+		super
 	
-	_createFollowupFrameAcceptingTempContainer: (acceptTemp) -> new PCCProcedureFrame(@groupable, @variables, acceptTemp)
+	addLocalVariable: (variable, container) ->
+		identifier = variable.getName()
+		throw new Error("Tried to add internal read-only variable!") if identifier == "i_r" or identifier == "i_i" or identifier == "i_g"
+		super###
 	
+	_createFollowupFrameAcceptingTempTypes: (tempTypes) -> new PCCProcedureFrame(@groupable, @variables[..], tempTypes)
 	
+	###
 	_argumentsToCallProcessFromFrame: (frame) ->
 		args = super
-		args.unshift(PCCContainer.GUARD()) if @groupable.isMonitorProcedure()
+		#args.unshift(PCCContainer.GUARD()) if @groupable.isMonitorProcedure()
 		args.unshift(PCCContainer.INSTANCE()) if @groupable.isClassProcedure()
 		args.unshift(PCCContainer.RETURN())
-		args
+		args###
+	
+	copy: ->
+		res = new PCCProcedureFrame(@groupable, @variables[..], @tempTypes, false)
+		@_copyVariablesToCopy(res)
+		res.parentFrame = @
+		res
 	
 	
 	
@@ -135,11 +194,18 @@ class PCCProcedureFrame
 
 
 PCCProcessFrame::parentFrame = null	# closestAncestor
-PCCProcessFrame::marked = []
+PCCProcessFrame::mark = (m) ->
+	@marked = [] if not @marked
+	@marked.push(m)
+
+PCCProcessFrame.checkTempTypesEquality = (types1, types2) ->
+	return false if types1.length != types2.length
+	(return false if not types1[i].isEqual(types2[i])) for i in [0...types1.length]
+	true
 PCCProcessFrame.checkFramesForConsistency = (frames) ->
 	groupable = frames[0].groupable
-	hasTemp = frames[0].tempContainer != null
-	(if frames[i].groupable != groupable || (frames[i].tempContainer != null) != hasTemp
+	tempTypes = frames[0].tempTypes
+	(if frames[i].groupable != groupable || !PCCProcessFrame.checkTempTypesEquality(tempTypes, frames[i].tempTypes)
 		throw new Error("Inconsistent process frames")
 	) for i in [1...frames.length] by 1
 	null
@@ -150,19 +216,19 @@ PCCProcessFrame.findClosesAncestorForFrames = (frames) ->
 	currentFrames = frames.concat([])
 	while closestAncestor == null
 		(if currentFrames[i] != null
-			currentFrames[i].marked.push(frames[i])
+			currentFrames[i].mark(frames[i])
 			markedFrames.push(currentFrames[i])
 			(closestAncestor = currentFrames[i]; break) if currentFrames[i].marked.length == frames.length
 			currentFrames[i] = currentFrames[i].parentFrame
 		) for i in [0...frames.length] by 1
-	(f.marked = []) for f in markedFrames
+	(f.marked = null) for f in markedFrames
 	closestAncestor
 	
 PCCProcessFrame.createFollowupFrameForFrames = (frames) ->
 	PCCProcessFrame.checkFramesForConsistency(frames)
 	closestAncestor = PCCProcessFrame.findClosesAncestorForFrames(frames)
 	
-	result = closestAncestor._createFollowupFrameAcceptingTempContainer(frames[0].tempContainer != null)
+	result = closestAncestor._createFollowupFrameAcceptingTempTypes(c.ccsType for c in frames[0].protections)
 	result.parentFrame = closestAncestor
 	result
 
@@ -174,21 +240,88 @@ PCCProcessFrame.createFollowupFrameForFrames = (frames) ->
 
 
 
-PCCProcessFrame::compilerHandleNewIdentifierWithDefaultValueCallback: (compiler, identifier, callback, context) ->
-	@addLocalVariable(identifier, callback(context))
+PCCProcessFrame::compilerHandleNewVariableWithDefaultValueCallback = (compiler, variable) ->
+	c = variable.compileDefaultValue(compiler)
+	compiler.getProcessFrame().addLocalVariable(variable, c)
+	variable
 
-PPCProcessFrame::compilerGetVariable: (compiler, identifier) -> 
-	if @varTable[identifier] then new PCCLocalVariable(identifier) else null
+PCCProcessFrame::compilerGetVariable = (compiler, identifier) -> 
+	(return new PCCLocalVariable(v.node, v.getName(), v.type, v.isInternal) if v.getIdentifier() == identifier) for v in @variables
+	#if @varTable[identifier] then new PCCLocalVariable(identifier) else null
+	null
 		
-PCCProcessFrame::compilerGetProcedure: (compiler, identifier, instanceContainer) -> null
+PCCProcessFrame::compilerGetProcedure = (compiler, identifier, instanceContainer) -> null
 
 
 
-PCCProcedureFrame::compilerGetVariable: (compiler, identifier) -> @getProcedure().getVariableWithName(identifier)
+#PCCProcedureFrame::compilerGetVariable = (compiler, identifier) -> @getProcedure().getVariableWithName(identifier)
+#PCCProcedureFrame::compilerGetVariable = (compiler, identifier) -> 
+#	if identifier == "i_r" or identifier == "i_i" or identifier == "i_g" then new PCCLocalVariable(identifier)
+#	else super
 		
-PCCProcedureFrame::compilerGetProcedure: (compiler, identifier, instanceContainer) -> 
+PCCProcedureFrame::compilerGetProcedure = (compiler, identifier, instanceContainer) -> 
 	p = @getProcedure()
 	if p.getName() == identifier then p else p.getProcedureWithName(identifier)
 
 
 
+
+###
+class PCCContainerInfo
+	constructor: (@payload, @isLocalVariable) ->
+
+
+class PCCContainerInfoArray
+	constructor: (temporaryItems=[]) -> @infos = (new PCCContainerInfo(c, false) for c in temporaryItems)
+	copy: ->
+		res = new PCCContainerProtectionArray()
+		res.infos = @infos[..]
+		res
+	getCount: ->
+		res = 0
+		++res for ci in @infos
+		res
+	
+	# Protecting Containers
+	protectContainer: (container, isLocalVariable) ->
+		@protections.push(new PCCContainerInfo(container, isLocalVariable))
+	unprotectContainer: -> @infos.pop().container
+	getContainer: ->
+		throw new Error("getProtection: Nothing protected at the moment!") if @infos.length == 0
+		@infos[@infos.length-1].payload
+	getTemporaryContainers: ->
+		res = []
+		(res.push(ci.payload) if not ci.isLocalVariable) for ci in @infos
+		res
+	
+	getCCSTypes: ->
+		res = new PCCContainerInfoArray()
+		res.infos = (new PCCContainerInfo(ci.payload.ccsType, ci.isLocalVariable) for ci in @infos)
+		res
+		
+	getTemporaryTypes: ->
+		res = []
+		return res if infos.length == 0
+		if @infos[0].payload instanceof PCCContainer
+			(res.push(ci.payload.ccsType) if not cp.isLocalVariable) for ci in @infos
+		else if infos[0].payload instanceof PCCType
+			(res.push(ci.payload) if not cp.isLocalVariable) for ci in @infos
+		else
+			throw new Error("getTemporaryTypes not applicable on payload!")
+		res
+	
+###
+
+# Convenience
+
+class PCCGroupable
+	constructor: (@processName) ->
+	getProcessName: -> @processName
+
+
+###
+
+{version: "1.0", tree: (new PCProgram((new PCMonitor("M", (new PCConditionDecl("c", (new PCRelationalExpression((new PCLiteralExpression(parseInt(3))), "<", (new PCLiteralExpression(parseInt(4))))))), (new PCConditionDecl("c2", (new PCLiteralExpression(true)))), (new PCConditionDecl("c3", (new PCLiteralExpression(false)))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "f", (new PCStmtBlock((new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.WAIT, (new PCIdentifierExpression("c")))))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("condition fulfilled!")))))))))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "g", (new PCStmtBlock((new PCStatement((new PCPrintStmt((new PCLiteralExpression("Before signal")))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.SIGNAL, (new PCIdentifierExpression("c")))))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("Behind signal")))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.SIGNAL_ALL)))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("Behind signallAll")))))))))))), (new PCDeclStmt((new PCSimpleType(PCSimpleType.MUTEX)), (new PCVariableDeclarator("guard", null)))), (new PCMainAgent((new PCStmtBlock((new PCDeclStmt((new PCClassType("M")), (new PCVariableDeclarator("m", null)))), (new PCDeclStmt((new PCSimpleType(PCSimpleType.AGENT)), (new PCVariableDeclarator("a", (new PCVariableInitializer(false, (new PCStartExpression((new PCProcedureCall("agent1", (new PCIdentifierExpression("m")))))))))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.LOCK, (new PCIdentifierExpression("guard")))))), (new PCStatement((new PCStmtExpression((new PCClassCall((new PCIdentifierExpression("m")), (new PCProcedureCall("f")))))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.UNLOCK, (new PCIdentifierExpression("guard")))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.JOIN, (new PCIdentifierExpression("a")))))))))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "agent1", (new PCStmtBlock((new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.LOCK, (new PCIdentifierExpression("guard")))))), (new PCStatement((new PCStmtExpression((new PCClassCall((new PCIdentifierExpression("m")), (new PCProcedureCall("g")))))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.UNLOCK, (new PCIdentifierExpression("guard")))))))), (new PCFormalParameter((new PCClassType("M")), "m"))))))}
+
+
+###
