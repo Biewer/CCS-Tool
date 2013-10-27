@@ -63,11 +63,11 @@ class PCEnvironmentController
 		throw new Error("No procedure did begin!") if not @_envStack instanceof PCProcedure
 		@_envStack = @_envStack.parent
 	
-	beginMainAgent: -> 
+	beginMainAgent: (node) -> 
 		if @_envStack.getProcedureWithName("#mainAgent")
 			@beginProcedure("#mainAgent")
 		else
-			@beginNewProcedure("#mainAgent", new PCTType(PCTType.VOID), [])
+			@beginNewProcedure(node, "#mainAgent", new PCTType(PCTType.VOID), [])
 	
 	endMainAgent: ->
 		@endProcedure()
@@ -115,6 +115,7 @@ class PCEnvironmentNode
 class PCClass extends PCEnvironmentNode
 	constructor: (node, @type) -> super node, @type.identifier
 	getName: -> @label
+	isMonitor: -> @type.isMonitor()
 
 
 class PCProcedure extends PCEnvironmentNode
@@ -123,6 +124,7 @@ class PCProcedure extends PCEnvironmentNode
 	#isStructProcedure: -> @parent instanceof PCStruct
 	#isMonitorProcedure: -> @parent instanceof PCMonitor
 	isClassProcedure: -> @parent instanceof PCClass
+	isMonitorProcedure: -> @parent instanceof PCClass and @parent.isMonitor()
 
 
 

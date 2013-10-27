@@ -153,7 +153,9 @@ class PCCRestrictionStackElement extends PCCUnaryStackElement
 	isCompletedProcess: -> if @next then @next.isCompletedProcess() else false
 
 class PCCApplicationStackElement extends PCCUnaryStackElement
-	constructor: (@processName, @argContainers) -> 
+	constructor: (@processName, argContainers) -> 
+		argContainers = [] if argContainers == undefined
+		@argContainers = argContainers[..] if argContainers
 		super
 	getResults: ->
 		more = if @next then @next.getResults() else new PCCStackResultContainer()
@@ -164,10 +166,10 @@ class PCCApplicationStackElement extends PCCUnaryStackElement
 
 class PCCApplicationPlaceholderStackElement extends PCCApplicationStackElement
 	constructor: (@frame) -> super null, null
-	set: (processName, argContainers) ->
+	set: (processName, argContainers=[]) ->
 		throw new Error("Placeholder values can't be set twice!") if @processName or @argContainers
 		@processName = processName
-		@argContainers = argContainers
+		@argContainers = argContainers[..]
 		null
 	getResults: ->
 		throw new Error("Placeholder without values!") if !@processName or !@argContainers
@@ -204,8 +206,18 @@ class PCCSequenceStackElement extends PCCBinaryCCSStackElement
 
 
 
+class PCCSystemProcessStackElement extends PCCUnaryStackElement
+	getResults: ->
+		container = @next.getResults()
+		pRes = container.getResult()
+		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
+		pRes
+	
+
 class PCCProcessDefinitionStackElement extends PCCUnaryStackElement
-	constructor: (@processName, @argContainers=[]) -> super
+	constructor: (@processName, argContainers=[]) -> 
+		@argContainers = argContainers[..]
+		super
 	getResults: ->
 		container = @next.getResults()
 		pRes = container.getResult()

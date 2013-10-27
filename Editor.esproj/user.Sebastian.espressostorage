@@ -7,13 +7,13 @@
 	<key>ESProjectWindowState</key>
 	<dict>
 		<key>ContentSize</key>
-		<string>{1267, 727}</string>
+		<string>{1337, 1026}</string>
 		<key>ProjectURL</key>
-		<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/Editor.esproj/</string>
+		<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/Editor.esproj/</string>
 		<key>StateType</key>
 		<string>ProjectWindow</string>
 		<key>TopLeftPoint</key>
-		<string>{198, 910}</string>
+		<string>{145, 1174}</string>
 	</dict>
 	<key>com.macrabbit.Espresso.FileManager.DisclosureCollapsed</key>
 	<false/>
@@ -21,7 +21,7 @@
 	<dict>
 		<key>ExpandedURLs</key>
 		<array>
-			<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/htdocs</string>
+			<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/htdocs</string>
 		</array>
 	</dict>
 	<key>com.macrabbit.Espresso.Publisher.DisclosureCollapsed</key>
@@ -32,85 +32,115 @@
 		<array>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCS.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UICCSHistory.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSRules.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/htdocs/index.html</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSStepView.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UISetup.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PseuCo.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PCCProcessFrame.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/Translater.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PCCCompiler.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCProcessFrame.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PCCCompilerStack.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCCompiler.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PCCProgramController.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCProgramController.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PCEnvironment.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCContainer.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PseuCo.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCCCompilerStack.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UIAppController.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PseuCo%2bCompiler.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/htdocs/screen.css</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCType.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UIExecutor.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/PCEnvironment.coffee</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UICCSEditor.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>
 			<dict>
 				<key>DocumentURL</key>
-				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Sommer%202013/Bachelor-Arbeit/Tool/CCSParser.pegjs</string>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/CCS.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PseuCo%2bCompiler.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/CCSRules.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UIConsole.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/UIPseuCoEditor.coffee</string>
+				<key>StateType</key>
+				<string>DefaultTab</string>
+			</dict>
+			<dict>
+				<key>DocumentURL</key>
+				<string>file://localhost/Users/Sebastian/Dropbox/Dokumente/Uni/Winter%202013/Bachelor-Arbeit/Tool/PCType.coffee</string>
 				<key>StateType</key>
 				<string>DefaultTab</string>
 			</dict>

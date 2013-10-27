@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"]>
 
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
 <head>
@@ -11,89 +11,181 @@
 <meta name="keywords" content="Splodge, App Development, Product Design, Markers, Marker, Mark, Textmarker, App, Apps, App Store, Apple, Highlight, Text, Texts, Markings, Readability, Productivity, Education, Important stuff, Information, Sum up texts, App Developer, new Apps, iPad, iPhone, Apps for iPad, Pupil, Student, Professor, Scientist, Journalist" />
 <meta name="description" content="This is the website of Splodge, the maker of Markers. Get to know our company and learn about our app Markers on the iOS App Store. Feel free to contact us anytime if you have any questions about or products or services in terms of app development and product design." />
 
-<meta name="viewport" content="width=800">
+<meta name="viewport" content="width=800" />
 
 
 <link rel="shortcut icon" href="favicon.ico" />
 
-<link rel="stylesheet" type="text/css" media="print" href="styles/print.css" />
 <style type="text/css" media="screen">
 	@import url(screen.css);
 </style>
 
 <script type="text/javascript">
-
-var _inputField, _errorField, _resultField;
-var _mainScript = null, _parserScript = null;
-
-var stepView;
-
+//<![CDATA[
+__loadCallbacks = []
+function registerLoadCallback(f, context) {
+	__loadCallbacks.push({f:f, context:context})
+}
 function init() {
-	_inputField = document.getElementById("inputField");
-	_errorField = document.getElementById("errorField");
-	_resultField = document.getElementById("resultField");
-	
-	reloadScripts();
-}
-
-function parse() {
-	try {
-		ccs = CCSParser.parse(_inputField.value);
-		_resultField.innerText = ccs.toString();
-		_errorField.innerHTML = "&nbsp;";
-		console.log(ccs.getPossibleSteps().join(", "));
-		document.getElementById("ccsView").innerHTML = "";
-		stepView = new CCSStepView(ccs);
-		document.getElementById("ccsView").appendChild(stepView.getNode());
-	} catch (e) {
-		col = (e.column) ? ", column " + e.column : ""
-		_errorField.innerText = "Line " + e.line + col + ": " + e.message;
-		_resultField.innerText = "";
+	for (var i = 0; i < __loadCallbacks.length; i++) {
+		o = __loadCallbacks[i]
+		o.f(o.context);
 	}
 }
-
-function reloadScripts() {
-	if (_mainScript) {
-		_mainScript.parentNode.removeChild(_mainScript);
-	}
-	if (_parserScript) {
-		_parserScript.parentNode.removeChild(_parserScript);
-	}
-	
-	_mainScript = document.createElement("SCRIPT");
-	_mainScript.setAttribute("type", "text/javascript");
-	_mainScript.setAttribute("src", "CCS.js?x" + Math.ceil(Math.random()*10000));
-	document.head.appendChild(_mainScript);
-	
-	_parserScript = document.createElement("SCRIPT");
-	_parserScript.setAttribute("type", "text/javascript");
-	_parserScript.setAttribute("src", "CCSParser.js?x" + Math.ceil(Math.random()*10000));
-	document.head.appendChild(_parserScript);
-	
-	window.setTimeout(parse, (location.host == "" ? 50 : 200));
-}
-
+//]]>
 </script>
+
+<script src="jquery.js" type="text/javascript"></script>
+<script src="UI.js" type="text/javascript"></script>
+<script src="CCS.js" type="text/javascript"></script>
+<script src="PseuCo.js" type="text/javascript"></script>
+<script src="PCCompiler.js" type="text/javascript"></script>
+
+
 
 </head>
 
-<body onload="init();">
+<body onload="init()">
+
+<!-- *** FILE CONTROL *** -->
+
+<div id="fileControl">
+<div id="filePicker">
+	<div id="fileLabel">
+		<span id="fileTitle">Concurrent Counting</span>
+		<span id="fileType">(PseuCo)</span>
+	</div>
+	<div id="fileDropDownButton">(v)</div>
+</div>
+<div id="fileAdd">(+)</div>
+</div>
+
+
+<div id="verticalSizable">
+
+
+
+<!-- *** MAIN CONTENT AREA *** -->
+
+<div id="mainContent">
+	<div id="horizontalSizable">
+		<div id="pseuco">
+			<textarea id="pseuco_field" readonly="readonly">mainAgent { }</textarea>
+			<textarea id="pseucojs_field"></textarea>
+		</div>
+		<div id="hresizer">&bullet;</div>
+		<div id="ccs">
+			<textarea id="ccs_field" readonly="readonly">a!.0 | a?.0</textarea>
+			<input type="button" name="Run" value="Run" disabled="disabled" id="ccsRun" />
+		</div>
+	</div>
+</div>
+
+
+
+<div id="vresizer">&bullet;</div>
+
+
+<!-- *** TOOL AREA *** -->
+
+<div id="tools">
+	<ul id="tabBar">
+		<li class="tabBarItem" data-tab-content="console">Console</li>
+		<li class="tabBarItem" data-tab-content="history">CCS History</li>
+	</ul>
+	<div id="tabContent">
+		<div id="console" class="tabContentItem">
+			<!--
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			
+			&lt;&lt;&lt; receive?42<br />
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			&lt;&lt;&lt; receive?42<br />
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			&lt;&lt;&lt; receive?42<br />
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			&lt;&lt;&lt; receive?42<br />
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			&lt;&lt;&lt; receive?42<br />
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			&lt;&lt;&lt; receive?42<br />
+			This is one line <br />
+			&gt;&gt;&gt; send!42 <br />
+			&lt;&lt;&lt; receive?42<br />
+			-->
+		</div>
+		
+		<ul id="history" class="tabContentItem" style="display:none">
+			<!--
+			<li>
+				<span class="h_action">&nbsp;</span>
+				<span class="h_ccs">a!.0 + b!.0 | a?.0 + b?.0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action"><span class="action_name">&tau; <span class="action_detail">(is_empty)</span></span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action"><span class="action_name">&tau; <span class="action_detail">(a_very_long_channel_name)</span></span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action"><span class="action_name">a!42</span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action"><span class="action_name">&tau; <span class="action_detail">(is_empty)</span></span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			-->
+			<li>
+				<span class="h_action">&tau; <span class="action_detail">(is_empty)</span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action">a!42</span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action">&tau; <span class="action_detail">(a_very_long_channel_name)</span></span>
+				<span class="h_ccs">a_very_long_channel_name!. a_very_long_channel_name?. a_very_long_channel_name!. a_very_long_channel_name?. a_very_long_channel_name!. a_very_long_channel_name?. 0 | a_very_long_channel_name?. a_very_long_channel_name!. a_very_long_channel_name?. a_very_long_channel_name!. a_very_long_channel_name?. a_very_long_channel_name!. 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action">&tau; <span class="action_detail">(is_empty)</span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action">a!42</span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_action">&tau; <span class="action_detail">(a_very_long_channel_name)</span></span>
+				<span class="h_ccs">0 | 0 \ {a, b}</span>
+			</li>
+			<li>
+				<span class="h_ccs">a!.0 + b!.0 | a?.0 + b?.0 \ {a, b}</span>
+			</li>
+		</ul>
+	</div>
+</div>
+
+
+
+</div>
+
+
+
+<!--
 <h1>Test Playground</h1>
-<p>Enter your CCS code here:</p>
+<p>Enter your PseuCo code here:</p>
 <div style="float:left; width:45%; margin-bottom:10px">
-<textarea id="inputField" style="width: 100%; height: 325px;" oninput="parse();">Train[t] := is_empty!.
-put_stone!.
-enter_pass!t.
-exit_pass!t.
-take_stone!.Train[t]
-
-Basket := is_empty?. Basket
-+ put_stone?. Full
-
-Full := take_stone?. Basket
-+ put_stone?. Full
-
-(Basket | Train[1] | Train[2])\{is_empty,put_stone,take_stone}</textarea>
+<textarea id="inputField" style="width: 100%; height: 325px;" oninput="testPseuCo();"></textarea>
 <p id="errorField">&nbsp;</p>
 <input type="button" name="" value="Reload Scripts!" onclick="reloadScripts();" /> <a href="http://splodge.com/imprint.html"><input type="button" name="" value="Impressum" /></a>
 </div>
@@ -104,6 +196,7 @@ Full := take_stone?. Basket
 <span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P<sup class="ccs_badge">3</sup></span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?x</a>=<input id="test" type="text" value="0" class="ccs_input" />.<span>b?.<span>0</span></span></span></span>
 </p>
 </div>
+-->
 </body>
 
 </html>

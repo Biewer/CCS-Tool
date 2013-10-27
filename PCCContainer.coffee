@@ -41,7 +41,7 @@ class PCCBinaryContainer extends PCCComposedContainer
 			@exp = new CCSAdditiveExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree(), @operator)
 			super PCCType.INT
 		else if @operator == "*" or @operator == "/" or @operator == "%"
-			@exp = new MultiplicativeExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree(), @operator)
+			@exp = new CCSMultiplicativeExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree(), @operator)
 			super PCCType.INT
 		else if @operator == "<" or @operator == "<=" or @operator == ">" or @operator == ">="
 			@exp = new CCSRelationalExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree(), @operator)

@@ -3,7 +3,6 @@ PCNode::compile = (compiler) ->
 	throw new Error("Abstract method!")
 PCNode::_childrenCompile = (compiler) ->
 	c.compile(compiler) for c in @children
-#PCNode::collectEnvironments = (controller) -> null
 	
 	
 
@@ -16,9 +15,10 @@ PCProgram::compile = (compiler) ->
 
 PCMainAgent::compile = (compiler) ->
 	compiler.beginMainAgent()
-	i_r = compiler.getFreshContainer(PCCType.INT, "ret")
-	compiler.emitInput("channel1_create", null, i_r)
-	compiler.getProcessFrame().addLocalVariable(new PCCVariableInfo(null, "r", null, true), i_r)	# ToDo: PCVariable not good!
+	#i_r = compiler.getFreshContainer(PCCType.INT, "ret")
+	#compiler.emitInput("channel1_create", null, i_r)
+	i_r = new PCCConstantContainer(-1)
+	compiler.getProcessFrame().addLocalVariable(new PCCVariableInfo(null, "r", null, true), i_r)
 	@_childrenCompile(compiler)
 	compiler.emitStop()
 	compiler.endMainAgent()
@@ -27,9 +27,14 @@ PCMainAgent::compile = (compiler) ->
 
 PCProcedureDecl::compile = (compiler) ->
 	compiler.beginProcedure(@name)
-	@getBody().compile(compiler)
-	compiler.emitExit()
+	proc = compiler.getProcedureWithName(@name)
+	if proc.isMonitorProcedure()
+		guard = compiler.getVariableWithName("guard", null, true)
+		compiler.emitOutput("lock", guard.getContainer(compiler))
+	@getBody().compile(compiler)		
+	proc.emitExit(compiler)
 	compiler.endProcedure()
+	[]
 	
 	
 
@@ -57,10 +62,11 @@ PCConditionDecl::compile = (compiler) ->
 	context = {target: @, compiler: compiler}
 	variable = new PCCVariableInfo(@, @name, new PCTType(PCTType.CONDITION))
 	compiler.handleNewVariableWithDefaultValueCallback(variable)
+	[]
 
 PCConditionDecl::compileDefaultValue = (compiler) ->
 	result = compiler.getFreshContainer(PCCType.INT)
-	compiler.emitInput("create_WaitRoom", null, result)
+	compiler.emitInput("wait_create", null, result)
 	result
 	
 	
@@ -69,11 +75,8 @@ PCConditionDecl::compileDefaultValue = (compiler) ->
 PCDecl::compile = (compiler) ->
 	type = @children[0]
 	vd.compile(compiler) for vd in @getDeclarators()
+	[]
 	
-	
-
-#PCDeclStmt::compile = (compiler) ->
-	#throw new Error("Not implemented!")
 	
 	
 
@@ -83,39 +86,22 @@ PCVariableDeclarator::compile = (compiler) ->
 	compiler.handleNewVariableWithDefaultValueCallback(variable)
 
 PCVariableDeclarator::compileDefaultValue = (compiler) ->
-	init = @getInitializer()
-	if init  
-		c = init.compile(compiler)
-		@getTypeNode().getType(compiler).type.fulfillAssignment(compiler, c)
+	type = @getTypeNode().getType(compiler).type
+	if @getInitializer()
+		@getInitializer().compile(compiler, type)
 	else
-		@getTypeNode().getType(compiler).type.createDefaultContainer(compiler)
+		type.createContainer(compiler)
 	
 	
 	
 
-PCVariableInitializer::compile = (compiler) ->
+PCVariableInitializer::compile = (compiler, type) ->
 	if @isArray()
-		@fulfillAssignment(compiler, @PCCCompilerArrayConst)	#???
+		cc = (c.compile(compiler, type.elementsType) for c in @children)
+		type.createContainer(compiler, cc)
 	else
-		@children[0].compile(compiler)
+		type.createContainer(compiler, @children[0].compile(compiler))
 	
-	
-###
-PCArrayType::getCCSType = -> new PCCType(@children[0].getCCSType())
-
-PCSimpleType::getCCSType = ->
-	if @type == PCSimpleType.VOID then PCCType.VOID
-	else if @type == PCSimpleType.STRING then PCCType.STRING
-	else if @type == PCSimpleType.BOOL then PCCType.BOOL
-	else PCCType.INT
-
-PCChannelType::getCCSType = -> 
-	t = @valueType
-	base = if t == PCSimpleType.STRING then PCCType.STRING else if t == PCSimpleType.BOOL then PCCType.BOOL else PCCType.INT
-	new PCCType(base)
-
-PCClassType::getCCSType = -> new PCCType(null, @className)
-###
 	
 	
 
@@ -157,7 +143,7 @@ PCAssignDestination::compile = (compiler) ->	# Returns the same value as array e
 	res
 PCAssignDestination::setValueForArrayAtIndex = (compiler, instanceContainer, indexContainer, valueContainer) ->
 	compiler.emitOutput("array_access", instanceContainer, indexContainer)
-	compiler.emitInput("array_set", instanceContainer, valueContainer)
+	compiler.emitOutput("array_set", instanceContainer, valueContainer)
 	valueContainer
 PCAssignDestination::assignContainer = (compiler, c) ->
 	arrayIndexCount = @children.length
@@ -175,9 +161,21 @@ PCAssignDestination::assignContainer = (compiler, c) ->
 PCSendExpression::compile = (compiler) ->
 	c = @children[0].compile(compiler)
 	v = @children[1].compile(compiler)
-	compiler.emitOutput("prepareSend", c, v)
-	compiler.emitInput("send", c, null)
+	if @children[0].getType(compiler).capacity <= 0
+		control = compiler.emitChoice()
+		compiler.emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">="))
+		compiler.emitOutput("put", c, v)	# Buffered
+		p1 = compiler.emitProcessApplicationPlaceholder()
+		control.setBranchFinished()
+		compiler.emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), "<"))
+		compiler.emitOutput("receive", c, v)	# Unbuffered
+		p2 = compiler.emitProcessApplicationPlaceholder()
+		control.setBranchFinished()
+		compiler.emitMergeOfProcessFramesOfPlaceholders([p1, p2])
+	else
+		compiler.emitOutput("put", c, v)	# Buffered
 	v
+	
 	
 	
 
@@ -287,7 +285,8 @@ PCProcedureCall::compile = (compiler, instanceContainer, className) ->
 	control.setBranchFinished()	# left is finished
 	if proc.returnType.kind != PCTType.VOID
 		res = compiler.getFreshContainer(proc.returnType.getCCSType())
-		compiler.emitInput("receive", compiler.getVariableWithName("r", null, true).getContainer(compiler), res)
+		#compiler.emitInput("receive", compiler.getVariableWithName("r", null, true).getContainer(compiler), res)
+		compiler.emitInput("rreturn", null, res)
 		res
 	else
 		null
@@ -364,12 +363,27 @@ PCStmtExpression::compile = (compiler, loopEntry) ->
 	
 
 PCSelectStmt::compile = (compiler, loopEntry) ->
-	throw new Error("Not implemented!")
+	return if @children.length == 0
+	placeholders = []
+	breaks = []
+	for i in [0...@children.length-1] by 1
+		control = compiler.emitChoice()
+		breaks.concat(@children[i].compile(compiler, loopEntry))
+		placeholders.push(compiler.emitProcessApplicationPlaceholder())
+		control.setBranchFinished()
+	breaks.concat(@children[@children.length-1].compile(compiler, loopEntry))
+	placeholders.push(compiler.emitProcessApplicationPlaceholder())
+	compiler.emitMergeOfProcessFramesOfPlaceholders(placeholders)
+	debugger
+	breaks
 	
 	
 
 PCCase::compile = (compiler, loopEntry) ->
-	throw new Error("Not implemented!")
+	cond = @getCondition()
+	if cond
+		cond.compile(compiler)
+	@getExecution().compile(compiler, loopEntry)
 	
 	
 
@@ -459,10 +473,8 @@ PCForInit::compile = (compiler) ->
 PCReturnStmt::compile = (compiler, loopEntry) ->
 	if @children.length == 1
 		res = @children[0].compile(compiler)
-		retChan = compiler.getVariableWithName("r", null, true).getContainer(compiler)
-		compiler.emitOutput("prepareSend", retChan, res)
-		compiler.emitInput("send", retChan, null)
-	compiler.emitExit()
+		compiler.emitOutput("return", null, res)
+	compiler.getCurrentProcedure().emitExit(compiler)
 	[]
 	
 	
@@ -487,7 +499,7 @@ PCPrimitiveStmt::compile = (compiler, loopEntry) ->
 			control = compiler.emitChoice()
 			compiler.emitCondition(new PCCUnaryContainer("!", b))
 			c = cond.getContainer(compiler)
-			compiler.emitOutput("wait_add", c, null)
+			compiler.emitOutput("add", c, null)
 			g = compiler.getVariableWithName("guard", null, true).getContainer(compiler)
 			compiler.emitOutput("unlock", g, null)
 			compiler.emitOutput("wait", c, null)

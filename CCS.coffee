@@ -6,6 +6,16 @@ CCSUIChannel = "\u03c8"			# psi
 ObjID = 1
 _DEBUG = []
 
+DSteps = []
+DS = ->
+	console.log ccs.system.toString()
+	DSteps = ccs.getPossibleSteps()
+	console.log("\"#{i}\": #{s.toString()}") for s, i in DSteps
+	null
+DP = (i) -> 
+	ccs.performStep(DSteps[i])
+	DS()
+
 CCSTypeUnknown = 0
 CCSTypeChannel = 1
 CCSTypeValue = 2
@@ -20,13 +30,14 @@ CCSGetMostGeneralType = (t1, t2) ->
 class CCS
 	constructor: (@processDefinitions, @system) ->
 		@system.setCCS @
-		(pd.setCCS @; pd.getArgTypes()) for pd in @processDefinitions
+		(pd.setCCS @; pd.computeArgTypes()) for pd in @processDefinitions
 	
 	getProcessDefinition: (name, argCount) -> 
 		result = null
 		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pd in @processDefinitions
 		return result
 	getPossibleSteps: (env) -> @system.getPossibleSteps(env)
+	performStep: (step) -> @system = step.perform()
 	
 	toString: -> "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
 
@@ -38,7 +49,7 @@ class CCSProcessDefinition
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (ccs) -> @process.setCCS ccs
-	getArgTypes: ->
+	computeArgTypes: ->
 		return null if !@params
 		@types = ((								# ToDo: Repeat until types won't change anymore
 			@process.getTypeOfIdentifier x, CCSTypeUnknown
@@ -63,14 +74,15 @@ class CCSProcess
 	setLeft: (left) -> @subprocesses[0] = left
 	setRight: (right) -> @subprocesses[1] = right
 	
-	replaceIdentifierWithValue: (identifier, value) -> 
-		p.replaceIdentifierWithValue(identifier, value) for p in @subprocesses
-	replaceIdentifier: (old, newID) ->
-		p.replaceIdentifier(old, newID) for p in @subprocesses
+	replaceVariable: (varName, exp) -> 
+		p.replaceVariable(varName, exp) for p in @subprocesses
+	replaceVariableWithValue: (varName, val) -> 
+		@replaceVariable varName, new CCSConstantExpression(val)
+	replaceChannelName: (old, newID) ->
+		p.replaceChannelName(old, newID) for p in @subprocesses
 	getTypeOfIdentifier: (identifier, type) ->
-		(
+		for t in (p.getTypeOfIdentifier(identifier, type) for p in @subprocesses)
 			type = CCSGetMostGeneralType(type, t)
-		) for t in (p.getTypeOfIdentifier(identifier, type) for p in @subprocesses)
 		type
 	getApplicapleRules: -> []
 	getPossibleSteps: () -> (rule.getPossibleSteps(this) for rule in @getApplicapleRules()).concatChildren()
@@ -113,29 +125,29 @@ class CCSProcessApplication extends CCSProcess
 		return @process if @process
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		@process = pd.process.copy()
-		((
-			id = pd.params[i]
-			if pd.types[i] == CCSTypeChannel
-				@process.replaceIdentifier(id, @valuesToPass[i].variableName)
-			else
-				@process.replaceIdentifierWithValue(id, @valuesToPass[i].evaluate())	# NoNoNo! Do not evaluate!!!!????			
-		) for i in [0..pd.params.length-1] ) if pd.params
+		if pd.params
+			for i in [0..pd.params.length-1]
+				id = pd.params[i]
+				if pd.types[i] == CCSTypeChannel
+					@process.replaceChannelName(id, @valuesToPass[i].variableName)
+				else
+					@process.replaceVariable(id, @valuesToPass[i])	
 		@process
 	getPrecedence: -> 12
 	getTypeOfIdentifier: (identifier, type) ->
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
-		((
-			type = CCSGetMostGeneralType(type, @valuesToPass[i].getType(identifier))	# ??? getType?
-			type = CCSGetMostGeneralType(type, pd.types[i])
-		) for i in [0..pd.params.length-1] ) if pd.params
+		if pd.params
+			for i in [0..pd.params.length-1]
+				type = @valuesToPass[i].getTypeOfIdentifier(identifier, type)
+				type = CCSGetMostGeneralType(type, pd.types[i])
 		type
 	getApplicapleRules: -> [CCSRecRule]
 	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
 	getExits: -> if @process then @process.getExits() else []
-	replaceIdentifierWithValue: (identifier, value) -> 
-		@valuesToPass = (e.replaceIdentifierWithValue(identifier, value) for e in @valuesToPass)
-	replaceIdentifier: (old, newID) -> 
-		e.replaceIdentifier(old, newID) for e in @valuesToPass
+	replaceVariable: (varName, exp) -> 
+		@valuesToPass = (e.replaceVariable(varName, exp) for e in @valuesToPass)
+	replaceChannelName: (old, newID) -> 
+		e.replaceChannelName(old, newID) for e in @valuesToPass
 	###getProxy: -> 	# ToDo: cache result
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		new ProcessApplicationProxy(@, pd.process.copy())###
@@ -156,17 +168,19 @@ class CCSPrefix extends CCSProcess
 	getApplicapleRules: -> [CCSPrefixRule, CCSOutputRule, CCSInputRule]
 	getProcess: -> @subprocesses[0]
 	
-	replaceIdentifierWithValue: (identifier, value) ->
-		@action.replaceIdentifierWithValue(identifier, value)
-		super identifier, value if @action.replaceIdentifierWithValue(identifier, value)
-	replaceIdentifier: (old, newID) ->
-		@action.replaceIdentifier(old, newID)
-		super old, newID if @action.replaceIdentifier(old, newID)
+	replaceVariable: (varName, exp) ->
+		super varName, exp if @action.replaceVariable(varName, exp)
+	replaceChannelName: (old, newID) ->
+		super old, newID if @action.replaceChannelName(old, newID)
 	getPrefixes: -> return [@]
 	getTypeOfIdentifier: (identifier, type) ->
-		type = CCSGetMostGeneralType(type, @action.getTypeOfIdentifier(identifier, type))
-		return type if @action.isInputAction() and @action.variable == "identifier"	#???
-		super identifier, type
+		type = @action.getTypeOfIdentifier(identifier, type)
+		if @action.isInputAction() and @action.variable == identifier	# new var starts with type "value"
+			super identifier, CCSTypeValue
+			type
+		else
+			super identifier, type
+		
 	toString: -> "#{@action.toString()}.#{@stringForSubprocess @getProcess()}"
 	copy: -> (new CCSPrefix(@action.copy(), @getProcess().copy()))._setCCS(@ccs)
 
@@ -178,6 +192,12 @@ class CCSCondition extends CCSProcess
 	getPrecedence: -> 12
 	getApplicapleRules: -> [CCSCondRule]
 	getProcess: -> @subprocesses[0]
+	getTypeOfIdentifier: (identifier, type) ->
+		type = @expression.getTypeOfIdentifier(identifier, type)
+		super identifier, type
+	replaceVariable: (varName, exp) ->
+		@expression = @expression.replaceVariable(varName, exp)
+		super varName, exp
 	
 	toString: -> "when (#{@expression.toString()}) #{@stringForSubprocess @getProcess()}"
 	copy: -> (new CCSCondition(@expression.copy(), @getProcess().copy()))._setCCS(@ccs)
@@ -238,31 +258,32 @@ class CCSRestriction extends CCSProcess
 # - Channel
 
 class CCSChannel
-	constructor: (@name, @expression) ->	# string x Expression
+	constructor: (@name, @expression=null) ->	# string x Expression
 	
 	isEqual: (channel) ->
 		return false if channel.name != @name
-		return true if channel.expression == null and @expression == null
-		return false if channel.expression == null or @expression == null
+		return true if not channel.expression and not @expression
+		return false if not channel.expression or not @expression
 		return channel.expression.evaluate() == @expression.evaluate()
-	replaceIdentifierWithValue: (identifier, value) ->
-		@expression = @expression.replaceIdentifierWithValue(identifier, value) if @expression
+	replaceVariable: (varName, exp) ->
+		@expression = @expression.replaceVariable(varName, exp) if @expression
 		null
-	replaceIdentifier: (old, newID) ->
+	replaceChannelName: (old, newID) ->
 		@name = newID if @name == old
 		null
 	getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, CCSTypeChannel) if @name == identifier
-		type = CCSGetMostGeneralType(type, @expression.getType()) if @expression
+		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
 		type
 	toString: ->
 		result = "" + @name
 		if @expression
 				if @expression.isEvaluatable()
-					result += "(#{@expression.evaluate();})"
+					result += "(#{@expression.evaluate()})"
 				else
-					result += "(#{@expression.toString();})"
+					result += "(#{@expression.toString()})"
 		result
+	copy: -> new CCSChannel(@name, @expression?.copy())
 
 ###
 class CCSInternalChannel extends CCSChannel
@@ -271,8 +292,8 @@ class CCSInternalChannel extends CCSChannel
 			throw new Error("Only internal channel names are allowed!")
 		super name, null
 	isEqual: (channel) -> channel.name == @name and channel.expression == null
-	replaceIdentifierWithValue: (identifier, value) -> null
-	replaceIdentifier: (old, newID) -> null
+	replaceVariable: (varName, exp) -> null
+	replaceChannelName: (old, newID) -> null
 	getTypeOfIdentifier: (identifier, type) -> type
 	toString: -> @name
 	###
@@ -296,18 +317,20 @@ class CCSAction
 	
 	
 	toString: -> @channel.toString()
+	transferDescription: -> @channel.toString()
 	isSyncableWithAction: (action) -> false
-	replaceIdentifierWithValue: (identifier, value) ->		# returns true if prefix should continue replacing the variable in its subprocess
-		@channel.replaceIdentifierWithValue(identifier, value)
+	replaceVariable: (varName, exp) ->		# returns true if prefix should continue replacing the variable in its subprocess
+		@channel.replaceVariable(varName, exp)
 		true
-	replaceIdentifier: (old, newID) -> @channel.replaceIdentifier old, newID
+	replaceChannelName: (old, newID) -> @channel.replaceChannelName old, newID
 	getTypeOfIdentifier: (identifier, type) -> @channel.getTypeOfIdentifier(identifier, type)
 
 
 # - Simple Action
 class CCSSimpleAction extends CCSAction
 	isSimpleAction: -> true
-	copy: -> new CCSSimpleAction(@channel)
+	supportsValuePassing: -> false
+	copy: -> new CCSSimpleAction(@channel.copy())
 
 CCSInternalActionCreate = (name) -> 
 	if name != CCSInternalChannel and name != CCSExitChannel
@@ -324,18 +347,13 @@ class CCSInput extends CCSAction
 	isInputAction: -> true
 	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and action.supportsValuePassing() == this.supportsValuePassing()
-	replaceIdentifierWithValue: (identifier, value) -> 
-		super identifier, value
-		@variable != identifier	# stop replacing if identifier is equal to its own variable name
-	replaceIdentifier: (old, newID) -> 
-		super old, newID
-		@variable != old
-	getTypeOfIdentifier: (identifier, type) -> 
-		type = CCSGetMostGeneralType(type, CCSTypeValue) if @variable == identifier
-		super identifier, type
+	replaceVariable: (varName, exp) -> 
+		super varName, exp
+		@variable != varName	# stop replacing if identifier is equal to its own variable name
 	
 	toString: -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
-	copy: -> new CCSInput(@channel, @variable, @range)
+	transferDescription: -> "#{super}#{ if @supportsValuePassing() then ": " + @incommingValue else ""}"
+	copy: -> new CCSInput(@channel.copy(), @variable, @range)
 
 
 # - Match
@@ -345,20 +363,17 @@ class CCSMatch extends CCSAction
 	isMatchAction: -> true
 	supportsValuePassing: -> true
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and action.supportsValuePassing() and action.expression.evaluate() == this.expression.evaluate()
-	replaceIdentifierWithValue: (identifier, value) -> 
-		super identifier, value
-		@expression = @expression.replaceIdentifierWithValue(identifier, value)
-		true
-	replaceIdentifier: (old, newID) -> 
-		super old, newID
-		@expression.replaceIdentifier(old, newID)
+	replaceVariable: (varName, exp) -> 
+		super varName, exp
+		@expression = @expression.replaceVariable(varName, exp)
 		true
 	getTypeOfIdentifier: (identifier, type) -> 
-		type = CCSGetMostGeneralType(type, @expression.getType(identifier)) if @expression
+		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
 		super identifier, type
 	
 	toString: -> "#{super}?=#{if @expression then @expression.toString() else ""}"
-	copy: -> new CCSMatch(@channel, @expression?.copy())
+	transferDescription: -> throw new Error("Currently unsupported action")
+	copy: -> new CCSMatch(@channel.copy(), @expression?.copy())
 	
 
 # - Output
@@ -372,20 +387,17 @@ class CCSOutput extends CCSAction
 			action.isSyncableWithAction(this)
 		else
 			false
-	replaceIdentifierWithValue: (identifier, value) -> 
-		super identifier, value
-		@expression = @expression.replaceIdentifierWithValue(identifier, value) if @expression
-		true
-	replaceIdentifier: (old, newID) -> 
-		super old, newID
-		@expression?.replaceIdentifier(old, newID)
+	replaceVariable: (varName, exp) -> 
+		super varName, exp
+		@expression = @expression.replaceVariable(varName, exp) if @expression
 		true
 	getTypeOfIdentifier: (identifier, type) -> 
-		type = CCSGetMostGeneralType(type, @expression.getType(identifier)) if @expression
+		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
 		super identifier, type
 			
 	toString: -> "#{super}!#{if @expression then @expression.toString() else ""}"
-	copy: -> new CCSOutput(@channel, (@expression?.copy()))
+	transferDescription: -> "#{super}#{if @expression then ": " + @expression.evaluate() else ""}"
+	copy: -> new CCSOutput(@channel.copy(), (@expression?.copy()))
 	
 
 # -- Expression
@@ -394,21 +406,22 @@ class CCSExpression
 	
 	getLeft: -> @subExps[0]
 	getRight: -> @subExps[1]
-	replaceIdentifierWithValue: (identifier, value) -> 
+	replaceVariable: (varName, exp) -> 
 		@subExps = ((
-			exp.replaceIdentifierWithValue(identifier, value)
-		) for exp in @subExps)
+			e.replaceVariable(varName, exp)
+		) for e in @subExps)
 		@
-	replaceIdentifier: (old, newID) -> 
-		exp.replaceIdentifier(old, newID) for exp in @subExps
+	replaceChannelName: (old, newID) -> null
 	
 	usesIdentifier: (identifier) ->
+		@_childrenUseIdentifier identifier
+	_childrenUseIdentifier: (identifier) ->
 		result = false;
-		(result || e.usesIdentifier()) for e in @subExps	# Returns false if root is the requested identifier: then its type is unknown
+		(result || e.usesIdentifier()) for e in @subExps
 		result
-	getType: (identifier) ->
-		CCSTypeValue if @usesIdentifier(identifier)
-		CCSTypeUnknown
+	getTypeOfIdentifier: (identifier, type) ->
+		type = CCSGetMostGeneralType(type, CCSTypeValue) if @_childrenUseIdentifier(identifier)
+		type
 	evaluate: -> throw new Error("Abstract method!")
 	isEvaluatable: -> false
 		
@@ -425,14 +438,19 @@ class CCSExpression
 
 # - ConstantExpression
 class CCSConstantExpression extends CCSExpression
-	constructor: (@value) -> super()
+	constructor: (@value) -> 
+		super()
 	
 	getPrecedence: -> 18
-	evaluate: -> 
-		if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
+	evaluate: -> CCSConstantExpression.valueToString @value
+		#if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
 	isEvaluatable: -> true
 	toString: -> if typeof @value == "string" then '"'+@value+'"' else "" + @value
 	copy: -> new CCSConstantExpression(@value)
+
+CCSConstantExpression.valueToString = (value) ->
+	value = (if value == true then "1" else "0") if typeof value == "boolean"
+	value = "" + value
 	
 
 # - VariableExpression
@@ -441,9 +459,10 @@ class CCSVariableExpression extends CCSExpression
 		super()
 	
 	getPrecedence: -> 18
-	replaceIdentifierWithValue: (identifier, value) -> 
-		if identifier == @variableName then new CCSConstantExpression(value) else @
-	replaceIdentifier: (old, newID) ->
+	usesIdentifier: (identifier) -> identifier == @variableName
+	replaceVariable: (varName, exp) -> 
+		if varName == @variableName then exp else @
+	replaceChannelName: (old, newID) ->
 		@variableName = newID if @variableName == old
 	evaluate: -> throw new Error('Unbound identifier!')
 	isEvaluatable: -> false
@@ -460,7 +479,7 @@ class CCSAdditiveExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
-		if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!")
+		"" + (if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!"))
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
@@ -503,9 +522,10 @@ class CCSRelationalExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
-		if @op == "<" then l < r else if @op == "<=" then l <= r
+		res = if @op == "<" then l < r else if @op == "<=" then l <= r
 		else if @op == ">" then l > r else if @op == ">=" then l >= r
 		else throw new Error("Invalid operator!")
+		CCSConstantExpression.valueToString res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
@@ -518,10 +538,11 @@ class CCSEqualityExpression extends CCSExpression
 	
 	getPrecedence: -> 3
 	evaluate: ->
-		l = parseInt(@getLeft().evaluate())
-		r = parseInt(@getRight().evaluate())
-		if @op == "==" then l == r else if @op == "!=" then l != r 
+		l = @getLeft().evaluate()
+		r = @getRight().evaluate()
+		res = if @op == "==" then l == r else if @op == "!=" then l != r 
 		else throw new Error("Invalid operator!")
+		CCSConstantExpression.valueToString res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
@@ -533,11 +554,11 @@ class CCSEqualityExpression extends CCSExpression
 	
 ActionSets =
 	isActionInK: (action) -> ActionSets.isActionInCom(action) and action.isSimpleAction()
-	isActionInCom: (action) -> ActionSets.isActionInAct(action) and action.channel != CCSInternalChannel
-	isActionInAct: (action) -> ActionSets.isActionInActPlus(action) and action.channel != CCSExitChannel
+	isActionInCom: (action) -> ActionSets.isActionInAct(action) and action.channel.name != CCSInternalChannel
+	isActionInAct: (action) -> ActionSets.isActionInActPlus(action) and action.channel.name != CCSExitChannel
 	isActionInActPlus: (action) -> !action.supportsValuePassing()
-	isActionInComVP: (action) -> ActionSets.isActionInActVP(action) and action.channel != CCSInternalChannel
-	isActionInActVP: (action) -> action.channel != CCSExitChannel
+	isActionInComVP: (action) -> ActionSets.isActionInActVP(action) and action.channel.name != CCSInternalChannel
+	isActionInActVP: (action) -> action.channel.name != CCSExitChannel
 	isActionInActVPPlus: (action) -> true	# We don't have more
 	
 Array::filterKSteps = ->
@@ -607,4 +628,12 @@ Array.prototype.joinChildren = function(separator) {
 }`
 Array::assertNonNull = ->
 	(throw new Error("Null element found!") if typeof e == "undefined" or e == null) for e in @
+	
+
+CCSProcess::findApp = (name) ->
+	(c.findApp name for c in @subprocesses).joinChildren()
+CCSProcessApplication::findApp = (name) ->
+	debugger
+	if name == @processName then [@] else []
+CCSPrefix::findApp = -> []
 	

@@ -10,6 +10,7 @@ class PCCCompiler
 		@stack = null	
 		@groupElements = []	
 		@controller = new PCCProgramController(@program)
+		@systemProcesses = []
 	
 	compile: -> 
 		@program.collectClasses(@controller)
@@ -18,17 +19,32 @@ class PCCCompiler
 		global = new PCCGlobalStackElement(@controller.getGlobal())
 		@stack = new PCCCompilerStack(global)
 		usedTypes = @controller.getUsedTypes()
+		@compileReturn()
 		@compileMutex()
 		@compileWaitRoom()
 		@compileArrayManager()
 		@compileArrayWithCapacity(n) for n of usedTypes.arrays
+		@compileChannelManager()
+		@compileChannelWithCapacity(n) for n of usedTypes.channels
 		@compileAgentTools()
-		p.emitAgentConstructor(@) for p in @controller.agents
+		for p in @controller.getAgents()
+			p.emitAgentConstructor(@)
+			@beginSystemProcess()
+			@emitProcessApplication(p.getAgentProcessName(), [])
+			@endSystemProcess()
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@program.compile(@)
-		new CCS(@controller.root.collectPDefs(), new CCSStop())
+		new CCS(@controller.root.collectPDefs(), @_getSystem())
 		# ToDo: return CCS tree
 	
+	_getSystem: ->
+		@beginSystemProcess()
+		@emitProcessApplication("MainAgent", [])
+		@endSystemProcess()
+		system = @systemProcesses[0]
+		for i in [1...@systemProcesses.length] by 1
+			system = new CCSParallel(system, @systemProcesses[i])
+		new CCSRestriction(system, ["*", "println"])
 	
 	###
 		Delegates must implement the following methods:
@@ -54,6 +70,9 @@ class PCCCompiler
 	getCurrentClass: ->
 		for e in @groupElements
 			return e.classInfo if (e instanceof PCCClassStackElement)
+	getCurrentProcedure: ->
+		for e in @groupElements
+			return e.procedure if (e instanceof PCCProcedureStackElement)
 	
 	getGlobal: -> @controller.getGlobal()
 	
@@ -66,10 +85,25 @@ class PCCCompiler
 	_getControlElement: -> @stack.getCurrentControlElement()
 	
 	_handleStackResult: (resultContainer, controlElement) ->
-		console.log "Saving results to #{controlElement.__proto__.constructor}"
 		(if result.type == PCCStackResult.TYPE_CCSPROCESS_DEFINITION
 			controlElement.compilerPushPDef(result.data)
 		) for result in resultContainer.results
+	
+	beginSystemProcess: ->
+		element = new PCCSystemProcessStackElement()
+		@groupElements.push(element)
+		@stack.pushElement(element)
+	
+	endSystemProcess: ->
+		element = @groupElements.pop()
+		throw new Error("Unexpected stack element!") if not (element instanceof PCCSystemProcessStackElement)
+		res = element.removeFromStack()
+		@systemProcesses.push(res.data)
+	
+	emitSystemProcessApplication: (processName, argumentContainers) ->
+		@beginSystemProcess()
+		@emitProcessApplication(processName, argumentContainers)
+		@endSystemProcess()
 	
 	beginProcessGroup: (groupable, variables) ->
 		frame = new PCCProcessFrame(groupable, variables)
@@ -108,7 +142,7 @@ class PCCCompiler
 		return null if placeholders.length == 0
 		frames = (p.frame for p in placeholders)
 		followup = PCCProcessFrame.createFollowupFrameForFrames(frames)
-		followup.emitCallProcessFromFrame(compiler, p.frame, p) for p in placeholders
+		followup.emitCallProcessFromFrame(@, p.frame, p) for p in placeholders
 		@addProcessGroupFrame(followup)
 		followup
 	
@@ -263,6 +297,7 @@ class PCCCompiler
 		@emitProcessApplication("Mutex", [i])
 		control.setBranchFinished()
 		@endProcessDefinition()
+		@emitSystemProcessApplication("Mutex_cons", [new PCCConstantContainer(1)])
 	
 	compileWaitRoom: ->
 		i = new PCCVariableContainer("i", PCCType.INT)
@@ -315,6 +350,7 @@ class PCCCompiler
 		@emitProcessApplication("WaitRoom", [i, new PCCConstantContainer(0)])
 		control.setBranchFinished()
 		@endProcessDefinition()
+		@emitSystemProcessApplication("WaitRoom_cons", [new PCCConstantContainer(1)])
 		
 	
 	compileArrayWithCapacity: (size) ->
@@ -354,6 +390,7 @@ class PCCCompiler
 		@emitProcessApplication("Array#{size}", args)
 		control.setBranchFinished()
 		@endProcessDefinition()
+		@emitSystemProcessApplication("Array#{size}_cons", [])
 		
 	compileArrayManager: ->
 		i = new PCCVariableContainer("next_i", PCCType.INT)
@@ -361,6 +398,66 @@ class PCCCompiler
 		@emitOutput("array_new", null, i)
 		@emitProcessApplication("ArrayManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		@endProcessDefinition()
+		@emitSystemProcessApplication("ArrayManager", [new PCCConstantContainer(1)])
+	
+	
+	compileChannelWithCapacity: (capacity) ->
+		return @compileUnbufferedChannelCons() if capacity <= 0
+		i = new PCCVariableContainer("i", PCCType.INT)
+		c = new PCCVariableContainer("c", PCCType.INT)
+		args = [i, c]
+		args.push(new PCCVariableContainer("v#{j}", PCCType.INT)) for j in [0...capacity]
+		@beginProcessDefinition("Channel#{capacity}", args)
+		args[1] = new PCCBinaryContainer(c, new PCCConstantContainer(1), "+")
+		for j in [0...capacity]
+			control = @emitChoice()
+			@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(j), "=="))
+			v = new PCCVariableContainer("v#{j}", PCCType.INT)
+			@emitInput("put", i, v)
+			@emitProcessApplication("Channel#{capacity}", args)
+			control.setBranchFinished()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">"))
+		@emitOutput("receive", i, new PCCVariableContainer("v0", PCCType.INT))
+		args.splice(2, 1)
+		args.push(new PCCConstantContainer(0))
+		args[1] = new PCCBinaryContainer(c, new PCCConstantContainer(1), "-")
+		@emitProcessApplication("Channel#{capacity}", args)
+		@endProcessDefinition()
+		
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("Channel#{capacity}_cons", [])
+		@emitInput("channel_new", null, i)
+		def = new PCCVariableContainer("d", PCCType.VOID)
+		@emitOutput("channel#{capacity}_create", null, i)
+		@emitInput("channel_setDefault", i, def)
+		control = @emitParallel()
+		@emitProcessApplication("Channel#{capacity}_cons", [])
+		control.setBranchFinished()
+		args = [i, new PCCConstantContainer(0)]
+		args.push(def) for j in [0...capacity]
+		@emitProcessApplication("Channel#{capacity}", args)
+		control.setBranchFinished()
+		@endProcessDefinition()
+		@emitSystemProcessApplication("Channel#{capacity}_cons", [])
+	
+	compileUnbufferedChannelCons: ->
+		i = new PCCVariableContainer("i", PCCType.INT)
+		@beginProcessDefinition("Channel_cons", [i])
+		@emitOutput("channel_create", null, i)
+		@emitProcessApplication("Channel_cons", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "-")])
+		@endProcessDefinition()
+		@emitSystemProcessApplication("Channel_cons", [new PCCConstantContainer(-1)])
+		
+	
+
+	compileChannelManager: ->
+		i = new PCCVariableContainer("next_i", PCCType.INT)
+		@beginProcessDefinition("ChannelManager", [i])
+		@emitOutput("channel_new", null, i)
+		@emitProcessApplication("ChannelManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
+		@endProcessDefinition()
+		@emitSystemProcessApplication("ChannelManager", [new PCCConstantContainer(1)])
+			
 	
 	
 	compileAgentTools: ->
@@ -369,6 +466,7 @@ class PCCCompiler
 		@emitOutput("agent_new", null, i)
 		@emitProcessApplication("AgentManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		@endProcessDefinition()
+		@emitSystemProcessApplication("AgentManager", [new PCCConstantContainer(1)])
 		
 		a = new PCCVariableContainer("a", PCCType.INT)
 		c = new PCCVariableContainer("c", PCCType.INT)
@@ -396,6 +494,16 @@ class PCCCompiler
 		@emitProcessApplication("JoinDistributor", [a, new PCCBinaryContainer(c, new PCCConstantContainer(1), "-")])
 		control.setBranchFinished()
 		@endProcessDefinition()
+	
+	
+	compileReturn: ->
+		@beginProcessDefinition("Return", [])
+		v = new PCCVariableContainer("v", PCCType.INT)
+		@emitInput("return", null, v)
+		@emitOutput("rreturn", null, v)
+		@emitProcessApplication("Return", [])
+		@endProcessDefinition()
+		@emitSystemProcessApplication("Return", [])
 		
 		
 		
@@ -444,23 +552,23 @@ class PCCConstructor
 	constructor: (@compiler, @delegate, @context) ->
 	emit: ->
 		envName = @delegate.constructorGetName(@, @context)
-		variables = @delegate.constructorGetArguments(@, compiler, @context)
-		compiler.beginProcessGroup(new PCCGroupable(envName+"_cons"), variables)
-		entry = compiler.getProcessFrame()
-		variables = (compiler.getVariableWithName(v.getName(), null, v.isInternal) for v in variables)	# local variables
-		envArgCount = @delegate.constructorProtectEnvironmentArguments(@, compiler, variables, @context)
+		variables = @delegate.constructorGetArguments(@, @compiler, @context)
+		@compiler.beginProcessGroup(new PCCGroupable(envName+"_cons"), variables)
+		entry = @compiler.getProcessFrame()
+		variables = (@compiler.getVariableWithName(v.getName(), null, v.isInternal) for v in variables)	# local variables
+		envArgCount = @delegate.constructorProtectEnvironmentArguments(@, @compiler, variables, @context)
 		vars = []
-		vars.unshift(compiler.unprotectContainer()) for i in [0...envArgCount]
+		vars.unshift(@compiler.unprotectContainer()) for i in [0...envArgCount]
 		recursion = @delegate.constructorShouldCallRecursively?(@, @context)
 		control = null
-		control = compiler.emitParallel() if recursion
-		compiler.emitProcessApplication(envName, vars)
+		control = @compiler.emitParallel() if recursion
+		@compiler.emitProcessApplication(envName, vars)
 		if recursion
 			control.setBranchFinished()
-			@delegate.constructorUpdateVariablesForRecursiveCall(@, compiler, entry, variables, @context)
-			entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
+			@delegate.constructorUpdateVariablesForRecursiveCall(@, @compiler, entry, variables, @context)
+			entry.emitCallProcessFromFrame(@compiler, @compiler.getProcessFrame())
 			control.setBranchFinished()
-		compiler.endProcessGroup()
+		@compiler.endProcessGroup()
 PCCConstructor.emitConstructor = (compiler, delegate, context) -> (new PCCConstructor(compiler, delegate, context)).emit()
 	
 

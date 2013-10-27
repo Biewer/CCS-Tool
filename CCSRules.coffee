@@ -45,7 +45,7 @@ CCSInputRule =
 		if step.process.action.incommingValue == undefined
 			throw new Error("Input action's incomming value was not set!")
 		result = step.process.getProcess()
-		result.replaceIdentifierWithValue(step.process.action.variable, step.process.action.incommingValue)
+		result.replaceVariableWithValue(step.process.action.variable, step.process.action.incommingValue)
 		result
 
 # - MatchRule
@@ -73,18 +73,28 @@ CCSChoiceRRule =
 # - ParLRule
 CCSParLRule = 
 	getPossibleSteps: (parallel) ->
-		i = 0
-		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getLeft().getPossibleSteps().filterActVPSteps()
+		if not parallel._CCSParLRule
+			i = 0
+			parallel._CCSParLRule = (new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getLeft().getPossibleSteps().filterActVPSteps())
+		parallel._CCSParLRule
 	performStep: (step) -> 
+		step.process._CCSSyncRule = undefined
+		step.process._CCSParRRule = undefined
+		step.process._CCSParLRule = undefined
 		step.process.setLeft(step.substeps[0].perform())
 		step.process
 
 # - ParRRule
 CCSParRRule = 
 	getPossibleSteps: (parallel) ->
-		i = 0
-		new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getRight().getPossibleSteps().filterActVPSteps()
+		if not parallel._CCSParRRule
+			i = 0
+			parallel._CCSParRRule = (new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getRight().getPossibleSteps().filterActVPSteps())
+		parallel._CCSParRRule
 	performStep: (step) -> 
+		step.process._CCSSyncRule = undefined
+		step.process._CCSParRRule = undefined
+		step.process._CCSParLRule = undefined
 		step.process.setRight(step.substeps[0].perform())
 		step.process
 
@@ -96,26 +106,31 @@ CCSSyncRule =
 		return result
 
 	getPossibleSteps: (parallel) ->
-		left = parallel.getLeft().getPossibleSteps()
-		right = parallel.getRight().getPossibleSteps()
-		result = []
-		c = 0
-		(
-			_right = CCSSyncRule.filterStepsSyncableWithStep(l, right)
-			(result.push(new CCSStep(c++, parallel, new CCSInternalActionCreate(CCSInternalChannel), @, "[#{l.toString()}, #{r.toString()}]", l, r))) for r in _right
-		) for l in left
-		return result
+		if not parallel._CCSSyncRule
+			left = parallel.getLeft().getPossibleSteps()
+			right = parallel.getRight().getPossibleSteps()
+			result = []
+			c = 0
+			(
+				_right = CCSSyncRule.filterStepsSyncableWithStep(l, right)
+				(result.push(new CCSStep(c++, parallel, new CCSInternalActionCreate(CCSInternalChannel), @, "#{if l.action.isOutputAction() then l.action.transferDescription() else r.action.transferDescription()}", l, r))) for r in _right
+			) for l in left
+			parallel._CCSSyncRule = result
+		parallel._CCSSyncRule
 	performStep: (step) -> 
+		step.process._CCSSyncRule = undefined
+		step.process._CCSParRRule = undefined
+		step.process._CCSParLRule = undefined
 		inp = null
 		out = null
-		prefix = step.substeps[0].getLeaveProcesses()[0]
+		prefix = step.substeps[0].getLeafProcesses()[0]
 		if prefix.action.supportsValuePassing()
 			if prefix.action.isInputAction()
 				inp = prefix
-				out = step.substeps[1].getLeaveProcesses()[0]
+				out = step.substeps[1].getLeafProcesses()[0]
 			else
 				out = prefix
-				inp = step.substeps[1].getLeaveProcesses()[0]
+				inp = step.substeps[1].getLeafProcesses()[0]
 			inp.action.incommingValue = out.action.expression.evaluate()
 		step.process.setLeft(step.substeps[0].perform())
 		step.process.setRight(step.substeps[1].perform())
@@ -142,8 +157,9 @@ CCSResRule =
 # - CondRule
 CCSCondRule =
 	getPossibleSteps: (condition) ->
-		if condition.expression.evaluate() 
-		then condition.process.getPossibleSteps().filterActVPPlusSteps() 
+		debugger if CCSCondRule.DEBUGGER
+		if condition.expression.evaluate() == "1"
+		then condition.getProcess().getPossibleSteps().filterActVPPlusSteps() 
 		else []
 	performStep: (step) -> step.substeps[0].perform()
 
@@ -151,7 +167,7 @@ CCSCondRule =
 # - ExitRule
 CCSExitRule = 
 	getPossibleSteps: (exit) -> [new CCSStep(0, exit, new CCSInternalActionCreate(CCSExitChannel), @)]
-	performStep: (step) -> new Stop()
+	performStep: (step) -> new CCSStop()
 
 
 # - SyncExitRule
@@ -163,7 +179,7 @@ CCSSyncExitRule =
 		c = 0
 		result = []
 		(
-			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, "[#{l.toString()}, #{r.toString()}]", l, r))) for r in right
+			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, "#{if l.action.isOutput() then l.action.transferDescription() else r.action.transferDescription()}", l, r))) for r in right
 		) for l in left
 		return result
 	performStep: (step) -> SyncRule.performStep step
@@ -186,7 +202,7 @@ CCSSeq2Rule =
 		rhos = sequence.getLeft().getPossibleSteps().filter(filter)
 		result = []
 		c = 0
-		(result.push(new CCSStep(c++, sequence, new CCSInternalActionCreate(CCSInternalChannel), @, "[#{CCSExitChannel}]", rho))) for rho in rhos
+		(result.push(new CCSStep(c++, sequence, new CCSInternalActionCreate(CCSInternalChannel), @, "#{CCSExitChannel}", rho))) for rho in rhos
 		return result
 	performStep: (step) -> step.process.getRight()
 

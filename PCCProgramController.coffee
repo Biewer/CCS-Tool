@@ -53,12 +53,13 @@ class PCCClass extends PCClass
 		return if not hasVariables
 		@emitEnvironment(compiler)
 		PCCConstructor.emitConstructor(compiler, @)
+		compiler.emitSystemProcessApplication(@getProcessName(), [new PCCConstantContainer(1)])
 		
 	constructorGetName: -> @getEnvProcessName()
 	constructorGetArguments: -> [new PCCVariableInfo(null, "next_i", @type, true)]
 	constructorProtectEnvironmentArguments: (cons, compiler, variables) ->
 		instance = variables[0]
-		compiler.emitOutput("env_class_#{@getName()}_create", null, instance.getContainer(compiler))
+		compiler.emitOutput("class_#{@getName()}_create", null, instance.getContainer(compiler))
 		compiler.protectContainer(instance.getContainer(compiler))
 		res = 1
 		for n,v of @variables
@@ -85,6 +86,7 @@ class PCCClass extends PCClass
 class PCCProcedure extends PCProcedure
 	getProcessName: -> "Proc#{@getComposedLabel()}"
 	getAgentStarterChannel: -> "start#{@getComposedLabel()}"
+	getAgentProcessName: -> "Agent#{@getComposedLabel()}"
 	getVariableClass: -> PCCLocalVariable
 	getAllArgumentContainers: (compiler, explicitArgumentContainers, instanceContainer) ->
 		argumentContainers = explicitArgumentContainers[..]
@@ -102,14 +104,14 @@ class PCCProcedure extends PCProcedure
 		res++ if @isClassProcedure()
 		res
 	emitAgentConstructor: (compiler) ->
-		definitionName = "Agent#{@getComposedLabel()}"
+		definitionName = @getAgentProcessName()
 		compiler.beginProcessDefinition(definitionName, [])
 		i = new PCCVariableContainer("i", PCCType.INT)
 		compiler.emitInput("agent_new", null, i)
 		compiler.emitOutput(@getAgentStarterChannel(), null, i)
 		args = []
 		for j in [0...@getImplicitAndExplicitArgumentCount()]
-			a = new PCCConstantContainer("a#{j}", PCCType.VOID)		# Type is unimportant here
+			a = new PCCVariableContainer("a#{j}", PCCType.VOID)		# Type is unimportant here
 			compiler.emitInput("start_set_arg", i, a)
 			args.push(a)
 		control1 = compiler.emitParallel()
@@ -127,6 +129,11 @@ class PCCProcedure extends PCProcedure
 		control2.setBranchFinished()
 		control1.setBranchFinished()
 		compiler.endProcessDefinition()
+	emitExit : (compiler) ->
+		if @isMonitorProcedure()
+			guard = compiler.getVariableWithName("guard", null, true)
+			compiler.emitOutput("unlock", guard.getContainer(compiler))
+		compiler.emitExit()
 			
 		
 		
@@ -150,6 +157,14 @@ class PCCType
 	getSubtype: ->
 		throw new Error("Cannot get subtype for non-array type!") if !@isArray()
 		@_type._type
+	getDefaultContainer: -> 
+		return new PCCConstantContainer(0) if @isArray() or @isClass()
+		new PCCConstantContainer(switch @_type
+			when 0 then false
+			when 1 then 0
+			when 2 then ""
+			else throw new Error("Void does not have a default value")
+		)
 
 PCCType.VOID = new PCCType(-1)
 PCCType.BOOL = new PCCType(0)
@@ -175,20 +190,31 @@ PCTType::getCCSType = ->
 		else PCCType.VOID
 
 PCTArrayType::getCCSType = -> new PCCType(@elementsType.getCCSType())
-PCTChannelType::getCCSType = -> new PCCType(@chanelledType.getCCSType())
+PCTChannelType::getCCSType = -> new PCCType(@channelledType.getCCSType())
 PCTProcedureType::getCCSType = -> @returnType.getCCSType()
 PCTProcedureType::getCCSArgumentTypes = -> t.getCCSType() for t in @argumentTypes
 
+###
 PCTArrayType::fulfillAssignment = (compiler, container) ->
 	result = compiler.getFreshContainer(container.ccsType)
 	compiler.emitInput("array_copy", container, result)
 	result
-PCTArrayType::createDefaultContainer = (compiler) ->
+###
+PCTArrayType::createContainer = (compiler, containers=[]) ->
 	result = compiler.getFreshContainer(@getCCSType())
 	compiler.emitInput("array#{@capacity}_create", null, result)
+	compiler.emitOutput("array_setDefault", result, @elementsType.getCCSType().getDefaultContainer())
+	if @elementsType.requiresCustomDefaultContainer()
+		for i in [containers.length...@capacity] by 1
+			containers.push(@elementsType.createContainer(compiler))
+	for c, i in containers
+		compiler.emitOutput("array_access", result, new PCCConstantContainer(i))
+		compiler.emitOutput("array_set", result, c)
 	result
-PCTType::fulfillAssignment = (compiler, container) -> container
-PCTType::createDefaultContainer = (compiler) ->
+PCTType::requiresCustomDefaultContainer = -> 
+	@kind != PCTType.INT and @kind != PCTType.BOOL and @kind != PCTType.STRING
+PCTType::createContainer = (compiler, container) ->
+	return container if container
 	throw new Error("No default value for agents available") if @kind == PCTType.AGENT
 	throw new Error("No default value for void available") if @kind == PCTType.VOID
 	if @kind == PCTType.MUTEX
@@ -199,12 +225,17 @@ PCTType::createDefaultContainer = (compiler) ->
 		new PCCConstantContainer("")
 	else
 		new PCCConstantContainer(0)
-PCTChannelType::createDefaultContainer = (compiler) ->
+PCTChannelType::createContainer = (compiler, container) ->
+	return container if container
 	res = compiler.getFreshContainer(@getCCSType())
-	channel = "channel#{if @capacity != PCChannelType.CAPACITY_UNKNOWN then @capacity else ""}_create"
+	buffered = @capacity != PCChannelType.CAPACITY_UNKNOWN and @capacity != 0
+	channel = "channel#{if buffered then @capacity else ""}_create"
 	compiler.emitInput(channel, null, res)
+	if buffered
+		compiler.emitOutput("channel_setDefault", res, @channelledType.getCCSType().getDefaultContainer())
 	res
-PCTClassType::createDefaultContainer = (compiler) ->
+PCTClassType::createContainer = (compiler, container) ->
+	return container if container
 	result = compiler.getFreshContainer(PCCType.INT)
 	compiler.emitInput("class_#{@identifier}_create", null, result)
 	result
@@ -226,7 +257,7 @@ PCCVariableInfo.getNameForInternalVariableWithName = (name) -> "#"+name
 PCVariable::getSuggestedContainerName = -> @getName() + "L"
 PCVariable::getCCSType = -> @type.getCCSType()
 PCVariable::compileDefaultValue = (compiler) -> 
-	if @node then @node.compileDefaultValue(compiler) else @type.createDefaultContainer(compiler)
+	if @node then @node.compileDefaultValue(compiler) else @type.createContainer(compiler)
 PCCVariableInfo::getCCSType = -> if @type or not @isInternal then super else PCCType.INT
 	
 	
@@ -263,6 +294,7 @@ class PCCGlobalVariable extends PCCVariable
 		container = @compileDefaultValue(compiler)
 		compiler.emitProcessApplication(@getEnvProcessName(), [container])
 		compiler.endProcessGroup()
+		compiler.emitSystemProcessApplication(@getProcessName(), [])
 		
 	getProcessName: -> "Env_global_#{@getName()}_cons"
 	getEnvProcessName: -> "Env_global_#{@getName()}"
@@ -314,7 +346,7 @@ class PCCProgramController extends PCEnvironmentController
 	constructor: ->
 		super
 		@root = new PCCGlobal()
-		@agents = []
+		@agents = {}
 		@_envStack = @root
 
 	processNewClass: (node, classType) ->
@@ -331,7 +363,14 @@ class PCCProgramController extends PCEnvironmentController
 		@_processNewVariable(tnode)
 	
 	processProcedureAsAgent: (procedure) ->
-		@agents.push(procedure)
+		@agents[procedure.getName()] = procedure
+	
+	getAgents: ->
+		res = []
+		for p of @agents
+			proc = @agents[p]
+			res.push(proc) if proc instanceof PCProcedure
+		res
 	
 	getUsedTypes: ->
 		res = 
@@ -346,10 +385,14 @@ PCEnvironmentNode::getUsedTypes = (res) ->
 	c.getUsedTypes(res) for c in @children
 	null
 PCVariable::getUsedTypes = (res) ->
-	if @type.kind == PCTType.ARRAY
-		res.arrays[@type.capacity] = true
-	else if @type.kind == PCTType.CHANNEL
-		res.channels[@type.capacity] = true
+	@type.getUsedTypes(res)
+PCTType::getUsedTypes = -> null
+PCTArrayType::getUsedTypes = (res) ->
+	res.arrays[@capacity] = true
+	@elementsType.getUsedTypes(res)
+	null
+PCTChannelType::getUsedTypes = (res) ->
+	res.channels[@getApplicableCapacity()] = true
 	null
 		
 

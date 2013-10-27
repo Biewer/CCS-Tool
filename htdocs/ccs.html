@@ -18,13 +18,13 @@
 
 <link rel="stylesheet" type="text/css" media="print" href="styles/print.css" />
 <style type="text/css" media="screen">
-	@import url(screen2.css);
+	@import url(screen.css);
 </style>
 
 <script type="text/javascript">
 
 var _inputField, _errorField, _resultField;
-var _mainScript = null, _parserScript = null, _pseucoScript = null, _compilerScript = null;
+var _mainScript = null, _parserScript = null;
 
 var stepView;
 
@@ -43,8 +43,8 @@ function parse() {
 		_errorField.innerHTML = "&nbsp;";
 		console.log(ccs.getPossibleSteps().join(", "));
 		document.getElementById("ccsView").innerHTML = "";
-		stepView = new CCSStepView(ccs);
-		document.getElementById("ccsView").appendChild(stepView.getNode());
+		//stepView = new CCSStepView(ccs);
+		//document.getElementById("ccsView").appendChild(stepView.getNode());
 	} catch (e) {
 		col = (e.column) ? ", column " + e.column : ""
 		_errorField.innerText = "Line " + e.line + col + ": " + e.message;
@@ -56,12 +56,6 @@ function reloadScripts() {
 	if (_mainScript) {
 		_mainScript.parentNode.removeChild(_mainScript);
 	}
-	if (_pseucoScript) {
-		_pseucoScript.parentNode.removeChild(_pseucoScript);
-	}
-	if (_compilerScript) {
-		_compilerScript.parentNode.removeChild(_compilerScript);
-	}
 	if (_parserScript) {
 		_parserScript.parentNode.removeChild(_parserScript);
 	}
@@ -71,40 +65,12 @@ function reloadScripts() {
 	_mainScript.setAttribute("src", "CCS.js?x" + Math.ceil(Math.random()*10000));
 	document.head.appendChild(_mainScript);
 	
-	_pseucoScript = document.createElement("SCRIPT");
-	_pseucoScript.setAttribute("type", "text/javascript");
-	_pseucoScript.setAttribute("src", "PseuCo.js?x" + Math.ceil(Math.random()*10000));
-	document.head.appendChild(_pseucoScript);
-	
-	_compilerScript = document.createElement("SCRIPT");
-	_compilerScript.setAttribute("type", "text/javascript");
-	_compilerScript.setAttribute("src", "PCCompiler.js?x" + Math.ceil(Math.random()*10000));
-	document.head.appendChild(_compilerScript);
-	
 	_parserScript = document.createElement("SCRIPT");
 	_parserScript.setAttribute("type", "text/javascript");
 	_parserScript.setAttribute("src", "CCSParser.js?x" + Math.ceil(Math.random()*10000));
 	document.head.appendChild(_parserScript);
 	
-	window.setTimeout(testPseuCo, (location.host == "" ? 50 : 200));
-}
-
-
-
-function testPseuCo() {
-	try {
-		var obj = eval("__t = " + _inputField.value);
-		if (obj) {
-			//_resultField.innerText = obj.tree.toString();
-			compiler = new PCCCompiler(obj.tree);
-			ccs = compiler.compile()
-			_resultField.innerText = ccs.toString()
-		}
-	} catch (e) {
-		col = (e.column) ? ", column " + e.column : ""
-		_errorField.innerText = "Line " + e.line + col + ": " + e.message;
-		_resultField.innerText = "";
-	}
+	window.setTimeout(parse, (location.host == "" ? 50 : 200));
 }
 
 </script>
@@ -113,9 +79,21 @@ function testPseuCo() {
 
 <body onload="init();">
 <h1>Test Playground</h1>
-<p>Enter your PseuCo code here:</p>
+<p>Enter your CCS code here:</p>
 <div style="float:left; width:45%; margin-bottom:10px">
-<textarea id="inputField" style="width: 100%; height: 325px;" oninput="testPseuCo();"></textarea>
+<textarea id="inputField" style="width: 100%; height: 325px;" oninput="parse();">Train[t] := is_empty!.
+put_stone!.
+enter_pass!t.
+exit_pass!t.
+take_stone!.Train[t]
+
+Basket := is_empty?. Basket
++ put_stone?. Full
+
+Full := take_stone?. Basket
++ put_stone?. Full
+
+(Basket | Train[1] | Train[2])\{is_empty,put_stone,take_stone}</textarea>
 <p id="errorField">&nbsp;</p>
 <input type="button" name="" value="Reload Scripts!" onclick="reloadScripts();" /> <a href="http://splodge.com/imprint.html"><input type="button" name="" value="Impressum" /></a>
 </div>
@@ -125,6 +103,11 @@ function testPseuCo() {
 <p class="ccs_view">
 <span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P<sup class="ccs_badge">3</sup></span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?x</a>=<input id="test" type="text" value="0" class="ccs_input" />.<span>b?.<span>0</span></span></span></span>
 </p>
+</div>
+
+<div id="">
+<p>Console:</p>
+<textarea id="console" style="width: 100%; height: 105px;" readonly></textarea>
 </div>
 </body>
 

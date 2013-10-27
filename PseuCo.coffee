@@ -32,7 +32,7 @@ class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDec
 class PCMainAgent extends PCNode	# "mainAgent" PCStmtBlock
 	collectClasses: (env) -> null
 	collectEnvironment: (env) ->
-		env.beginMainAgent()
+		env.beginMainAgent(@)
 		@children[0].collectEnvironment(env)
 		env.endMainAgent()
 	toString: -> "mainAgent " + @children[0].toString("")
@@ -124,15 +124,16 @@ class PCVariableDeclarator extends PCNode	# Identifier and optional initializer
 	
 	toString: -> 
 		res = @name
-		res += " #{@children[0].toString()}" if @children.length > 0
+		res += " = #{@children[0].toString()}" if @children.length > 0
 		res
 
 class PCVariableInitializer extends PCNode	# array initialization >= 1 child initializers, otherwise 1 child expression
 	constructor: (@isUncompletedArray=false, children...) -> super children...
 	isArray: -> !(@children[0] instanceof PCExpression)
+	getTypeNode: -> @parent.getTypeNode()
 	toString: ->
 		if @children[0] instanceof PCExpression
-			"= #{@children[0].toString()}"
+			"#{@children[0].toString()}"
 		else
 			"{#{ (o.toString() for o in @children).join(", ") }#{ if @isUncompletedArray then "," else "" }}"
 
@@ -141,7 +142,7 @@ class PCVariableInitializer extends PCNode	# array initialization >= 1 child ini
 class PCArrayType extends PCNode	# array of type baseType
 	constructor: (baseType, @size) -> super baseType
 	
-	_getType: -> new PCTTypeType(new PCTArrayType(@children[0].getType().type, @size))
+	_getType: (env) -> new PCTTypeType(new PCTArrayType(@children[0].getType(env).type, @size))
 	toString: -> "#{@children[0]}[#{@size}]"
 
 # - Non-Array Type
@@ -293,7 +294,7 @@ class PCPostfixExpression extends PCExpression
 	constructor: (assignDestination, @operator) -> super assignDestination
 	_getType: -> new PCTType(PCType.INT)
 	getPrecedence: -> 69
-	toString: -> "#{@childToString(0)}#{@operator}"
+	toString: -> "#{@children[0].toString()}#{@operator}"
 
 # - Receive Expression
 class PCReceiveExpression extends PCExpression	# 1 child
@@ -388,13 +389,15 @@ class PCStmtExpression extends PCNode	# We need this for instanceof check
 # - Select Statement
 class PCSelectStmt extends PCNode	# children are cases
 	collectEnvironment: (env) -> null
-	toString: (indent) -> "#{indent}select {\n#{(o.toString(indent+PCIndent) for o in @children).join("\n")}#{indent}\n}"
+	toString: (indent) -> "#{indent}select {\n#{(o.toString(indent+PCIndent) for o in @children).join("\n")}\n#{indent}}"
 
 # - Case
 class PCCase extends PCNode
 	constructor: (execution, condition) -> if condition then super execution, condition else super execution
+	getCondition: -> if @children.length == 2 then @children[1] else null
+	getExecution: -> @children[0]
 	collectEnvironment: (env) -> null
-	toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0].toString()}"
+	toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0].toString(indent, true)}"
 
 # - If Statement
 class PCIfStmt extends PCNode
@@ -417,7 +420,7 @@ class PCForStmt extends PCNode		# Add PCForUpdate class?
 		children = @update.concat([@body])
 		children.unshift(@expression) if @expression
 		children.unshift(@init) if @init
-		super children
+		super children...
 	collectEnvironment: (env) -> null
 	toString: (indent) -> "#{indent}for (#{if @init then @init.toString() else ""}; #{if @expression then @expression.toString() else ""}; #{(o.toString("") for o in @update).join(", ")}) #{@body.toString(indent, true)}"
 

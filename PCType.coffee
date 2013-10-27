@@ -65,8 +65,9 @@ class PCTChannelType extends PCTType
 		@kind == type.kind and @capacity == type.capacity and @channelledType.isEqual(type.channelledType)
 	isAssignableTo: (type) ->	# is this assignable to type?
 		@kind == type.kind and (@capacity == type.capacity or type.capacity == 0) and @channelledType.isEqual(type.channelledType)
+	getApplicableCapacity: -> if @capacity == PCChannelType.CAPACITY_UNKNOWN then 0 else @capacity
 	toString: ->
-		if @capacity == 0
+		if @capacity == PCChannelType.CAPACITY_UNKNOWN
 			"handshake #{@channelledType.toString()} #{super}"
 		else
 			"#{@channelledType.toString()} #{super} of capacity #{@capacity}"
@@ -75,6 +76,7 @@ class PCTChannelType extends PCTType
 class PCTClassType extends PCTType
 	constructor: (isMonitor, @identifier) ->
 		super (if isMonitor then PCTType.MONITOR else PCTType.STRUCT)
+	isMonitor: -> @kind == PCTType.MONITOR
 	isEqual: (type) ->
 		@kind == type.kind and @identifier == type.identifier
 	toString: -> "#{super} #{@identifier}"
