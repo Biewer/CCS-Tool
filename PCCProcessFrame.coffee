@@ -1,4 +1,23 @@
 ###
+PseuCo Compiler
+Copyright (C) 2013 Sebastian Biewer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+###
+
+
+###
 	Manages multiple versions of process frames. A process frame is the set of all arguments, local variables and temporary containers of a compile unit, also called a process groupable (e.g. a procedure) at a specific time.
 	Process frames may exist in multiple versions: One version for each CCS process. Because of restrictions of CCS it is not always possible to compile into a single process. This class helps to manage the fragmentation of code into multiple processes.
 	Versions are partially ordered.
@@ -78,7 +97,7 @@ class PCCProcessFrame
 		
 	isContainerLocalVariable: (container) ->
 		(return true if container.isEqual(c)) for v, c of @varTable
-		false
+		false 
 	
 	
 		
@@ -87,22 +106,31 @@ class PCCProcessFrame
 	createFollowupFrame: -> PCCProcessFrame.createFollowupFrameForFrames([@])
 	_createFollowupFrameAcceptingTempTypes: (tempTypes) -> new PCCProcessFrame(@groupable, @variables[..], tempTypes)
 	
-	createNewScope: -> @copy()
+	createNewScope: -> @copy()		# That's old: Creation of scope and transition to it is one step here and must be separated!
 	
 	
-	_checkHierarchyConsistency: (frame) ->
+	_checkCallConsistency: (frame) ->
+		fail = frame.protections.length != @tempTypes.length
+		fail = true if frame.groupable != @groupable
+		fail = true if frame.variables.length < @initialVariableCount
+		for i in [0...@initialVariableCount] by 1
+			(fail = true; break) if @variables[i].getIdentifier() != frame.variables[i].getIdentifier()
+		throw new Error("Call consistency is violated!") if fail
+		null
+		###
 		return if @parentFrame == frame or @ == frame
 		while frame.parentFrame
 			frame = frame.parentFrame
 			return if frame == @parentFrame
 		throw new Error("Frame must be connected in hierarchy")
+		###
 	
 	_argumentsToCallProcessFromFrame: (frame) ->
 		args = (frame.varTable[@variables[i].getIdentifier()] for i in [0...@initialVariableCount] by 1)
 		args.concat(frame.protections[0...@tempTypes.length])
 	
 	emitCallProcessFromFrame: (compiler, frame, appPlaceholder) ->
-		#@_checkHierarchyConsistency(frame)
+		@_checkCallConsistency(frame)
 		args = @_argumentsToCallProcessFromFrame(frame)
 		@emitCallProcessWithArgumentContainers(compiler, args, appPlaceholder)
 		
@@ -137,7 +165,7 @@ class PCCProcedureFrame extends PCCProcessFrame
 			variables = procedure.arguments
 			if procedure.isClassProcedure()
 				variables.unshift(new PCCVariableInfo(null, "i", null, true)) 	#ToDo: add type
-			variables.unshift(new PCCVariableInfo(null, "r", null, true))
+			#variables.unshift(new PCCVariableInfo(null, "r", null, true))
 			
 		super procedure, variables, tempTypes, autoInit
 		
@@ -197,14 +225,14 @@ PCCProcessFrame::mark = (m) ->
 	@marked = [] if not @marked
 	@marked.push(m)
 
-PCCProcessFrame.checkTempTypesEquality = (types1, types2) ->
-	return false if types1.length != types2.length
-	(return false if not types1[i].isEqual(types2[i])) for i in [0...types1.length]
+PCCProcessFrame.checkTempTypesEquality = (prot1, prot2) ->
+	return false if prot1.length != prot2.length
+	(return false if not prot1[i].ccsType.isEqual(prot2[i].ccsType)) for i in [0...prot1.length]
 	true
 PCCProcessFrame.checkFramesForConsistency = (frames) ->
 	groupable = frames[0].groupable
-	tempTypes = frames[0].tempTypes
-	(if frames[i].groupable != groupable || !PCCProcessFrame.checkTempTypesEquality(tempTypes, frames[i].tempTypes)
+	protections = frames[0].protections
+	(if frames[i].groupable != groupable || !PCCProcessFrame.checkTempTypesEquality(protections, frames[i].protections)
 		throw new Error("Inconsistent process frames")
 	) for i in [1...frames.length] by 1
 	null

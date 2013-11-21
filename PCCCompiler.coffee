@@ -1,4 +1,23 @@
 ###
+PseuCo Compiler
+Copyright (C) 2013 Sebastian Biewer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+###
+
+
+###
 	The central coordination class for the compile process of PseuCo to CCS.
 	You start the compilation process by creating a new PCCCompiler object with the node of your PseuCo tree and call compile() on it. You'll get a CCS tree on success
 ###
@@ -131,9 +150,10 @@ class PCCCompiler
 		@stack.pushElement(new PCCScopeStackElement(scope))
 		scope
 	
-	emitNextProcessFrame: ->
+	emitNextProcessFrame: (derivationFrames) ->
 		frame = @getProcessFrame()
-		next = frame.createFollowupFrame()
+		derivationFrames = [frame] if not derivationFrames
+		next = PCCProcessFrame.createFollowupFrameForFrames(derivationFrames)
 		next.emitCallProcessFromFrame(@, frame)
 		@addProcessGroupFrame(next)
 		next
@@ -243,7 +263,8 @@ class PCCCompiler
 	endExpression: ->
 
 
-
+	_usingFrames: ->
+		@groupElements.length > 1 or (@groupElements.length > 0 and @groupElements[0] instanceof PCCProcessFrameStackElement)
 
 	emitStop: -> @stack.pushElement(new PCCStopStackElement())
 	emitExit: -> @stack.pushElement(new PCCExitStackElement())
@@ -257,12 +278,12 @@ class PCCCompiler
 	emitChoice: -> 
 		res = new PCCChoiceStackElement()
 		@stack.pushElement(res)
-		@emitNewScope() if @groupElements.length > 1	# Change it to "if using frames"
+		@emitNewScope() if @_usingFrames() 
 		res
 	emitParallel: -> 
 		res = new PCCParallelStackElement()
 		@stack.pushElement(res)
-		@emitNewScope() if @groupElements.length > 1	# Change it to "if using frames"
+		@emitNewScope() if @_usingFrames()
 		res
 	emitSequence: -> 
 		#@emitNextProcessFrame()	# start new process to avoid loosing input variables in right side of sequence received on left side
@@ -427,13 +448,14 @@ class PCCCompiler
 		i = new PCCVariableContainer("next_i", PCCType.INT)
 		@beginProcessDefinition("Channel#{capacity}_cons", [])
 		@emitInput("channel_new", null, i)
-		def = new PCCVariableContainer("d", PCCType.VOID)
+		#def = new PCCVariableContainer("d", PCCType.VOID)
 		@emitOutput("channel#{capacity}_create", null, i)
-		@emitInput("channel_setDefault", i, def)
+		#@emitInput("channel_setDefault", i, def)
 		control = @emitParallel()
 		@emitProcessApplication("Channel#{capacity}_cons", [])
 		control.setBranchFinished()
 		args = [i, new PCCConstantContainer(0)]
+		def = new PCCConstantContainer(0)
 		args.push(def) for j in [0...capacity]
 		@emitProcessApplication("Channel#{capacity}", args)
 		control.setBranchFinished()

@@ -1,3 +1,23 @@
+/*
+PseuCo Compiler
+Copyright (C) 2013 Sebastian Biewer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+
 
 html {
 	height: 100%;
@@ -6,8 +26,12 @@ html {
 body {
 	margin: 8px;
 	height: -webkit-calc(100% - 16px);
+	height: -moz-calc(100% - 16px);
+	height: calc(100% - 16px);
 	font-family: Georgia;
 	-webkit-user-select: none;
+	-moz-user-select: none;
+	user-select: none;
 }
 
 #fileControl {
@@ -19,11 +43,15 @@ body {
 	height: 32px;
 	float: left;
 	width: -webkit-calc(100% - 40px);
+	width: -moz-calc(100% - 40px);
+	width: calc(100% - 40px);
 }
 
 #fileLabel {
 	margin: 4px 8px 4px 8px;
 	width: -webkit-calc(100% - 49px);
+	width: -moz-calc(100% - 49px);
+	width: calc(100% - 49px);
 	float: left;
 }
 
@@ -66,10 +94,14 @@ body {
 #verticalSizable {
 	margin-top: 22px;
 	height: -webkit-calc(100% - 56px);
+	height: -moz-calc(100% - 56px);
+	height: calc(100% - 56px);
 }
 
 #mainContent {
 	height: -webkit-calc(70% - 10px);
+	height: -moz-calc(70% - 10px);
+	height: calc(70% - 10px);
 }
 
 #horizontalSizable {
@@ -79,14 +111,22 @@ body {
 #pseuco {
 	float: left;
 	width: -webkit-calc(50% - 5px);
+	width: -moz-calc(50% - 5px);
+	width: calc(50% - 5px);
 	background-color: #ddd;
 	height: 100%;
 	-webkit-user-select: text;
+	-moz-user-select: text;
+	user-select: text;
 }
 
 #pseuco_field {
 	width: -webkit-calc(100% - 6px);
+	width: -moz-calc(100% - 6px);
+	width: calc(100% - 6px);
 	height: -webkit-calc(100% - 6px);
+	height: -moz-calc(100% - 6px);
+	height: calc(100% - 6px);
 	resize: none;
 }
 
@@ -96,6 +136,8 @@ body {
 	left: 20px;
 	display: none;
 	-webkit-box-shadow: 8px 8px 8px #666;
+	-moz-box-shadow: 8px 8px 8px #666;
+	box-shadow: 8px 8px 8px #666;
 }
 
 #hresizer {
@@ -110,6 +152,8 @@ body {
 #ccs {
 	float: right;
 	width: -webkit-calc(50% - 5px);
+	width: -moz-calc(50% - 5px);
+	width: calc(50% - 5px);
 	background-color: #ddd;
 	height: 100%;
 	-webkit-user-select: text;
@@ -119,7 +163,11 @@ body {
 
 #ccs_field {
 	width: -webkit-calc(100% - 6px);
+	width: -moz-calc(100% - 6px);
+	width: calc(100% - 6px);
 	height: -webkit-calc(100% - 26px);
+	height: -moz-calc(100% - 26px);
+	height: calc(100% - 26px);
 	resize: none;
 }
 
@@ -134,6 +182,8 @@ body {
 
 #tools {
 	height: -webkit-calc(30% - 10px);
+	height: -moz-calc(30% - 10px);
+	height: calc(30% - 10px);
 	border: solid 1pt black;
 }
 
@@ -205,12 +255,10 @@ body {
 
 .warning {
 	color: #e79f1c;
-	//list-style-image: url(ErrorSmall.pdf);
 }
 
 .error {
 	color:  red;
-	//list-style-image: url(WarningSmall.pdf);
 }
 
 .ccs_observe {
@@ -240,6 +288,8 @@ body {
 	margin-right: 25px;
 	
 	-webkit-border-radius: 100px;
+	-moz-border-radius: 100px;
+	border-radius: 100px;
 	border: solid 1pt #ddd;
 	padding: 4px 6px;
 }

@@ -1,3 +1,23 @@
+###
+PseuCo Compiler
+Copyright (C) 2013 Sebastian Biewer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+###
+
+
+
 
 PCNode::compile = (compiler) ->
 	throw new Error("Abstract method!")
@@ -17,8 +37,8 @@ PCMainAgent::compile = (compiler) ->
 	compiler.beginMainAgent()
 	#i_r = compiler.getFreshContainer(PCCType.INT, "ret")
 	#compiler.emitInput("channel1_create", null, i_r)
-	i_r = new PCCConstantContainer(-1)
-	compiler.getProcessFrame().addLocalVariable(new PCCVariableInfo(null, "r", null, true), i_r)
+	#i_r = new PCCConstantContainer(-1)
+	#compiler.getProcessFrame().addLocalVariable(new PCCVariableInfo(null, "r", null, true), i_r)
 	@_childrenCompile(compiler)
 	compiler.emitStop()
 	compiler.endMainAgent()
@@ -421,6 +441,7 @@ PCWhileStmt::compile = (compiler) ->
 	
 
 PCDoStmt::compile = (compiler) ->
+	statusQuo = compiler.getProcessFrame()
 	entry = compiler.emitNextProcessFrame()
 	breaks = @children[0].compile(compiler, entry)
 	b = @children[1].compile(compiler)
@@ -431,7 +452,7 @@ PCDoStmt::compile = (compiler) ->
 	compiler.emitCondition(new PCCUnaryContainer("!", b))
 	breaks.push(compiler.emitProcessApplicationPlaceholder())
 	control.setBranchFinished()
-	out = compiler.emitNextProcessFrame()
+	out = compiler.emitNextProcessFrame([statusQuo])
 	out.emitCallProcessFromFrame(compiler, b.frame, b) for b in breaks
 	[]
 	
@@ -442,7 +463,7 @@ PCDoStmt::compile = (compiler) ->
 PCForStmt::compile = (compiler) ->
 	statusQuo = compiler.getProcessFrame()
 	if @init
-		#compiler.emitNewScope()
+		compiler.emitNewScope()
 		@init.compile(compiler)
 	entry = compiler.emitNextProcessFrame()
 	breaks = []
@@ -458,7 +479,7 @@ PCForStmt::compile = (compiler) ->
 	u.compile(compiler) for u in @update
 	entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
 	control.setBranchFinished() if control
-	out = compiler.emitNextProcessFrame()
+	out = compiler.emitNextProcessFrame([statusQuo])
 	out.emitCallProcessFromFrame(compiler, b.frame, b) for b in breaks
 	[]
 	
@@ -521,7 +542,7 @@ PCPrimitiveStmt::compile = (compiler, loopEntry) ->
 				vars = compiler.getCurrentClass().getAllConditions()
 			for v in vars
 				c = v.getContainer(compiler)
-				compiler.emitOutput("signalAll", c, null)
+				compiler.emitOutput("signal_all", c, null)
 	[]
 	
 	
@@ -529,6 +550,7 @@ PCPrimitiveStmt::compile = (compiler, loopEntry) ->
 PCPrintStmt::compile = (compiler, loopEntry) ->
 	return if @children.length == 0
 	out = @children[0].compile(compiler)
+	# Wrong: I have to protect containers!!!
 	(out = new PCCBinaryContainer(out, @children[i].compile(compiler), "+")) for i in [1...@children.length] by 1
 	compiler.emitOutput("println", null, out)
 	[]
