@@ -6,7 +6,7 @@ License
 PseuCo Compiler  
 Copyright (C) 2013  
 Saarland University (www.uni-saarland.de)  
-Sebastian Biewer (biewer@splodge.com)
+Sebastian Biewer (biewer-at-splodge.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -39,8 +39,8 @@ Use htdocs/index.html with the latest version of Safari or Firefox. In this prer
 **Note**: Unfinished prerelease software! Work is still in progress.
 
 
-Credts
+Credits
 ------
  * [CoffeeScript](http://coffeescript.org) A language that compiles into JavaScript
  * [jQuery](http://jquery.com/)
- * [PEG.js](https://github.com/dmajda/pegjs) Parser generator
+ * [PEG.js](http://pegjs.majda.cz) Parser generator
