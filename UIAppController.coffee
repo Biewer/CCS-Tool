@@ -1,6 +1,8 @@
 ###
-PseuCo Compiler
-Copyright (C) 2013 Sebastian Biewer
+PseuCo Compiler  
+Copyright (C) 2013  
+Saarland University (www.uni-saarland.de)  
+Sebastian Biewer (biewer@splodge.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

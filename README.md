@@ -1,10 +1,12 @@
 PseuCo Compiler
 ===============
 
-Licence
+License
 -------
-PseuCo Compiler
-Copyright (C) 2013 Sebastian Biewer
+PseuCo Compiler  
+Copyright (C) 2013  
+Saarland University (www.uni-saarland.de)  
+Sebastian Biewer (biewer@splodge.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,8 +33,14 @@ ToDo!
 
 Usage
 -----
-
 Use htdocs/index.html with the latest version of Safari or Firefox. In this prerelease version you need a separate tool to convert PseuCo to a JavaScript representation. You can double click on the PseuCo field to pop up an additional text field, where you can paste the JavaScript representation.
 
 
 **Note**: Unfinished prerelease software! Work is still in progress.
+
+
+Credts
+------
+ * [CoffeeScript](http://coffeescript.org) A language that compiles into JavaScript
+ * [jQuery](http://jquery.com/)
+ * [PEG.js](https://github.com/dmajda/pegjs) Parser generator
