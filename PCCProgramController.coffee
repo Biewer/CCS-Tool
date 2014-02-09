@@ -162,6 +162,9 @@ class PCCProcedure extends PCProcedure
 		
 
 
+###
+	PCCType represents CCS types, and - if an integer is used as a reference - the referenced CCS type.
+###
 
 class PCCType
 	constructor: (@_type, @_className) ->

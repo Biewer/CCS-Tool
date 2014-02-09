@@ -374,7 +374,11 @@ PCContinueStmt::compile = (compiler, loopEntry) ->
 	
 
 PCStmtBlock::compile = (compiler, loopEntry) ->
-	(c.compile(compiler, loopEntry) for c in @children).concatChildren()
+	statusQuo = compiler.getProcessFrame()
+	compiler.emitNewScope()
+	breaks = (c.compile(compiler, loopEntry) for c in @children).concatChildren()
+	compiler.emitNewScope(statusQuo);
+	breaks
 	
 	
 

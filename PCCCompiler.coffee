@@ -56,7 +56,6 @@ class PCCCompiler
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@program.compile(@)
 		new CCS(@controller.root.collectPDefs(), @_getSystem())
-		# ToDo: return CCS tree
 	
 	_getSystem: ->
 		@beginSystemProcess()
@@ -146,17 +145,19 @@ class PCCCompiler
 		nextFrame.emitProcessDefinition(@)
 		null
 	
-	emitNewScope: ->
+	emitNewScope: (derivationFrame) ->
 		frame = @getProcessFrame()
-		scope = frame.createNewScope()
-		@stack.pushElement(new PCCScopeStackElement(scope))
+		derivationFrame = frame if not derivationFrame
+		scope = derivationFrame.createScope()
+		scope.emitTransitionFromFrame(@, frame)
+		@addProcessGroupFrame scope
 		scope
 	
 	emitNextProcessFrame: (derivationFrames) ->
 		frame = @getProcessFrame()
 		derivationFrames = [frame] if not derivationFrames
 		next = PCCProcessFrame.createFollowupFrameForFrames(derivationFrames)
-		next.emitCallProcessFromFrame(@, frame)
+		next.emitTransitionFromFrame(@, frame)
 		@addProcessGroupFrame(next)
 		next
 	

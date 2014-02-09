@@ -209,7 +209,7 @@ class PCCBinaryCCSStackElement extends PCCBinaryStackElement
 		leftContainer.appendContainer(more)
 		leftContainer.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @_createCCSProcess(left.data, right.data))
 		leftContainer
-	isCompletedProcess: -> 
+	isCompletedProcess: ->
 		if @leftStack and @rightStack then @leftStack.isCompletedProcess() and @rightStack.isCompletedProcess() else false
 
 class PCCChoiceStackElement extends PCCBinaryCCSStackElement
@@ -258,9 +258,10 @@ class PCCProcessFrameStackElement extends PCCUnaryStackElement
 	compilerHandleNewVariableWithDefaultValueCallback: (compiler, variable, callback, context) ->
 		result = @frame.compilerHandleNewVariableWithDefaultValueCallback(compiler, variable, callback, context)
 		if result then result else super
-
-class PCCScopeStackElement extends PCCProcessFrameStackElement
 	isCompletedProcess: -> if @next then @next.isCompletedProcess() else false
+
+#class PCCScopeStackElement extends PCCProcessFrameStackElement
+	
 
 class PCCClassStackElement extends PCCUnaryStackElement
 	constructor: (@classInfo) -> super
