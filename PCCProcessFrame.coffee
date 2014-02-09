@@ -31,33 +31,57 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 class PCCProcessFrame
+	
+	###
+		* @param groupable: An object that implements the «Groupable» interface. All process frames with the same groupable object are in the same process group.
+		* @param variables: An array of PCCVariableInfo objects. The incoming variables that will get passed on transition to the represented process definition.
+		* @param tempTypes: An array of PCTType objects, which represents the values that will get passed as temporary values on transition to the represented process definition.
+		* @param autoInit: By default true. If the created process frame will be followup process frame, the creator of the frame might want to perform its own initialization, which it can communicate through this parameter.
+		
+		
+		Variables:
+			processID: Gives a process frame a unique identifier within the group, which is used to determine a unique name for the created process definition. For scopes the value of this variable is not relevant.
+			containerIndex: The number of issued auto-named PCCVariableContainer objects (using @createContainer).
+			usedContainers: An array of PCCVariableContainer objects that are already in use in the scope of the represented process definition.
+			varTable: A map from PseuCo identifiers (string) to PCCContainer objects which represents the current value of the corresponding identifier.
+			protections: A stack (array) of PCCContainer objects which represent a temporary value.
+			initialVariableCount: The number of incomming variables.
+			variables: An array of PCCVariableInfo objects, which represent the PseuCo variables currently covered by the process frame.
+	###
+	
 	constructor: (@groupable, @variables=[], @tempTypes=[], autoInit=true) ->		# tempTypes for incoming temp values
 		@_freshInit() if autoInit
 		null
 	
 	_freshInit: ->	# no copy
-		@groupable.frameCount = 0 if @groupable.frameCount == undefined
-		@processID = @groupable.frameCount++
+		@groupable.frameCount = 0 if @groupable.frameCount == undefined		# add a global variable to the group in order to count its process frames
+		@processID = @groupable.frameCount++	# this frame gets as index the number of the already created process frames (so it's unique);
 		@containerIndex = 0
 		@usedContainers = []
 		@varTable = {}
+		# auto-assign variable containers for the identifiers of the incoming variables; these will be used as the arguments of the represented process definition
 		(@varTable[v.getIdentifier()] = @createContainer(v.getCCSType(), v.getSuggestedContainerName())) for v in @variables
+		# the incoming temporary values will remain temporary values, so we'll create a new variable container for each of it and add it to protections array
 		@protections = (@createContainer(@tempTypes[i], "t#{i}") for i in [0...@tempTypes.length] by 1)
 		@initialVariableCount = @variables.length
+	
 	
 	
 	_argumentsForProcessDefinition: ->
 		args = (@varTable[v.getIdentifier()] for v in @variables)
 		args.concat(@protections)
 	
-	emitProcessDefinition: (compiler) ->	
+	###
+		Must be called before new containers get assigned to the variables or temporary values are pushed or popped!
+	###
+	emitProcessDefinition: (compiler) ->
+		return if @isScope
 		args = @_argumentsForProcessDefinition()
 		compiler._silentlyAddProcessDefinition(@_getProcessName(), args)
 	
 	_getProcessName: ->	"#{@groupable.getProcessName()}#{if @processID > 0 then "_#{@processID}" else ""}"
 	
 	_getProcessArgCount: -> @initialVariableCount + @tempTypes.length
-	#@initialVariableCount + @protections.length
 	
 	
 	
@@ -93,6 +117,9 @@ class PCCProcessFrame
 	unprotectContainer: ->
 		@protections.pop()
 	
+	###
+		Returns the last pushed temporary value.
+	###
 	getProtectedContainer: ->
 		throw new Error("No protected containers available") if @protections.length == 0
 		@protections[@protections.length-1]
@@ -108,56 +135,75 @@ class PCCProcessFrame
 	createFollowupFrame: -> PCCProcessFrame.createFollowupFrameForFrames([@])
 	_createFollowupFrameAcceptingTempTypes: (tempTypes) -> new PCCProcessFrame(@groupable, @variables[..], tempTypes)
 	
-	createNewScope: -> @copy()		# That's old: Creation of scope and transition to it is one step here and must be separated!
+	getTypesForTemporaryValues: -> c.ccsType for c in @protections
+		
+	
+	createScope: -> 
+		res = new PCCProcessFrame(@groupable, @variables[..], @getTypesForTemporaryValues(), false)
+		@_configureVariablesInScope(res)
+		res
+	
+	_configureVariablesInScope: (res) ->
+		res.processID = @processID
+		res.initialVariableCount = @variables.length
+		res.parentFrame = @
+		res.isScope = true
+		null
 	
 	
-	_checkCallConsistency: (frame) ->
+	
+
+	
+	
+	###
+		Guarantees that it is allowed to transition from »frame« to the receiver of the method call.
+	###
+	_checkTransitionConsistency: (frame) ->	
 		fail = frame.protections.length != @tempTypes.length
 		fail = true if frame.groupable != @groupable
+		fail = @isScope and @varTable	# scope that already transitioned
 		fail = true if frame.variables.length < @initialVariableCount
 		for i in [0...@initialVariableCount] by 1
 			(fail = true; break) if @variables[i].getIdentifier() != frame.variables[i].getIdentifier()
 		throw new Error("Call consistency is violated!") if fail
 		null
-		###
-		return if @parentFrame == frame or @ == frame
-		while frame.parentFrame
-			frame = frame.parentFrame
-			return if frame == @parentFrame
-		throw new Error("Frame must be connected in hierarchy")
-		###
+	
+	_variablesForTransition: -> @variables[i] for i in [0...@initialVariableCount] by 1
 	
 	_argumentsToCallProcessFromFrame: (frame) ->
-		args = (frame.varTable[@variables[i].getIdentifier()] for i in [0...@initialVariableCount] by 1)
+		args = (frame.varTable[v.getIdentifier()] for v in @_variablesForTransition())
 		args.concat(frame.protections[0...@tempTypes.length])
 	
-	emitCallProcessFromFrame: (compiler, frame, appPlaceholder) ->
-		@_checkCallConsistency(frame)
+	emitCallProcessFromFrame: (compiler, frame, appPlaceholder) ->	
+		@_checkTransitionConsistency(frame)
 		args = @_argumentsToCallProcessFromFrame(frame)
 		@emitCallProcessWithArgumentContainers(compiler, args, appPlaceholder)
 		
 	emitCallProcessWithArgumentContainers: (compiler, containers, appPlaceholder) ->
+		throw new Error("Illegal operation! This method cannot be used with scopes!") if @isScope
 		if containers.length != @_getProcessArgCount()
 			throw new Error("Number of argument containers does not match number of required arguments") 
 		if appPlaceholder
 			appPlaceholder.set(@_getProcessName(), containers)
 		else
 			compiler.emitProcessApplication(@_getProcessName(), containers)
-		
-	copy: ->
-		res = new PCCProcessFrame(@groupable, @variables[..], @tempTypes, false)
-		@_copyVariablesToCopy(res)
-		res.parentFrame = @
-		res
 	
-	_copyVariablesToCopy: (res) ->
-		res.processID = @processID
-		res.containerIndex = @containerIndex
-		res.usedContainers = @usedContainers[..]
-		res.varTable = {}
-		(res.varTable[v.getIdentifier()] = @varTable[v.getIdentifier()]) for v in @variables
-		res.protections = @protections[..]
-		res.initialVariableCount = @initialVariableCount
+	_emitScopeTransition: (compiler, frame) ->
+		@containerIndex = frame.containerIndex
+		@usedContainers = frame.usedContainers[..]
+		@varTable = {}
+		(@varTable[v.getIdentifier()] = frame.varTable[v.getIdentifier()]) for v in @_variablesForTransition()
+		@protections = frame.protections[..]
+	
+	emitTransitionFromFrame: (compiler, frame) ->
+		if @isScope
+			@_checkTransitionConsistency(frame)
+			@_emitScopeTransition(compiler, frame)
+		else
+			@emitCallProcessFromFrame(compiler, frame)
+		
+	
+	
 			
 		
 
@@ -167,66 +213,39 @@ class PCCProcedureFrame extends PCCProcessFrame
 			variables = procedure.arguments
 			if procedure.isClassProcedure()
 				variables.unshift(new PCCVariableInfo(null, "i", null, true)) 	#ToDo: add type
-			#variables.unshift(new PCCVariableInfo(null, "r", null, true))
 			
 		super procedure, variables, tempTypes, autoInit
 		
 	getProcedure: -> @groupable
 	
-	#_argumentsForProcessDefinition: ->
-		#args = super
-		#args.unshift(PCCContainer.GUARD()) if @groupable.isMonitorProcedure()	# ???????
-		#args.unshift(PCCContainer.INSTANCE()) if @groupable.isClassProcedure()
-		#args.unshift(PCCContainer.RETURN())
-		#args
-	
-	#_getProcessArgCount: ->
-		#result = super + 1
-		#result += 1 if @groupable.isMonitorProcedure()
-		#result += 1 if @groupable.isClassProcedure()
-		#result
-	###
-	getContainerForVariable: (identifier) ->
-		if identifier == "i_r" then PCCContainer.RETURN()
-		else if identifier == "i_i" then PCCContainer.INSTANCE()
-		else if identifier == "i_g" then PCCContainer.GUARD()
-		else super
-	
-	assignContainerToVariable: (identifier, container) ->
-		throw new Error("Tried to assign read-only variable!") if identifier == "i_r" or identifier == "i_i" or identifier == "i_g"
-		super
-	
-	addLocalVariable: (variable, container) ->
-		identifier = variable.getName()
-		throw new Error("Tried to add internal read-only variable!") if identifier == "i_r" or identifier == "i_i" or identifier == "i_g"
-		super###
-	
 	_createFollowupFrameAcceptingTempTypes: (tempTypes) -> new PCCProcedureFrame(@groupable, @variables[..], tempTypes)
 	
-	###
-	_argumentsToCallProcessFromFrame: (frame) ->
-		args = super
-		#args.unshift(PCCContainer.GUARD()) if @groupable.isMonitorProcedure()
-		args.unshift(PCCContainer.INSTANCE()) if @groupable.isClassProcedure()
-		args.unshift(PCCContainer.RETURN())
-		args###
-	
-	copy: ->
-		res = new PCCProcedureFrame(@groupable, @variables[..], @tempTypes, false)
-		@_copyVariablesToCopy(res)
-		res.parentFrame = @
+	createScope: ->
+		res = new PCCProcedureFrame(@groupable, @variables[..], @getTypesForTemporaryValues(), false)
+		@_configureVariablesInScope(res)
 		res
 	
 	
 	
-		
+
+###
+	This method creates a new process frame.
+	@param frames: The array with the process frames that the new frame should be derived by.
+###
+PCCProcessFrame.createFollowupFrameForFrames = (frames) ->
+	PCCProcessFrame.checkFramesForConsistency(frames)
+	closestAncestor = PCCProcessFrame.findClosesAncestorForFrames(frames)
+	
+	result = closestAncestor._createFollowupFrameAcceptingTempTypes(frames[0].getTypesForTemporaryValues())
+	result.parentFrame = closestAncestor
+	result	
 
 
-PCCProcessFrame::parentFrame = null	# closestAncestor
-PCCProcessFrame::mark = (m) ->
-	@marked = [] if not @marked
-	@marked.push(m)
+###
+	Helping methods for creating a new frame.
+###
 
+# Check if the derivation frames fulfill the necessary conditions.
 PCCProcessFrame.checkTempTypesEquality = (prot1, prot2) ->
 	return false if prot1.length != prot2.length
 	(return false if not prot1[i].ccsType.isEqual(prot2[i].ccsType)) for i in [0...prot1.length]
@@ -238,6 +257,13 @@ PCCProcessFrame.checkFramesForConsistency = (frames) ->
 		throw new Error("Inconsistent process frames")
 	) for i in [1...frames.length] by 1
 	null
+	
+
+# Determin the closest ancestor
+PCCProcessFrame::parentFrame = null		# closestAncestor
+PCCProcessFrame::mark = (m) ->
+	@marked = [] if not @marked
+	@marked.push(m)
 
 PCCProcessFrame.findClosesAncestorForFrames = (frames) ->
 	closestAncestor = null
@@ -253,13 +279,6 @@ PCCProcessFrame.findClosesAncestorForFrames = (frames) ->
 	(f.marked = null) for f in markedFrames
 	closestAncestor
 	
-PCCProcessFrame.createFollowupFrameForFrames = (frames) ->
-	PCCProcessFrame.checkFramesForConsistency(frames)
-	closestAncestor = PCCProcessFrame.findClosesAncestorForFrames(frames)
-	
-	result = closestAncestor._createFollowupFrameAcceptingTempTypes(c.ccsType for c in frames[0].protections)
-	result.parentFrame = closestAncestor
-	result
 
 
 
@@ -268,31 +287,49 @@ PCCProcessFrame.createFollowupFrameForFrames = (frames) ->
 
 
 
+
+# Compiler delegate methods
 
 PCCProcessFrame::compilerHandleNewVariableWithDefaultValueCallback = (compiler, variable) ->
 	c = variable.compileDefaultValue(compiler)
 	compiler.getProcessFrame().addLocalVariable(variable, c)
+	# The order is important here, since compileDefaultValue is allowed to begin new process frames. 
 	variable
 
 PCCProcessFrame::compilerGetVariable = (compiler, identifier) -> 
 	(return new PCCLocalVariable(v.node, v.getName(), v.type, v.isInternal) if v.getIdentifier() == identifier) for v in @variables
-	#if @varTable[identifier] then new PCCLocalVariable(identifier) else null
 	null
 		
 PCCProcessFrame::compilerGetProcedure = (compiler, identifier, instanceContainer) -> null
 
 
 
-#PCCProcedureFrame::compilerGetVariable = (compiler, identifier) -> @getProcedure().getVariableWithName(identifier)
-#PCCProcedureFrame::compilerGetVariable = (compiler, identifier) -> 
-#	if identifier == "i_r" or identifier == "i_i" or identifier == "i_g" then new PCCLocalVariable(identifier)
-#	else super
 		
 PCCProcedureFrame::compilerGetProcedure = (compiler, identifier, instanceContainer) -> 
 	p = @getProcedure()
 	if p.getName() == identifier then p else p.getProcedureWithName(identifier)
 
 
+
+
+
+
+# Convenience
+
+class PCCGroupable
+	constructor: (@processName) ->
+	getProcessName: -> @processName
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 
 ###
@@ -341,11 +378,7 @@ class PCCContainerInfoArray
 	
 ###
 
-# Convenience
 
-class PCCGroupable
-	constructor: (@processName) ->
-	getProcessName: -> @processName
 
 
 ###
