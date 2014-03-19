@@ -53,11 +53,11 @@ EOF
 	= !. {}
 
 IntegerLiteral "integer"
-	= "0" { return "0"; }
-	/ head:[1-9] tail:([0-9])* { return head + tail.join(""); }
+	= "0" { return 0; }
+	/ head:[1-9] tail:([0-9])* { return parseInt(head + tail.join(""), 10); }
 
 StringLiteral "string"
-	= stringLiteral:('"' StringCharacters? '"') { return stringLiteral.join(""); }
+	= stringLiteral:('"' StringCharacters? '"') { return stringLiteral[1] != null ? stringLiteral[1] : ""; }
 
 StringCharacters
 	= chars:StringCharacter+ { return chars.join(""); }
@@ -164,7 +164,7 @@ Struct
 																}
 
 StructCode
-	= decls:(Procedure / DeclarationStatement __)*	{
+	= decls:((Procedure / DeclarationStatement) __)*	{
 														var declarations = [];
 														for (var i = 0; i < decls.length; ++i)
 														{
@@ -226,12 +226,12 @@ Type
 															}
 
 PrimitiveType
-	= "bool" { return new PCSimpleType(PCSimpleType.BOOL); }
+	= ch:Chan { return ch; }
+	/ "bool" { return new PCSimpleType(PCSimpleType.BOOL); }
 	/ "int" { return new PCSimpleType(PCSimpleType.INT); }
-	/ "string" { return new PCSimpleType(PCSimpleType.INT); }
+	/ "string" { return new PCSimpleType(PCSimpleType.STRING); }
 	/ "mutex" { return new PCSimpleType(PCSimpleType.MUTEX); }
 	/ "agent" { return new PCSimpleType(PCSimpleType.AGENT); }
-	/ ch:Chan { return ch; }
 	/ id:Identifier { return new PCClassType(id); }
 
 Chan
@@ -244,8 +244,8 @@ ResultType
 	/ type:Type { return type; }
 
 Expression
-	= exp:AssignmentExpression { return exp; }
-	/ exp:StartExpression { return exp; }
+	= exp:StartExpression { return exp; }
+	/ exp:AssignmentExpression { return exp; }
 	/ exp:SendExpression { return exp; }
 	/ exp:ConditionalExpression { return exp; }
 
@@ -437,12 +437,12 @@ Statement
 	/ _ ";" { return new PCStatement(); }
 
 StatementExpression
-	= stmtExp:AssignmentExpression { return new PCStmtExpression(stmtExp); }
+	= stmtExp:StartExpression { return new PCStmtExpression(stmtExp); }
+	/ stmtExp:AssignmentExpression { return new PCStmtExpression(stmtExp); }
 	/ stmtExp:SendExpression { return new PCStmtExpression(stmtExp); }
 	/ stmtExp:PostfixExpression { return new PCStmtExpression(stmtExp); }
 	/ stmtExp:CallExpression { return new PCStmtExpression(stmtExp); }
 	/ stmtExp:ReceiveExpression { return new PCStmtExpression(stmtExp); }
-	/ stmtExp:StartExpression { return new PCStmtExpression(stmtExp); }
 
 StatementExpressionList
 	= head:StatementExpression tail:(__ "," __ StatementExpression)*	{
