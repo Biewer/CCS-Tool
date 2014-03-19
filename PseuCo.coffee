@@ -124,6 +124,8 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 
 # - Variable Decl
 class PCDecl extends PCNode	# Children: Type and variable declarator(s)
+	constructor: (@isStatement, children...) -> super children...
+	
 	getType: -> @children[0]
 	getDeclarators: -> @children[1..]
 	
@@ -132,10 +134,13 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 		type = @children[0].getType(env).type
 		@children[i].collectEnvironment(env, type) for i in [1...@children.length] by 1
 	
-	toString: (indent) -> indent + @children[0].toString() + " " + @children[1].toString()	# ToDo: Multiple declarators
+	toString: (indent) ->
+		res = indent + @children[0].toString() + " " + @children[1].toString()	# ToDo: Multiple declarators
+		res += ";" if @isStatement
+		res
 
-class PCDeclStmt extends PCDecl
-	toString: (indent) -> super + ";"
+# class PCDeclStmt extends PCDecl
+# 	toString: (indent) -> super + ";"
 
 # - Variable Declarator
 class PCVariableDeclarator extends PCNode	# Identifier and optional initializer
