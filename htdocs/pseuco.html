@@ -11,7 +11,7 @@
 <meta name="keywords" content="Splodge, App Development, Product Design, Markers, Marker, Mark, Textmarker, App, Apps, App Store, Apple, Highlight, Text, Texts, Markings, Readability, Productivity, Education, Important stuff, Information, Sum up texts, App Developer, new Apps, iPad, iPhone, Apps for iPad, Pupil, Student, Professor, Scientist, Journalist" />
 <meta name="description" content="This is the website of Splodge, the maker of Markers. Get to know our company and learn about our app Markers on the iOS App Store. Feel free to contact us anytime if you have any questions about or products or services in terms of app development and product design." />
 
-<meta name="viewport" content="width=800">
+<meta name="viewport" content="width=800" />
 
 
 <link rel="shortcut icon" href="favicon.ico" />
@@ -24,7 +24,7 @@
 <script type="text/javascript">
 
 var _inputField, _errorField, _resultField;
-var _mainScript = null, _parserScript = null, _pseucoScript = null, _compilerScript = null;
+var _mainScript = null, _parserScript = null, _pseucoScript = null, _pseucoParserScript = null, _compilerScript = null;
 
 var stepView;
 
@@ -65,6 +65,9 @@ function reloadScripts() {
 	if (_parserScript) {
 		_parserScript.parentNode.removeChild(_parserScript);
 	}
+	if (_pseucoParserScript) {
+		_pseucoParserScript.parentNode.removeChild(_pseucoParserScript);
+	}
 	
 	_mainScript = document.createElement("SCRIPT");
 	_mainScript.setAttribute("type", "text/javascript");
@@ -86,6 +89,11 @@ function reloadScripts() {
 	_parserScript.setAttribute("src", "CCSParser.js?x" + Math.ceil(Math.random()*10000));
 	document.head.appendChild(_parserScript);
 	
+	_pseucoParserScript = document.createElement("SCRIPT");
+	_pseucoParserScript.setAttribute("type", "text/javascript");
+	_pseucoParserScript.setAttribute("src", "PseuCoParser.js?x" + Math.ceil(Math.random()*10000));
+	document.head.appendChild(_pseucoParserScript);
+	
 	window.setTimeout(testPseuCo, (location.host == "" ? 50 : 200));
 }
 
@@ -93,13 +101,16 @@ function reloadScripts() {
 
 function testPseuCo() {
 	try {
-		var obj = eval("__t = " + _inputField.value);
-		if (obj) {
-			//_resultField.innerText = obj.tree.toString();
-			compiler = new PCCCompiler(obj.tree);
-			ccs = compiler.compile()
-			_resultField.innerText = ccs.toString()
-		}
+		var ast = PseuCoParser.parse(_inputField.value);
+		_resultField.innerText = ast.toString();
+		_errorField.innerText = "";
+		<!--var obj = eval("__t = " + _inputField.value);-->
+		<!--if (obj) {-->
+		<!--	//_resultField.innerText = obj.tree.toString();-->
+		<!--	compiler = new PCCCompiler(obj.tree);-->
+		<!--	ccs = compiler.compile()-->
+		<!--	_resultField.innerText = ccs.toString()-->
+		<!--}-->
 	} catch (e) {
 		col = (e.column) ? ", column " + e.column : ""
 		_errorField.innerText = "Line " + e.line + col + ": " + e.message;
