@@ -167,7 +167,7 @@ class PCVariableInitializer extends PCNode	# array initialization >= 1 child ini
 
 # -- TYPES --
 
-class PCArrayType extends PCNode	# array of type baseType
+class PCArrayType extends PCNode	# array of type baseType or array type
 	constructor: (baseType, @size) -> super baseType
 	
 	_getType: (env) -> new PCTTypeType(new PCTArrayType(@children[0].getType(env).type, @size))
