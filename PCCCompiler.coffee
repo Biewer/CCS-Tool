@@ -32,8 +32,9 @@ class PCCCompiler
 		@groupElements = []	
 		@controller = new PCCProgramController(@program)
 		@systemProcesses = []
+		@compilingNodes = []	# stack
 	
-	compile: -> 
+	compileProgram: -> 
 		@program.collectClasses(@controller)
 		@program.collectEnvironment(@controller)
 		@program.collectAgents(@controller)
@@ -56,6 +57,17 @@ class PCCCompiler
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@program.compile(@)
 		new CCS(@controller.root.collectPDefs(), @_getSystem())
+	
+	compile: (node, args...) ->
+		@compilingNodes.push(node)
+		res = node.compile(@, args...)
+		@compilingNodes.pop()
+		res
+	
+	pushStackElement: (element) ->
+		element.pseucoNode = @compilingNodes[@compilingNodes.length-1]
+		@stack.pushElement(element)
+		
 	
 	_getSystem: ->
 		@beginSystemProcess()
@@ -96,7 +108,11 @@ class PCCCompiler
 	
 	getGlobal: -> @controller.getGlobal()
 	
-	getFreshContainer: (ccsType, wish) -> @getProcessFrame().createContainer(ccsType, wish)
+	getFreshContainer: (ccsType, wish) -> 
+		res = @getProcessFrame().createContainer(ccsType, wish)
+		res.pseucoNode = @compilingNodes[@compilingNodes.length-1]
+		res.pseucoNode.addCalculusComponent(res.pseucoNode)
+		res
 	
 	handleNewVariableWithDefaultValueCallback: (variable, callback, context) ->		# callback returns a container
 		@stack.compilerHandleNewVariableWithDefaultValueCallback(@, variable, callback, context)
@@ -112,7 +128,7 @@ class PCCCompiler
 	beginSystemProcess: ->
 		element = new PCCSystemProcessStackElement()
 		@groupElements.push(element)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 	
 	endSystemProcess: ->
 		element = @groupElements.pop()
@@ -129,7 +145,7 @@ class PCCCompiler
 		frame = new PCCProcessFrame(groupable, variables)
 		element = new PCCProcessFrameStackElement(frame)
 		@groupElements.push(element)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		frame.emitProcessDefinition(@)
 		
 	endProcessGroup: ->
@@ -141,7 +157,7 @@ class PCCCompiler
 	getProcessFrame: -> @stack.getCurrentProcessFrame()
 	
 	addProcessGroupFrame: (nextFrame) ->
-		@stack.pushElement(new PCCProcessFrameStackElement(nextFrame))
+		@pushStackElement(new PCCProcessFrameStackElement(nextFrame))
 		nextFrame.emitProcessDefinition(@)
 		null
 	
@@ -182,7 +198,7 @@ class PCCCompiler
 	
 	_silentlyAddProcessDefinition: (processName, argumentContainers) ->
 		element = new PCCProcessDefinitionStackElement(processName, argumentContainers)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		element
 		
 	beginProcessDefinition: (processName, argumentContainers) ->
@@ -205,7 +221,7 @@ class PCCCompiler
 		curClass = @controller.getClassWithName(className)
 		throw new Error("Tried to begin unknown class!") if not curClass
 		element = new PCCClassStackElement(curClass)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		@groupElements.push(element)
 		
 	endClass: ->
@@ -247,7 +263,7 @@ class PCCCompiler
 		throw new Error("Tried to begin unknown procedure!") if !procedure
 		frame = new PCCProcedureFrame(procedure)
 		element = new PCCProcedureStackElement(procedure)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		@groupElements.push(element)
 		@addProcessGroupFrame(frame)
 	
@@ -269,36 +285,36 @@ class PCCCompiler
 	_usingFrames: ->
 		@groupElements.length > 1 or (@groupElements.length > 0 and @groupElements[0] instanceof PCCProcessFrameStackElement)
 
-	emitStop: -> @stack.pushElement(new PCCStopStackElement())
-	emitExit: -> @stack.pushElement(new PCCExitStackElement())
+	emitStop: -> @pushStackElement(new PCCStopStackElement())
+	emitExit: -> @pushStackElement(new PCCExitStackElement())
 	emitProcessApplication: (processName, argumentContainers=[]) -> 
-		@stack.pushElement(new PCCApplicationStackElement(processName, argumentContainers))
+		@pushStackElement(new PCCApplicationStackElement(processName, argumentContainers))
 	emitOutput: (channel, specificChannel, valueContainer) ->
-		@stack.pushElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
+		@pushStackElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
 	emitInput: (channel, specificChannel, container) ->
-		@stack.pushElement(new PCCInputStackElement(channel, specificChannel, container))
-	emitCondition: (condition) -> @stack.pushElement(new PCCConditionStackElement(condition))
+		@pushStackElement(new PCCInputStackElement(channel, specificChannel, container))
+	emitCondition: (condition) -> @pushStackElement(new PCCConditionStackElement(condition))
 	emitChoice: -> 
 		res = new PCCChoiceStackElement()
-		@stack.pushElement(res)
+		@pushStackElement(res)
 		@emitNewScope() if @_usingFrames() 
 		res
 	emitParallel: -> 
 		res = new PCCParallelStackElement()
-		@stack.pushElement(res)
+		@pushStackElement(res)
 		@emitNewScope() if @_usingFrames()
 		res
 	emitSequence: -> 
 		#@emitNextProcessFrame()	# start new process to avoid loosing input variables in right side of sequence received on left side
 		res = new PCCSequenceStackElement()
-		@stack.pushElement(res)
+		@pushStackElement(res)
 		res
 	emitRestriction: (restrictedChannelNames) -> 
-		@stack.pushElement(new PCCRestrictionStackElement(restrictedChannelNames))
+		@pushStackElement(new PCCRestrictionStackElement(restrictedChannelNames))
 	
 	emitProcessApplicationPlaceholder: ->
 		ph = new PCCApplicationPlaceholderStackElement(@getProcessFrame())
-		@stack.pushElement(ph)
+		@pushStackElement(ph)
 		ph
 	
 	
@@ -544,16 +560,22 @@ class PCCCompiler
 
 
 
-PCEnvironmentNode::compilerPushPDef = (pdef) ->
+PCTEnvironmentNode::compilerPushPDef = (pdef) ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.push(pdef)
-PCVariable::compilerPushPDef = PCEnvironmentNode::compilerPushPDef
-PCEnvironmentNode::collectPDefs = ->
+PCTVariable::compilerPushPDef = PCTEnvironmentNode::compilerPushPDef
+PCTEnvironmentNode::collectPDefs = ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.concat((c.collectPDefs() for c in @children).concatChildren())
-PCVariable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
+PCTVariable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
 
 
+PCNode::addCalculusComponent = (component) ->
+	@calculusComponents = [] if not @calculusComponents
+	@calculusComponents.push(component)
+PCNode::getCalculusComponents = ->
+	@calculusComponents = [] if not @calculusComponents
+	@calculusComponents
 
 
 

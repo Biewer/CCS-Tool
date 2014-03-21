@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 
-class PCCGlobal extends PCEnvironmentNode
+class PCCGlobal extends PCTEnvironmentNode
 	constructor: (program) -> super program, ""
 	getVariableClass: -> PCCGlobalVariable
 	
@@ -39,7 +39,7 @@ class PCCGlobal extends PCEnvironmentNode
 		
 
 
-class PCCClass extends PCClass
+class PCCClass extends PCTClass
 	constructor: ->
 		super
 		@addChild(new PCCInternalReadOnlyField(null, "guard", new PCTType(PCTType.MUTEX), true))
@@ -105,7 +105,7 @@ class PCCClass extends PCClass
 
 #class PCCStruct extends PCCClass
 		
-class PCCProcedure extends PCProcedure
+class PCCProcedure extends PCTProcedure
 	getProcessName: -> "Proc#{@getComposedLabel()}"
 	getAgentStarterChannel: -> "start#{@getComposedLabel()}"
 	getAgentProcessName: -> "Agent#{@getComposedLabel()}"
@@ -272,16 +272,16 @@ PCTClassType::createContainer = (compiler, container) ->
 
 # Variables
 
-class PCCVariableInfo extends PCVariable
+class PCCVariableInfo extends PCTVariable
 	constructor: (node, name, type, @isInternal=false) -> super node, name, type
 	getIdentifier: -> "#{if @isInternal then "#" else ""}#{@getName()}"	# default: x; internal: #x
 	getSuggestedContainerName: -> @getName() + (if @isInternal then "H" else "L")
 	 
 PCCVariableInfo.getNameForInternalVariableWithName = (name) -> "#"+name
 
-PCVariable::getSuggestedContainerName = -> @getName() + "L"
-PCVariable::getCCSType = -> @type.getCCSType()
-PCVariable::compileDefaultValue = (compiler) -> 
+PCTVariable::getSuggestedContainerName = -> @getName() + "L"
+PCTVariable::getCCSType = -> @type.getCCSType()
+PCTVariable::compileDefaultValue = (compiler) -> 
 	if @node then @node.compileDefaultValue(compiler) else @type.createContainer(compiler)
 PCCVariableInfo::getCCSType = -> if @type or not @isInternal then super else PCCType.INT
 	
@@ -367,7 +367,7 @@ class PCCLocalVariable extends PCCVariable
 
 
 
-class PCCProgramController extends PCEnvironmentController
+class PCCProgramController extends PCTEnvironmentController
 	constructor: ->
 		super
 		@root = new PCCGlobal()
@@ -394,7 +394,8 @@ class PCCProgramController extends PCEnvironmentController
 		res = []
 		for p of @agents
 			proc = @agents[p]
-			res.push(proc) if proc instanceof PCProcedure
+			res.push(proc) if proc instanceof PCT
+			Procedure
 		res
 	
 	getUsedTypes: ->
@@ -406,10 +407,10 @@ class PCCProgramController extends PCEnvironmentController
 	
 	
 
-PCEnvironmentNode::getUsedTypes = (res) ->
+PCTEnvironmentNode::getUsedTypes = (res) ->
 	c.getUsedTypes(res) for c in @children
 	null
-PCVariable::getUsedTypes = (res) ->
+PCTVariable::getUsedTypes = (res) ->
 	@type.getUsedTypes(res)
 PCTType::getUsedTypes = -> null
 PCTArrayType::getUsedTypes = (res) ->
@@ -430,7 +431,7 @@ PCStruct::collectAgents = (env) ->
 	env.beginClass(@name)
 	super
 	env.endClass()
-PCProcedure::collectAgents = (env) -> 
+PCProcedureDecl::collectAgents = (env) -> 		# ToDo: PCProcedure should be renamed to PCTProcedure. But shouldn't it be PCProcedureDecl?
 	env.beginProcedure(@name)
 	super
 	env.endProcedure()

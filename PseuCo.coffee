@@ -84,7 +84,7 @@ class PCProcedureDecl extends PCNode	# Children: PCFormalParameter objects
 class PCFormalParameter extends PCNode
 	constructor: (type, @identifier) -> super type
 	
-	getVariable: (env) -> new PCVariable(@, @identifier, @children[0].getType(env).type)
+	getVariable: (env) -> new PCTVariable(@, @identifier, @children[0].getType(env).type)
 	
 	toString: -> @children[0].toString() + " " + @identifier
 
@@ -118,7 +118,7 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 	getExpression: -> @children[0]
 	
 	collectEnvironment: (env) -> 
-		env.processNewVariable(new PCVariable(@, @name, new PCTType(PCTType.CONDITION)))
+		env.processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
 	
 	toString: (indent) -> "#{indent}condition #{@name} with #{@children[0].toString()};"
 
@@ -139,7 +139,9 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 		res += ";" if @isStatement
 		res
 
-# class PCDeclStmt extends PCDecl
+# PCDeclStmt is temporary available for convenience reasons!
+class PCDeclStmt extends PCDecl
+	constructor: (children...) -> super true, children...
 # 	toString: (indent) -> super + ";"
 
 # - Variable Declarator
@@ -148,7 +150,7 @@ class PCVariableDeclarator extends PCNode	# Identifier and optional initializer
 	getInitializer: -> if @children.length > 0 then @children[0] else null
 	getTypeNode: -> @parent.getType()
 	
-	collectEnvironment: (env, type) -> env.processNewVariable(new PCVariable(@, @name, type))
+	collectEnvironment: (env, type) -> env.processNewVariable(new PCTVariable(@, @name, type))
 	
 	toString: -> 
 		res = @name

@@ -32,7 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var PCCApplicationPlaceholderStackElement, PCCApplicationStackElement, PCCBinaryCCSStackElement, PCCBinaryContainer, PCCBinaryStackElement, PCCBinaryTarget, PCCChoiceStackElement, PCCClass, PCCClassStackElement, PCCCompiler, PCCCompilerStack, PCCComposedContainer, PCCCondition, PCCConditionStackElement, PCCConstantContainer, PCCConstructor, PCCContainer, PCCExitStackElement, PCCField, PCCGlobal, PCCGlobalStackElement, PCCGlobalVariable, PCCGroupable, PCCInputStackElement, PCCInternalReadOnlyField, PCCLocalVariable, PCCOutputStackElement, PCCParallelStackElement, PCCPrefixStackElement, PCCProcedure, PCCProcedureFrame, PCCProcedureStackElement, PCCProcessDefinitionStackElement, PCCProcessFrame, PCCProcessFrameStackElement, PCCProgramController, PCCRestrictionStackElement, PCCSequenceStackElement, PCCStackElement, PCCStackResult, PCCStackResultContainer, PCCStopStackElement, PCCSystemProcessStackElement, PCCType, PCCUnaryContainer, PCCUnaryStackElement, PCCVariable, PCCVariableContainer, PCCVariableInfo, _ref, _ref1, _ref10, _ref11, _ref12, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __slice = [].slice;
 
 PCCProcessFrame = (function() {
   /*
@@ -541,17 +542,7 @@ class PCCContainerInfoArray
 
 /*
 
-{version: "1.0", tree: (new PCProgram((new PCMonitor("M", (new PCConditionDecl("c", (new PCRelationalExpression((new PCLiteralExpression(parseInt(3))), "<", (new PCLiteralExpression(parseInt(4))))))), (new PCConditionDecl("c2", (new PCLiteralExpression(true)))), (new PCConditionDecl("c3", (new PCLiteralExpression(false)))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "f", (new PCStmtBlock((new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.WAIT, (new PCIdentifierExpression("c")))))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("condition fulfilled!")))))))))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "g", (new PCStmtBlock((new PCStatement((new PCPrintStmt((new PCLiteralExpression("Before signal")))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.SIGNAL, (new PCIdentifierExpression("c")))))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("Behind signal")))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.SIGNAL_ALL)))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("Behind signallAll")))))))))))), (new PCDeclStmt((new PCSimpleType(PCSimpleType.MUTEX)), (new PCVariableDeclarator("guard", null)))), (new PCMainAgent((new PCStmtBlock((new PCDeclStmt((new PCClassType("M")), (new PCVariableDeclarator("m", null)))), (new PCDeclStmt((new PCSimpleType(PCSimpleType.AGENT)), (new PCVariableDeclarator("a", (new PCVariableInitializer(false, (new PCStartExpression((new PCProcedureCall("agent1", (new PCIdentifierExpression("m")))))))))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.LOCK, (new PCIdentifierExpression("guard")))))), (new PCStatement((new PCStmtExpression((new PCClassCall((new PCIdentifierExpression("m")), (new PCProcedureCall("f")))))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.UNLOCK, (new PCIdentifierExpression("guard")))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.JOIN, (new PCIdentifierExpression("a")))))))))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "agent1", (new PCStmtBlock((new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.LOCK, (new PCIdentifierExpression("guard")))))), (new PCStatement((new PCStmtExpression((new PCClassCall((new PCIdentifierExpression("m")), (new PCProcedureCall("g")))))))), (new PCStatement((new PCPrimitiveStmt(PCPrimitiveStmt.UNLOCK, (new PCIdentifierExpression("guard")))))))), (new PCFormalParameter((new PCClassType("M")), "m"))))))}
-
-	
-{version: "1.0", tree: (new PCProgram((new PCDeclStmt((new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("x", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(41))))))))), (new PCMainAgent((new PCStmtBlock((new PCStatement((new PCPrintStmt((new PCAdditiveExpression((new PCIdentifierExpression("x")), "+", (new PCLiteralExpression(parseInt(1)))))))))))))))}
-
-
-{version: "1.0", tree: (new PCProgram((new PCDeclStmt((new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("n", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(0))))))))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "count", (new PCStmtBlock((new PCStatement((new PCForStmt((new PCStatement((new PCStmtBlock((new PCStatement((new PCStmtExpression((new PCPostfixExpression((new PCAssignDestination("n")), "++")))))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("Der neue Wert von n ist ")), (new PCIdentifierExpression("n")))))))))), (new PCForInit((new PCDecl((new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("i", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(0))))))))))), (new PCRelationalExpression((new PCIdentifierExpression("i")), "<", (new PCLiteralExpression(parseInt(10))))), (new PCStmtExpression((new PCPostfixExpression((new PCAssignDestination("i")), "++")))))))))))), (new PCMainAgent((new PCStmtBlock((new PCDeclStmt((new PCSimpleType(PCSimpleType.AGENT)), (new PCVariableDeclarator("a1", (new PCVariableInitializer(false, (new PCStartExpression((new PCProcedureCall("count")))))))))), (new PCDeclStmt((new PCSimpleType(PCSimpleType.AGENT)), (new PCVariableDeclarator("a2", (new PCVariableInitializer(false, (new PCStartExpression((new PCProcedureCall("count")))))))))), (new PCStatement((new PCPrintStmt((new PCLiteralExpression("Main agent ist terminiert! n = ")), (new PCIdentifierExpression("n"))))))))))))}
-
-
-
-{version: "1.0", tree: (new PCProgram((new PCDeclStmt((new PCChannelType(PCSimpleType.INT, 5)), (new PCVariableDeclarator("c", null)))), (new PCProcedureDecl((new PCSimpleType(PCSimpleType.VOID)), "f", (new PCStmtBlock((new PCStatement((new PCForStmt((new PCStatement((new PCStmtExpression((new PCSendExpression((new PCIdentifierExpression("cc")), (new PCIdentifierExpression("i")))))))), (new PCForInit((new PCDecl((new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("i", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(0))))))))))), (new PCRelationalExpression((new PCIdentifierExpression("i")), "<", (new PCLiteralExpression(parseInt(5))))), (new PCStmtExpression((new PCPostfixExpression((new PCAssignDestination("i")), "++")))))))))), (new PCFormalParameter((new PCChannelType(PCSimpleType.INT, PCChannelType.CAPACITY_UNKNOWN)), "cc")))), (new PCMainAgent((new PCStmtBlock((new PCStatement((new PCStmtExpression((new PCStartExpression((new PCProcedureCall("f", (new PCIdentifierExpression("c")))))))))), (new PCStatement((new PCForStmt((new PCStatement((new PCPrintStmt((new PCReceiveExpression((new PCIdentifierExpression("c")))))))), (new PCForInit((new PCDecl((new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("i", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(0))))))))))), (new PCRelationalExpression((new PCIdentifierExpression("i")), "<", (new PCLiteralExpression(parseInt(5))))), (new PCStmtExpression((new PCPostfixExpression((new PCAssignDestination("i")), "++"))))))))))))))}
+{version: "1.0", tree: (new PCProgram((new PCDecl(true, (new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("x", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(42))))))))), (new PCMainAgent((new PCStmtBlock((new PCDecl(true, (new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("y", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(7))))))))), (new PCStatement((new PCForStmt((new PCStatement((new PCStmtBlock((new PCStatement((new PCPrintStmt((new PCAdditiveExpression((new PCLiteralExpression("Die Zahl ist ")), "+", (new PCAdditiveExpression((new PCAdditiveExpression((new PCIdentifierExpression("x")), "+", (new PCIdentifierExpression("y")))), "+", (new PCIdentifierExpression("i")))))))))))))), (new PCForInit((new PCDecl(false, (new PCSimpleType(PCSimpleType.INT)), (new PCVariableDeclarator("i", (new PCVariableInitializer(false, (new PCLiteralExpression(parseInt(0))))))))))), (new PCRelationalExpression((new PCIdentifierExpression("i")), "<", (new PCLiteralExpression(parseInt(10))))), (new PCStmtExpression((new PCPostfixExpression((new PCAssignDestination("i")), "++"))))))))))))))}
 */
 
 
@@ -611,7 +602,7 @@ PCCGlobal = (function(_super) {
 
   return PCCGlobal;
 
-})(PCEnvironmentNode);
+})(PCTEnvironmentNode);
 
 PCCClass = (function(_super) {
   __extends(PCCClass, _super);
@@ -751,7 +742,7 @@ PCCClass = (function(_super) {
 
   return PCCClass;
 
-})(PCClass);
+})(PCTClass);
 
 PCCProcedure = (function(_super) {
   __extends(PCCProcedure, _super);
@@ -843,7 +834,7 @@ PCCProcedure = (function(_super) {
 
   return PCCProcedure;
 
-})(PCProcedure);
+})(PCTProcedure);
 
 /*
 	PCCType represents CCS types, and - if an integer is used as a reference - the referenced CCS type.
@@ -1098,21 +1089,21 @@ PCCVariableInfo = (function(_super) {
 
   return PCCVariableInfo;
 
-})(PCVariable);
+})(PCTVariable);
 
 PCCVariableInfo.getNameForInternalVariableWithName = function(name) {
   return "#" + name;
 };
 
-PCVariable.prototype.getSuggestedContainerName = function() {
+PCTVariable.prototype.getSuggestedContainerName = function() {
   return this.getName() + "L";
 };
 
-PCVariable.prototype.getCCSType = function() {
+PCTVariable.prototype.getCCSType = function() {
   return this.type.getCCSType();
 };
 
-PCVariable.prototype.compileDefaultValue = function(compiler) {
+PCTVariable.prototype.compileDefaultValue = function(compiler) {
   if (this.node) {
     return this.node.compileDefaultValue(compiler);
   } else {
@@ -1368,9 +1359,10 @@ PCCProgramController = (function(_super) {
     res = [];
     for (p in this.agents) {
       proc = this.agents[p];
-      if (proc instanceof PCProcedure) {
+      if (proc instanceof PCT) {
         res.push(proc);
       }
+      Procedure;
     }
     return res;
   };
@@ -1387,9 +1379,9 @@ PCCProgramController = (function(_super) {
 
   return PCCProgramController;
 
-})(PCEnvironmentController);
+})(PCTEnvironmentController);
 
-PCEnvironmentNode.prototype.getUsedTypes = function(res) {
+PCTEnvironmentNode.prototype.getUsedTypes = function(res) {
   var c, _i, _len, _ref6;
   _ref6 = this.children;
   for (_i = 0, _len = _ref6.length; _i < _len; _i++) {
@@ -1399,7 +1391,7 @@ PCEnvironmentNode.prototype.getUsedTypes = function(res) {
   return null;
 };
 
-PCVariable.prototype.getUsedTypes = function(res) {
+PCTVariable.prototype.getUsedTypes = function(res) {
   return this.type.getUsedTypes(res);
 };
 
@@ -1441,9 +1433,9 @@ PCStruct.prototype.collectAgents = function(env) {
   return env.endClass();
 };
 
-PCProcedure.prototype.collectAgents = function(env) {
+PCProcedureDecl.prototype.collectAgents = function(env) {
   env.beginProcedure(this.name);
-  PCProcedure.__super__.collectAgents.apply(this, arguments);
+  PCProcedureDecl.__super__.collectAgents.apply(this, arguments);
   return env.endProcedure();
 };
 
@@ -1486,9 +1478,10 @@ PCCCompiler = (function() {
     this.groupElements = [];
     this.controller = new PCCProgramController(this.program);
     this.systemProcesses = [];
+    this.compilingNodes = [];
   }
 
-  PCCCompiler.prototype.compile = function() {
+  PCCCompiler.prototype.compileProgram = function() {
     var cls, global, n, p, usedTypes, _i, _j, _len, _len1, _ref6, _ref7;
     this.program.collectClasses(this.controller);
     this.program.collectEnvironment(this.controller);
@@ -1523,6 +1516,20 @@ PCCCompiler = (function() {
     }
     this.program.compile(this);
     return new CCS(this.controller.root.collectPDefs(), this._getSystem());
+  };
+
+  PCCCompiler.prototype.compile = function() {
+    var args, node, res;
+    node = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    this.compilingNodes.push(node);
+    res = node.compile.apply(node, [this].concat(__slice.call(args)));
+    this.compilingNodes.pop();
+    return res;
+  };
+
+  PCCCompiler.prototype.pushStackElement = function(element) {
+    element.pseucoNode = this.compilingNodes[this.compilingNodes.length - 1];
+    return this.stack.pushElement(element);
   };
 
   PCCCompiler.prototype._getSystem = function() {
@@ -1594,7 +1601,11 @@ PCCCompiler = (function() {
   };
 
   PCCCompiler.prototype.getFreshContainer = function(ccsType, wish) {
-    return this.getProcessFrame().createContainer(ccsType, wish);
+    var res;
+    res = this.getProcessFrame().createContainer(ccsType, wish);
+    res.pseucoNode = this.compilingNodes[this.compilingNodes.length - 1];
+    res.pseucoNode.addCalculusComponent(res.pseucoNode);
+    return res;
   };
 
   PCCCompiler.prototype.handleNewVariableWithDefaultValueCallback = function(variable, callback, context) {
@@ -1620,7 +1631,7 @@ PCCCompiler = (function() {
     var element;
     element = new PCCSystemProcessStackElement();
     this.groupElements.push(element);
-    return this.stack.pushElement(element);
+    return this.pushStackElement(element);
   };
 
   PCCCompiler.prototype.endSystemProcess = function() {
@@ -1644,7 +1655,7 @@ PCCCompiler = (function() {
     frame = new PCCProcessFrame(groupable, variables);
     element = new PCCProcessFrameStackElement(frame);
     this.groupElements.push(element);
-    this.stack.pushElement(element);
+    this.pushStackElement(element);
     return frame.emitProcessDefinition(this);
   };
 
@@ -1663,7 +1674,7 @@ PCCCompiler = (function() {
   };
 
   PCCCompiler.prototype.addProcessGroupFrame = function(nextFrame) {
-    this.stack.pushElement(new PCCProcessFrameStackElement(nextFrame));
+    this.pushStackElement(new PCCProcessFrameStackElement(nextFrame));
     nextFrame.emitProcessDefinition(this);
     return null;
   };
@@ -1730,7 +1741,7 @@ PCCCompiler = (function() {
   PCCCompiler.prototype._silentlyAddProcessDefinition = function(processName, argumentContainers) {
     var element;
     element = new PCCProcessDefinitionStackElement(processName, argumentContainers);
-    this.stack.pushElement(element);
+    this.pushStackElement(element);
     return element;
   };
 
@@ -1762,7 +1773,7 @@ PCCCompiler = (function() {
       throw new Error("Tried to begin unknown class!");
     }
     element = new PCCClassStackElement(curClass);
-    this.stack.pushElement(element);
+    this.pushStackElement(element);
     return this.groupElements.push(element);
   };
 
@@ -1815,7 +1826,7 @@ PCCCompiler = (function() {
     }
     frame = new PCCProcedureFrame(procedure);
     element = new PCCProcedureStackElement(procedure);
-    this.stack.pushElement(element);
+    this.pushStackElement(element);
     this.groupElements.push(element);
     return this.addProcessGroupFrame(frame);
   };
@@ -1844,36 +1855,36 @@ PCCCompiler = (function() {
   };
 
   PCCCompiler.prototype.emitStop = function() {
-    return this.stack.pushElement(new PCCStopStackElement());
+    return this.pushStackElement(new PCCStopStackElement());
   };
 
   PCCCompiler.prototype.emitExit = function() {
-    return this.stack.pushElement(new PCCExitStackElement());
+    return this.pushStackElement(new PCCExitStackElement());
   };
 
   PCCCompiler.prototype.emitProcessApplication = function(processName, argumentContainers) {
     if (argumentContainers == null) {
       argumentContainers = [];
     }
-    return this.stack.pushElement(new PCCApplicationStackElement(processName, argumentContainers));
+    return this.pushStackElement(new PCCApplicationStackElement(processName, argumentContainers));
   };
 
   PCCCompiler.prototype.emitOutput = function(channel, specificChannel, valueContainer) {
-    return this.stack.pushElement(new PCCOutputStackElement(channel, specificChannel, valueContainer));
+    return this.pushStackElement(new PCCOutputStackElement(channel, specificChannel, valueContainer));
   };
 
   PCCCompiler.prototype.emitInput = function(channel, specificChannel, container) {
-    return this.stack.pushElement(new PCCInputStackElement(channel, specificChannel, container));
+    return this.pushStackElement(new PCCInputStackElement(channel, specificChannel, container));
   };
 
   PCCCompiler.prototype.emitCondition = function(condition) {
-    return this.stack.pushElement(new PCCConditionStackElement(condition));
+    return this.pushStackElement(new PCCConditionStackElement(condition));
   };
 
   PCCCompiler.prototype.emitChoice = function() {
     var res;
     res = new PCCChoiceStackElement();
-    this.stack.pushElement(res);
+    this.pushStackElement(res);
     if (this._usingFrames()) {
       this.emitNewScope();
     }
@@ -1883,7 +1894,7 @@ PCCCompiler = (function() {
   PCCCompiler.prototype.emitParallel = function() {
     var res;
     res = new PCCParallelStackElement();
-    this.stack.pushElement(res);
+    this.pushStackElement(res);
     if (this._usingFrames()) {
       this.emitNewScope();
     }
@@ -1893,18 +1904,18 @@ PCCCompiler = (function() {
   PCCCompiler.prototype.emitSequence = function() {
     var res;
     res = new PCCSequenceStackElement();
-    this.stack.pushElement(res);
+    this.pushStackElement(res);
     return res;
   };
 
   PCCCompiler.prototype.emitRestriction = function(restrictedChannelNames) {
-    return this.stack.pushElement(new PCCRestrictionStackElement(restrictedChannelNames));
+    return this.pushStackElement(new PCCRestrictionStackElement(restrictedChannelNames));
   };
 
   PCCCompiler.prototype.emitProcessApplicationPlaceholder = function() {
     var ph;
     ph = new PCCApplicationPlaceholderStackElement(this.getProcessFrame());
-    this.stack.pushElement(ph);
+    this.pushStackElement(ph);
     return ph;
   };
 
@@ -2154,16 +2165,16 @@ PCCCompiler = (function() {
 
 })();
 
-PCEnvironmentNode.prototype.compilerPushPDef = function(pdef) {
+PCTEnvironmentNode.prototype.compilerPushPDef = function(pdef) {
   if (!this.PCCCompilerPDefs) {
     this.PCCCompilerPDefs = [];
   }
   return this.PCCCompilerPDefs.push(pdef);
 };
 
-PCVariable.prototype.compilerPushPDef = PCEnvironmentNode.prototype.compilerPushPDef;
+PCTVariable.prototype.compilerPushPDef = PCTEnvironmentNode.prototype.compilerPushPDef;
 
-PCEnvironmentNode.prototype.collectPDefs = function() {
+PCTEnvironmentNode.prototype.collectPDefs = function() {
   var c;
   if (!this.PCCCompilerPDefs) {
     this.PCCCompilerPDefs = [];
@@ -2180,12 +2191,26 @@ PCEnvironmentNode.prototype.collectPDefs = function() {
   }).call(this)).concatChildren());
 };
 
-PCVariable.prototype.collectPDefs = function() {
+PCTVariable.prototype.collectPDefs = function() {
   if (this.PCCCompilerPDefs) {
     return this.PCCCompilerPDefs;
   } else {
     return [];
   }
+};
+
+PCNode.prototype.addCalculusComponent = function(component) {
+  if (!this.calculusComponents) {
+    this.calculusComponents = [];
+  }
+  return this.calculusComponents.push(component);
+};
+
+PCNode.prototype.getCalculusComponents = function() {
+  if (!this.calculusComponents) {
+    this.calculusComponents = [];
+  }
+  return this.calculusComponents;
 };
 
 /*
@@ -2536,6 +2561,21 @@ PCCStackElement = (function() {
     return false;
   };
 
+  PCCStackElement.prototype.createCalculusNode = function() {
+    var args, cons, res;
+    cons = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    res = (function(func, args, ctor) {
+      ctor.prototype = func.prototype;
+      var child = new ctor, result = func.apply(child, args);
+      return Object(result) === result ? result : child;
+    })(cons, args, function(){});
+    res.pseucoNode = this.pseucoNode;
+    if (this.pseucoNode) {
+      this.pseucoNode.addCalculusComponent(res);
+    }
+    return res;
+  };
+
   PCCStackElement.prototype.compilerGetVariable = function(compiler, identifier) {
     var _ref6;
     return (_ref6 = this.parent) != null ? _ref6.compilerGetVariable(compiler, identifier) : void 0;
@@ -2714,7 +2754,7 @@ PCCStopStackElement = (function(_super) {
   PCCStopStackElement.prototype.getResults = function() {
     var more;
     more = this.next ? this.next.getResults() : new PCCStackResultContainer();
-    more.addResult(PCCStackResult.TYPE_CCSPROCESS, new CCSStop());
+    more.addResult(PCCStackResult.TYPE_CCSPROCESS, this.createCalculusNode(CCSStop));
     return more;
   };
 
@@ -2737,7 +2777,7 @@ PCCExitStackElement = (function(_super) {
   PCCExitStackElement.prototype.getResults = function() {
     var more;
     more = this.next ? this.next.getResults() : new PCCStackResultContainer();
-    more.addResult(PCCStackResult.TYPE_CCSPROCESS, new CCSExit());
+    more.addResult(PCCStackResult.TYPE_CCSPROCESS, this.createCalculusNode(CCSExit));
     return more;
   };
 
@@ -2773,7 +2813,7 @@ PCCPrefixStackElement = (function(_super) {
     if (pRes.type !== PCCStackResult.TYPE_CCSPROCESS) {
       throw new Error("Unexpected result type!");
     }
-    container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, new CCSPrefix(this._getAction(), pRes.data));
+    container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, this.createCalculusNode(CCSPrefix, this._getAction(), pRes.data));
     return container;
   };
 
@@ -2798,7 +2838,7 @@ PCCInputStackElement = (function(_super) {
   }
 
   PCCInputStackElement.prototype._getAction = function() {
-    return new CCSInput(this._getChannel(), this.container ? this.container.identifier : null);
+    return this.createCalculusNode(CCSInput, this._getChannel(), this.container ? this.container.identifier : null);
   };
 
   return PCCInputStackElement;
@@ -2814,7 +2854,7 @@ PCCOutputStackElement = (function(_super) {
   }
 
   PCCOutputStackElement.prototype._getAction = function() {
-    return new CCSOutput(this._getChannel(), this.container ? this.container.ccsTree() : null);
+    return this.createCalculusNode(CCSOutput, this._getChannel(), this.container ? this.container.ccsTree() : null);
   };
 
   return PCCOutputStackElement;
@@ -2836,7 +2876,7 @@ PCCConditionStackElement = (function(_super) {
     if (pRes.type !== PCCStackResult.TYPE_CCSPROCESS) {
       throw new Error("Unexpected result type!");
     }
-    container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, new CCSCondition(this.conditionContainer.ccsTree(), pRes.data));
+    container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, this.createCalculusNode(CCSCondition, this.conditionContainer.ccsTree(), pRes.data));
     return container;
   };
 
@@ -2867,7 +2907,7 @@ PCCRestrictionStackElement = (function(_super) {
     if (pRes.type !== PCCStackResult.TYPE_CCSPROCESS) {
       throw new Error("Unexpected result type!");
     }
-    container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, new CCSRestriction(pRes.data, this.restrictedChannels));
+    container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, this.createCalculusNode(CCSRestriction, pRes.data, this.restrictedChannels));
     return container;
   };
 
@@ -2910,7 +2950,7 @@ PCCApplicationStackElement = (function(_super) {
       }
       return _results;
     }).call(this);
-    more.addResult(PCCStackResult.TYPE_CCSPROCESS, new CCSProcessApplication(this.processName, values));
+    more.addResult(PCCStackResult.TYPE_CCSPROCESS, this.createCalculusNode(CCSProcessApplication, this.processName, values));
     return more;
   };
 
@@ -3006,7 +3046,7 @@ PCCChoiceStackElement = (function(_super) {
   }
 
   PCCChoiceStackElement.prototype._createCCSProcess = function(left, right) {
-    return new CCSChoice(left, right);
+    return this.createCalculusNode(CCSChoice, left, right);
   };
 
   return PCCChoiceStackElement;
@@ -3022,7 +3062,7 @@ PCCParallelStackElement = (function(_super) {
   }
 
   PCCParallelStackElement.prototype._createCCSProcess = function(left, right) {
-    return new CCSParallel(left, right);
+    return this.createCalculusNode(CCSParallel, left, right);
   };
 
   return PCCParallelStackElement;
@@ -3038,7 +3078,7 @@ PCCSequenceStackElement = (function(_super) {
   }
 
   PCCSequenceStackElement.prototype._createCCSProcess = function(left, right) {
-    return new CCSSequence(left, right);
+    return this.createCalculusNode(CCSSequence, left, right);
   };
 
   return PCCSequenceStackElement;
@@ -3096,7 +3136,7 @@ PCCProcessDefinitionStackElement = (function(_super) {
       }
       return _results;
     }).call(this);
-    def = new CCSProcessDefinition(this.processName, pRes.data, argNames);
+    def = this.createCalculusNode(CCSProcessDefinition, this.processName, pRes.data, argNames);
     container.replaceResult(PCCStackResult.TYPE_CCSPROCESS_DEFINITION, def);
     return container;
   };
@@ -3396,7 +3436,7 @@ PCNode.prototype._childrenCompile = function(compiler) {
   _results = [];
   for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
     c = _ref13[_i];
-    _results.push(c.compile(compiler));
+    _results.push(compiler.compile(c));
   }
   return _results;
 };
@@ -3422,7 +3462,7 @@ PCProcedureDecl.prototype.compile = function(compiler) {
     guard = compiler.getVariableWithName("guard", null, true);
     compiler.emitOutput("lock", guard.getContainer(compiler));
   }
-  this.getBody().compile(compiler);
+  compiler.compile(this.getBody());
   proc.emitExit(compiler);
   compiler.endProcedure();
   return [];
@@ -3468,7 +3508,7 @@ PCDecl.prototype.compile = function(compiler) {
   _ref13 = this.getDeclarators();
   for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
     vd = _ref13[_i];
-    vd.compile(compiler);
+    compiler.compile(vd);
   }
   return [];
 };
@@ -3487,7 +3527,7 @@ PCVariableDeclarator.prototype.compileDefaultValue = function(compiler) {
   var type;
   type = this.getTypeNode().getType(compiler).type;
   if (this.getInitializer()) {
-    return this.getInitializer().compile(compiler, type);
+    return compiler.compile(this.getInitializer(), type);
   } else {
     return type.createContainer(compiler);
   }
@@ -3502,13 +3542,13 @@ PCVariableInitializer.prototype.compile = function(compiler, type) {
       _results = [];
       for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
         c = _ref13[_i];
-        _results.push(c.compile(compiler, type.elementsType));
+        _results.push(compiler.compile(c, type.elementsType));
       }
       return _results;
     }).call(this);
     return type.createContainer(compiler, cc);
   } else {
-    return type.createContainer(compiler, this.children[0].compile(compiler));
+    return type.createContainer(compiler, compiler.compile(this.children[0]));
   }
 };
 
@@ -3530,13 +3570,13 @@ PCStartExpression.prototype.compile = function(compiler) {
 
 PCAssignExpression.prototype.compile = function(compiler) {
   var c;
-  c = this.getExpression().compile(compiler);
+  c = compiler.compile(this.getExpression());
   if (this.operator === "+=") {
-    c = new PCCBinaryContainer(this.getDestination().compile(compiler), c, "+");
+    c = new PCCBinaryContainer(compiler.compile(this.getDestination()), c, "+");
   } else if (this.operator === "*=") {
-    c = new PCCBinaryContainer(this.getDestination().compile(compiler), c, "*");
+    c = new PCCBinaryContainer(compiler.compile(this.getDestination()), c, "*");
   } else if (this.operator === "/=") {
-    c = new PCCBinaryContainer(this.getDestination().compile(compiler), c, "/");
+    c = new PCCBinaryContainer(compiler.compile(this.getDestination()), c, "/");
   } else if (this.operator !== "=") {
     throw new Error("Unknown assign operator");
   }
@@ -3550,7 +3590,7 @@ PCAssignDestination.prototype.compile = function(compiler) {
   v = compiler.getVariableWithName(this.identifier, null);
   res = v.getContainer(compiler);
   for (i = _i = 0; _i < arrayIndexCount; i = _i += 1) {
-    res = this.getValueForArrayAtIndex(compiler, ai, this.children[i].compile(compiler));
+    res = this.getValueForArrayAtIndex(compiler, ai, compiler.compile(this.children[i]));
   }
   return res;
 };
@@ -3570,16 +3610,16 @@ PCAssignDestination.prototype.assignContainer = function(compiler, c) {
   } else {
     ai = v.getContainer(compiler);
     for (i = _i = 0, _ref13 = arrayIndexCount - 2; _i <= _ref13; i = _i += 1) {
-      ai = this.getValueForArrayAtIndex(compiler, ai, this.children[i].compile(compiler));
+      ai = this.getValueForArrayAtIndex(compiler, ai, compiler.compile(this.children[i]));
     }
-    return this.setValueForArrayAtIndex(compiler, ai, this.children[arrayIndexCount - 1].compile(compiler), c);
+    return this.setValueForArrayAtIndex(compiler, ai, compiler.compile(this.children[arrayIndexCount - 1]), c);
   }
 };
 
 PCSendExpression.prototype.compile = function(compiler) {
   var c, control, p1, p2, v;
-  c = this.children[0].compile(compiler);
-  v = this.children[1].compile(compiler);
+  c = compiler.compile(this.children[0]);
+  v = compiler.compile(this.children[1]);
   if (this.children[0].getType(compiler).capacity <= 0) {
     control = compiler.emitChoice();
     compiler.emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">="));
@@ -3599,15 +3639,15 @@ PCSendExpression.prototype.compile = function(compiler) {
 
 PCConditionalExpression.prototype.compile = function(compiler) {
   var b, c, control, lp, rp;
-  b = this.children[0].compile(compiler);
+  b = compiler.compile(this.children[0]);
   control = compiler.emitChoice();
   compiler.emitCondition(b);
-  c = this.children[1].compile(compiler);
+  c = compiler.compile(this.children[1]);
   compiler.protectContainer(c);
   lp = compiler.emitProcessApplicationPlaceholder();
   control.setBranchFinished();
   compiler.emitCondition(new PCCUnaryContainer("!", b));
-  c = this.children[2].compile(compiler);
+  c = compiler.compile(this.children[2]);
   compiler.protectContainer(c);
   rp = compiler.emitProcessApplicationPlaceholder();
   compiler.emitMergeOfProcessFramesOfPlaceholders([lp, rp]);
@@ -3616,60 +3656,60 @@ PCConditionalExpression.prototype.compile = function(compiler) {
 
 PCOrExpression.prototype.compile = function(compiler) {
   var left, right;
-  left = this.children[0].compile(compiler);
+  left = compiler.compile(this.children[0]);
   compiler.protectContainer(left);
-  right = this.children[1].compile(compiler);
+  right = compiler.compile(this.children[1]);
   left = compiler.unprotectContainer();
   return new PCCBinaryContainer(left, right, "||");
 };
 
 PCAndExpression.prototype.compile = function(compiler) {
   var left, right;
-  left = this.children[0].compile(compiler);
+  left = compiler.compile(this.children[0]);
   compiler.protectContainer(left);
-  right = this.children[1].compile(compiler);
+  right = compiler.compile(this.children[1]);
   left = compiler.unprotectContainer();
   return new PCCBinaryContainer(left, right, "&&");
 };
 
 PCEqualityExpression.prototype.compile = function(compiler) {
   var left, right;
-  left = this.children[0].compile(compiler);
+  left = compiler.compile(this.children[0]);
   compiler.protectContainer(left);
-  right = this.children[1].compile(compiler);
+  right = compiler.compile(this.children[1]);
   left = compiler.unprotectContainer();
   return new PCCBinaryContainer(left, right, this.operator);
 };
 
 PCRelationalExpression.prototype.compile = function(compiler) {
   var left, right;
-  left = this.children[0].compile(compiler);
+  left = compiler.compile(this.children[0]);
   compiler.protectContainer(left);
-  right = this.children[1].compile(compiler);
+  right = compiler.compile(this.children[1]);
   left = compiler.unprotectContainer();
   return new PCCBinaryContainer(left, right, this.operator);
 };
 
 PCAdditiveExpression.prototype.compile = function(compiler) {
   var left, right;
-  left = this.children[0].compile(compiler);
+  left = compiler.compile(this.children[0]);
   compiler.protectContainer(left);
-  right = this.children[1].compile(compiler);
+  right = compiler.compile(this.children[1]);
   left = compiler.unprotectContainer();
   return new PCCBinaryContainer(left, right, this.operator);
 };
 
 PCMultiplicativeExpression.prototype.compile = function(compiler) {
   var left, right;
-  left = this.children[0].compile(compiler);
+  left = compiler.compile(this.children[0]);
   compiler.protectContainer(left);
-  right = this.children[1].compile(compiler);
+  right = compiler.compile(this.children[1]);
   left = compiler.unprotectContainer();
   return new PCCBinaryContainer(left, right, this.operator);
 };
 
 PCUnaryExpression.prototype.compile = function(compiler) {
-  return new PCCUnaryContainer(this.operator, this.children[0].compile(compiler));
+  return new PCCUnaryContainer(this.operator, compiler.compile(this.children[0]));
 };
 
 PCPostfixExpression.prototype.compile = function(compiler) {
@@ -3683,14 +3723,14 @@ PCPostfixExpression.prototype.compile = function(compiler) {
       throw new Error("Unknown postfix operator");
     }
   }).call(this);
-  c = new PCCBinaryContainer(this.children[0].compile(compiler), new PCCConstantContainer(1), op);
+  c = new PCCBinaryContainer(compiler.compile(this.children[0]), new PCCConstantContainer(1), op);
   this.children[0].assignContainer(compiler, c);
   return c;
 };
 
 PCReceiveExpression.prototype.compile = function(compiler) {
   var c, res;
-  c = this.children[0].compile(compiler);
+  c = compiler.compile(this.children[0]);
   res = compiler.getFreshContainer(c.ccsType.getSubtype());
   compiler.emitInput("receive", c, res);
   return res;
@@ -3705,7 +3745,7 @@ PCProcedureCall.prototype.compile = function(compiler, instanceContainer, classN
   _ref13 = this.children;
   for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
     c = _ref13[_i];
-    compiler.protectContainer(c.compile(compiler));
+    compiler.protectContainer(compiler.compile(c));
   }
   control = compiler.emitSequence();
   args = [];
@@ -3738,7 +3778,7 @@ PCProcedureCall.prototype.compileSend = function(compiler, instanceContainer, cl
   _ref13 = this.children;
   for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
     c = _ref13[_i];
-    compiler.protectContainer(c.compile(compiler));
+    compiler.protectContainer(compiler.compile(c));
   }
   args = [];
   _ref14 = this.children;
@@ -3762,20 +3802,20 @@ PCProcedureCall.prototype.compileSend = function(compiler, instanceContainer, cl
 PCClassCall.prototype.compile = function(compiler) {
   var className;
   className = this.children[0].getType(compiler).identifier;
-  return this.children[1].compile(compiler, this.children[0].compile(compiler), className);
+  return compiler.compile(this.children[1], compiler.compile(this.children[0]), className);
 };
 
 PCClassCall.prototype.compileSend = function(compiler) {
   var className;
   className = this.children[0].getType(compiler).identifier;
-  return this.children[1].compileSend(compiler, this.children[0].compile(compiler), className);
+  return this.children[1].compileSend(compiler, compiler.compile(this.children[0]), className);
 };
 
 PCArrayExpression.prototype.compile = function(compiler) {
   var a, res, t;
-  a = this.children[0].compile(compiler);
+  a = compiler.compile(this.children[0]);
   compiler.protectContainer(a);
-  t = this.children[1].compile(compiler);
+  t = compiler.compile(this.children[1]);
   a = compiler.unprotectContainer();
   compiler.emitOutput("array_access", a, t);
   res = compiler.getFreshContainer(this.children[0].getType(compiler).type);
@@ -3794,7 +3834,7 @@ PCIdentifierExpression.prototype.compile = function(compiler) {
 };
 
 PCStatement.prototype.compile = function(compiler, loopEntry) {
-  return this.children[0].compile(compiler, loopEntry);
+  return compiler.compile(this.children[0], loopEntry);
 };
 
 PCBreakStmt.prototype.compile = function(compiler, loopEntry) {
@@ -3816,7 +3856,7 @@ PCStmtBlock.prototype.compile = function(compiler, loopEntry) {
     _results = [];
     for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
       c = _ref13[_i];
-      _results.push(c.compile(compiler, loopEntry));
+      _results.push(compiler.compile(c, loopEntry));
     }
     return _results;
   }).call(this)).concatChildren();
@@ -3825,7 +3865,7 @@ PCStmtBlock.prototype.compile = function(compiler, loopEntry) {
 };
 
 PCStmtExpression.prototype.compile = function(compiler, loopEntry) {
-  this.children[0].compile(compiler);
+  compiler.compile(this.children[0]);
   return [];
 };
 
@@ -3838,11 +3878,11 @@ PCSelectStmt.prototype.compile = function(compiler, loopEntry) {
   breaks = [];
   for (i = _i = 0, _ref13 = this.children.length - 1; _i < _ref13; i = _i += 1) {
     control = compiler.emitChoice();
-    breaks.concat(this.children[i].compile(compiler, loopEntry));
+    breaks.concat(compiler.compile(this.children[i], loopEntry));
     placeholders.push(compiler.emitProcessApplicationPlaceholder());
     control.setBranchFinished();
   }
-  breaks.concat(this.children[this.children.length - 1].compile(compiler, loopEntry));
+  breaks.concat(compiler.compile(this.children[this.children.length - 1], loopEntry));
   placeholders.push(compiler.emitProcessApplicationPlaceholder());
   compiler.emitMergeOfProcessFramesOfPlaceholders(placeholders);
   debugger;
@@ -3853,25 +3893,25 @@ PCCase.prototype.compile = function(compiler, loopEntry) {
   var cond;
   cond = this.getCondition();
   if (cond) {
-    cond.compile(compiler);
+    compiler.compile(cond);
   }
-  return this.getExecution().compile(compiler, loopEntry);
+  return compiler.compile(this.getExecution(), loopEntry);
 };
 
 PCIfStmt.prototype.compile = function(compiler, loopEntry) {
   var b, breaks, control, placeholders;
   placeholders = [];
-  b = this.children[0].compile(compiler);
+  b = compiler.compile(this.children[0]);
   control = compiler.emitChoice();
   compiler.emitCondition(b);
-  breaks = this.children[1].compile(compiler, loopEntry);
+  breaks = compiler.compile(this.children[1], loopEntry);
   if (!compiler.isCurrentProcessCompleted()) {
     placeholders.push(compiler.emitProcessApplicationPlaceholder());
   }
   control.setBranchFinished();
   compiler.emitCondition(new PCCUnaryContainer("!", b));
   if (this.children.length === 3) {
-    breaks = breaks.concat(this.children[2].compile(compiler, loopEntry));
+    breaks = breaks.concat(compiler.compile(this.children[2], loopEntry));
   }
   if (!compiler.isCurrentProcessCompleted()) {
     placeholders.push(compiler.emitProcessApplicationPlaceholder());
@@ -3884,10 +3924,10 @@ PCIfStmt.prototype.compile = function(compiler, loopEntry) {
 PCWhileStmt.prototype.compile = function(compiler) {
   var b, breaks, control, entry, out, _i, _len;
   entry = compiler.emitNextProcessFrame();
-  b = this.children[0].compile(compiler);
+  b = compiler.compile(this.children[0]);
   control = compiler.emitChoice();
   compiler.emitCondition(b);
-  breaks = this.children[1].compile(compiler, entry);
+  breaks = compiler.compile(this.children[1], entry);
   entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame());
   control.setBranchFinished();
   compiler.emitCondition(new PCCUnaryContainer("!", b));
@@ -3903,8 +3943,8 @@ PCDoStmt.prototype.compile = function(compiler) {
   var b, breaks, control, entry, out, statusQuo, _i, _len;
   statusQuo = compiler.getProcessFrame();
   entry = compiler.emitNextProcessFrame();
-  breaks = this.children[0].compile(compiler, entry);
-  b = this.children[1].compile(compiler);
+  breaks = compiler.compile(this.children[0], entry);
+  b = compiler.compile(this.children[1]);
   control = compiler.emitChoice();
   compiler.emitCondition(b);
   entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame());
@@ -3925,24 +3965,24 @@ PCForStmt.prototype.compile = function(compiler) {
   statusQuo = compiler.getProcessFrame();
   if (this.init) {
     compiler.emitNewScope();
-    this.init.compile(compiler);
+    compiler.compile(this.init);
   }
   entry = compiler.emitNextProcessFrame();
   breaks = [];
   control = null;
   if (this.expression) {
-    b = this.expression.compile(compiler);
+    b = compiler.compile(this.expression);
     control = compiler.emitChoice();
     compiler.emitCondition(new PCCUnaryContainer("!", b));
     breaks.push(compiler.emitProcessApplicationPlaceholder());
     control.setBranchFinished();
     compiler.emitCondition(b);
   }
-  breaks = breaks.concat(this.body.compile(compiler, entry));
+  breaks = breaks.concat(compiler.compile(this.body, entry));
   _ref13 = this.update;
   for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
     u = _ref13[_i];
-    u.compile(compiler);
+    compiler.compile(u);
   }
   entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame());
   if (control) {
@@ -3961,7 +4001,7 @@ PCForInit.prototype.compile = function(compiler) {
   _ref13 = this.children;
   for (_i = 0, _len = _ref13.length; _i < _len; _i++) {
     c = _ref13[_i];
-    c.compile(compiler);
+    compiler.compile(c);
   }
   return [];
 };
@@ -3969,7 +4009,7 @@ PCForInit.prototype.compile = function(compiler) {
 PCReturnStmt.prototype.compile = function(compiler, loopEntry) {
   var res;
   if (this.children.length === 1) {
-    res = this.children[0].compile(compiler);
+    res = compiler.compile(this.children[0]);
     compiler.emitOutput("return", null, res);
   }
   compiler.getCurrentProcedure().emitExit(compiler);
@@ -3980,16 +4020,16 @@ PCPrimitiveStmt.prototype.compile = function(compiler, loopEntry) {
   var b, c, cond, control, entry, g, v, vars, _i, _len;
   switch (this.kind) {
     case PCPrimitiveStmt.JOIN:
-      c = this.children[0].compile(compiler, loopEntry);
+      c = compiler.compile(this.children[0], loopEntry);
       compiler.emitOutput("join_register", c, null);
       compiler.emitOutput("join", c, null);
       break;
     case PCPrimitiveStmt.LOCK:
-      c = this.children[0].compile(compiler, loopEntry);
+      c = compiler.compile(this.children[0], loopEntry);
       compiler.emitOutput("lock", c, null);
       break;
     case PCPrimitiveStmt.UNLOCK:
-      c = this.children[0].compile(compiler, loopEntry);
+      c = compiler.compile(this.children[0], loopEntry);
       compiler.emitOutput("unlock", c, null);
       break;
     case PCPrimitiveStmt.WAIT:
@@ -3998,7 +4038,7 @@ PCPrimitiveStmt.prototype.compile = function(compiler, loopEntry) {
       }
       cond = compiler.getVariableWithName(this.children[0].identifier);
       entry = compiler.emitNextProcessFrame();
-      b = cond.node.getExpression().compile(compiler);
+      b = compiler.compile(cond.node.getExpression());
       control = compiler.emitChoice();
       compiler.emitCondition(new PCCUnaryContainer("!", b));
       c = cond.getContainer(compiler);
@@ -4012,11 +4052,11 @@ PCPrimitiveStmt.prototype.compile = function(compiler, loopEntry) {
       compiler.emitCondition(b);
       break;
     case PCPrimitiveStmt.SIGNAL:
-      c = this.children[0].compile(compiler, loopEntry);
+      c = compiler.compile(this.children[0], loopEntry);
       compiler.emitOutput("signal", c, null);
       break;
     case PCPrimitiveStmt.SIGNAL_ALL:
-      c = this.children.length > 0 ? this.children[0].compile(compiler, loopEntry) : null;
+      c = this.children.length > 0 ? compiler.compile(this.children[0], loopEntry) : null;
       vars = [];
       if (c) {
         if (!(this.children[0] instanceof PCIdentifierExpression)) {
@@ -4040,9 +4080,9 @@ PCPrintStmt.prototype.compile = function(compiler, loopEntry) {
   if (this.children.length === 0) {
     return;
   }
-  out = this.children[0].compile(compiler);
+  out = compiler.compile(this.children[0]);
   for (i = _i = 1, _ref13 = this.children.length; _i < _ref13; i = _i += 1) {
-    out = new PCCBinaryContainer(out, this.children[i].compile(compiler), "+");
+    out = new PCCBinaryContainer(out, compiler.compile(this.children[i]), "+");
   }
   compiler.emitOutput("println", null, out);
   return [];

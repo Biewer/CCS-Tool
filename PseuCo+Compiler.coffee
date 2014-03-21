@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 PCNode::compile = (compiler) ->
 	throw new Error("Abstract method!")
 PCNode::_childrenCompile = (compiler) ->
-	c.compile(compiler) for c in @children
+	compiler.compile(c) for c in @children
 	
 	
 
@@ -53,7 +53,7 @@ PCProcedureDecl::compile = (compiler) ->
 	if proc.isMonitorProcedure()
 		guard = compiler.getVariableWithName("guard", null, true)
 		compiler.emitOutput("lock", guard.getContainer(compiler))
-	@getBody().compile(compiler)		
+	compiler.compile(@getBody())		
 	proc.emitExit(compiler)
 	compiler.endProcedure()
 	[]
@@ -96,7 +96,7 @@ PCConditionDecl::compileDefaultValue = (compiler) ->
 
 PCDecl::compile = (compiler) ->
 	type = @children[0]
-	vd.compile(compiler) for vd in @getDeclarators()
+	compiler.compile(vd) for vd in @getDeclarators()
 	[]
 	
 	
@@ -110,7 +110,7 @@ PCVariableDeclarator::compile = (compiler) ->
 PCVariableDeclarator::compileDefaultValue = (compiler) ->
 	type = @getTypeNode().getType(compiler).type
 	if @getInitializer()
-		@getInitializer().compile(compiler, type)
+		compiler.compile(@getInitializer(), type)
 	else
 		type.createContainer(compiler)
 	
@@ -119,10 +119,10 @@ PCVariableDeclarator::compileDefaultValue = (compiler) ->
 
 PCVariableInitializer::compile = (compiler, type) ->
 	if @isArray()
-		cc = (c.compile(compiler, type.elementsType) for c in @children)
+		cc = (compiler.compile(c, type.elementsType) for c in @children)
 		type.createContainer(compiler, cc)
 	else
-		type.createContainer(compiler, @children[0].compile(compiler))
+		type.createContainer(compiler, compiler.compile(@children[0]))
 	
 	
 	
@@ -143,13 +143,13 @@ PCStartExpression::compile = (compiler) ->
 	
 
 PCAssignExpression::compile = (compiler) ->
-	c = @getExpression().compile(compiler)
+	c = compiler.compile(@getExpression())
 	if @operator == "+="
-		c = new PCCBinaryContainer(@getDestination().compile(compiler), c, "+")
+		c = new PCCBinaryContainer(compiler.compile(@getDestination()), c, "+")
 	else if @operator == "*="
-		c = new PCCBinaryContainer(@getDestination().compile(compiler), c, "*")
+		c = new PCCBinaryContainer(compiler.compile(@getDestination()), c, "*")
 	else if @operator == "/="
-		c = new PCCBinaryContainer(@getDestination().compile(compiler), c, "/")
+		c = new PCCBinaryContainer(compiler.compile(@getDestination()), c, "/")
 	else if @operator != "="
 		throw new Error("Unknown assign operator")
 	@getDestination().assignContainer(compiler, c)
@@ -161,7 +161,7 @@ PCAssignDestination::compile = (compiler) ->	# Returns the same value as array e
 	arrayIndexCount = @children.length
 	v = compiler.getVariableWithName(@identifier, null)
 	res = v.getContainer(compiler)
-	(res = @getValueForArrayAtIndex(compiler, ai, @children[i].compile(compiler))) for i in [0...arrayIndexCount] by 1
+	(res = @getValueForArrayAtIndex(compiler, ai, compiler.compile(@children[i]))) for i in [0...arrayIndexCount] by 1
 	res
 PCAssignDestination::setValueForArrayAtIndex = (compiler, instanceContainer, indexContainer, valueContainer) ->
 	compiler.emitOutput("array_access", instanceContainer, indexContainer)
@@ -174,15 +174,15 @@ PCAssignDestination::assignContainer = (compiler, c) ->
 		v.setContainer(compiler, c)
 	else
 		ai = v.getContainer(compiler)
-		(ai = @getValueForArrayAtIndex(compiler, ai, @children[i].compile(compiler))) for i in [0..arrayIndexCount-2] by 1
-		@setValueForArrayAtIndex(compiler, ai, @children[arrayIndexCount-1].compile(compiler), c)
+		(ai = @getValueForArrayAtIndex(compiler, ai, compiler.compile(@children[i]))) for i in [0..arrayIndexCount-2] by 1
+		@setValueForArrayAtIndex(compiler, ai, compiler.compile(@children[arrayIndexCount-1]), c)
 	
 
 	
 
 PCSendExpression::compile = (compiler) ->
-	c = @children[0].compile(compiler)
-	v = @children[1].compile(compiler)
+	c = compiler.compile(@children[0])
+	v = compiler.compile(@children[1])
 	if @children[0].getType(compiler).capacity <= 0
 		control = compiler.emitChoice()
 		compiler.emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">="))
@@ -202,15 +202,15 @@ PCSendExpression::compile = (compiler) ->
 	
 
 PCConditionalExpression::compile = (compiler) ->
-	b = @children[0].compile(compiler)
+	b = compiler.compile(@children[0])
 	control = compiler.emitChoice()
 	compiler.emitCondition(b)
-	c = @children[1].compile(compiler)
+	c = compiler.compile(@children[1])
 	compiler.protectContainer(c)
 	lp = compiler.emitProcessApplicationPlaceholder()
 	control.setBranchFinished()
 	compiler.emitCondition(new PCCUnaryContainer("!", b))
-	c = @children[2].compile(compiler)
+	c = compiler.compile(@children[2])
 	compiler.protectContainer(c)
 	rp = compiler.emitProcessApplicationPlaceholder()
 	compiler.emitMergeOfProcessFramesOfPlaceholders([lp, rp])
@@ -219,74 +219,74 @@ PCConditionalExpression::compile = (compiler) ->
 	
 
 PCOrExpression::compile = (compiler) ->
-	left = @children[0].compile(compiler)
+	left = compiler.compile(@children[0])
 	compiler.protectContainer(left)
-	right = @children[1].compile(compiler)
+	right = compiler.compile(@children[1])
 	left = compiler.unprotectContainer()
 	new PCCBinaryContainer(left, right, "||")
 	
 	
 
 PCAndExpression::compile = (compiler) ->
-	left = @children[0].compile(compiler)
+	left = compiler.compile(@children[0])
 	compiler.protectContainer(left)
-	right = @children[1].compile(compiler)
+	right = compiler.compile(@children[1])
 	left = compiler.unprotectContainer()
 	new PCCBinaryContainer(left, right, "&&")
 	
 	
 
 PCEqualityExpression::compile = (compiler) ->
-	left = @children[0].compile(compiler)
+	left = compiler.compile(@children[0])
 	compiler.protectContainer(left)
-	right = @children[1].compile(compiler)
+	right = compiler.compile(@children[1])
 	left = compiler.unprotectContainer()
 	new PCCBinaryContainer(left, right, @operator)
 	
 	
 
 PCRelationalExpression::compile = (compiler) ->
-	left = @children[0].compile(compiler)
+	left = compiler.compile(@children[0])
 	compiler.protectContainer(left)
-	right = @children[1].compile(compiler)
+	right = compiler.compile(@children[1])
 	left = compiler.unprotectContainer()
 	new PCCBinaryContainer(left, right, @operator)
 	
 	
 
 PCAdditiveExpression::compile = (compiler) ->
-	left = @children[0].compile(compiler)
+	left = compiler.compile(@children[0])
 	compiler.protectContainer(left)
-	right = @children[1].compile(compiler)
+	right = compiler.compile(@children[1])
 	left = compiler.unprotectContainer()
 	new PCCBinaryContainer(left, right, @operator)
 	
 	
 
 PCMultiplicativeExpression::compile = (compiler) ->
-	left = @children[0].compile(compiler)
+	left = compiler.compile(@children[0])
 	compiler.protectContainer(left)
-	right = @children[1].compile(compiler)
+	right = compiler.compile(@children[1])
 	left = compiler.unprotectContainer()
 	new PCCBinaryContainer(left, right, @operator)
 	
 	
 
 PCUnaryExpression::compile = (compiler) ->
-	new PCCUnaryContainer(@operator, @children[0].compile(compiler))
+	new PCCUnaryContainer(@operator, compiler.compile(@children[0]))
 	
 	
 
 PCPostfixExpression::compile = (compiler) ->
 	op = if @operator == "++" then "+" else if @operator == "--" then "-" else throw new Error("Unknown postfix operator")
-	c = new PCCBinaryContainer(@children[0].compile(compiler), new PCCConstantContainer(1), op)
+	c = new PCCBinaryContainer(compiler.compile(@children[0]), new PCCConstantContainer(1), op)
 	@children[0].assignContainer(compiler, c)
 	c
 	
 	
 
 PCReceiveExpression::compile = (compiler) ->
-	c = @children[0].compile(compiler)
+	c = compiler.compile(@children[0])
 	res = compiler.getFreshContainer(c.ccsType.getSubtype())
 	compiler.emitInput("receive", c, res)
 	res
@@ -297,7 +297,7 @@ PCReceiveExpression::compile = (compiler) ->
 PCProcedureCall::compile = (compiler, instanceContainer, className) ->
 	proc = compiler.getProcedureWithName(@procedureName, className)
 	compiler.protectContainer(instanceContainer) if instanceContainer
-	compiler.protectContainer(c.compile(compiler)) for c in @children
+	compiler.protectContainer(compiler.compile(c)) for c in @children
 	control = compiler.emitSequence()
 	args = []
 	args.unshift(compiler.unprotectContainer()) for c in @children
@@ -315,7 +315,7 @@ PCProcedureCall::compile = (compiler, instanceContainer, className) ->
 PCProcedureCall::compileSend = (compiler, instanceContainer, className) ->
 	proc = compiler.getProcedureWithName(@procedureName, className)
 	compiler.protectContainer(instanceContainer) if instanceContainer
-	compiler.protectContainer(c.compile(compiler)) for c in @children
+	compiler.protectContainer(compiler.compile(c)) for c in @children
 	args = []
 	args.unshift(compiler.unprotectContainer()) for c in @children
 	instanceContainer = compiler.unprotectContainer() if instanceContainer
@@ -328,16 +328,16 @@ PCProcedureCall::compileSend = (compiler, instanceContainer, className) ->
 
 PCClassCall::compile = (compiler) ->
 	className = @children[0].getType(compiler).identifier
-	@children[1].compile(compiler, @children[0].compile(compiler), className)
+	compiler.compile(@children[1], compiler.compile(@children[0]), className)
 PCClassCall::compileSend = (compiler) ->
 	className = @children[0].getType(compiler).identifier
-	@children[1].compileSend(compiler, @children[0].compile(compiler), className)
+	@children[1].compileSend(compiler, compiler.compile(@children[0]), className)
 	
 
 PCArrayExpression::compile = (compiler) ->
-	a = @children[0].compile(compiler)
+	a = compiler.compile(@children[0])
 	compiler.protectContainer(a)
-	t = @children[1].compile(compiler)
+	t = compiler.compile(@children[1])
 	a = compiler.unprotectContainer()
 	compiler.emitOutput("array_access", a, t)
 	res = compiler.getFreshContainer(@children[0].getType(compiler).type)
@@ -358,7 +358,7 @@ PCIdentifierExpression::compile = (compiler) ->
 	
 
 PCStatement::compile = (compiler, loopEntry) ->
-	@children[0].compile(compiler, loopEntry)
+	compiler.compile(@children[0], loopEntry)
 	
 	
 
@@ -376,14 +376,14 @@ PCContinueStmt::compile = (compiler, loopEntry) ->
 PCStmtBlock::compile = (compiler, loopEntry) ->
 	statusQuo = compiler.getProcessFrame()
 	compiler.emitNewScope()
-	breaks = (c.compile(compiler, loopEntry) for c in @children).concatChildren()
+	breaks = (compiler.compile(c, loopEntry) for c in @children).concatChildren()
 	compiler.emitNewScope(statusQuo);
 	breaks
 	
 	
 
 PCStmtExpression::compile = (compiler, loopEntry) ->
-	@children[0].compile(compiler)
+	compiler.compile(@children[0])
 	[]
 	
 	
@@ -394,10 +394,10 @@ PCSelectStmt::compile = (compiler, loopEntry) ->
 	breaks = []
 	for i in [0...@children.length-1] by 1
 		control = compiler.emitChoice()
-		breaks.concat(@children[i].compile(compiler, loopEntry))
+		breaks.concat(compiler.compile(@children[i], loopEntry))
 		placeholders.push(compiler.emitProcessApplicationPlaceholder())
 		control.setBranchFinished()
-	breaks.concat(@children[@children.length-1].compile(compiler, loopEntry))
+	breaks.concat(compiler.compile(@children[@children.length-1], loopEntry))
 	placeholders.push(compiler.emitProcessApplicationPlaceholder())
 	compiler.emitMergeOfProcessFramesOfPlaceholders(placeholders)
 	debugger
@@ -408,22 +408,22 @@ PCSelectStmt::compile = (compiler, loopEntry) ->
 PCCase::compile = (compiler, loopEntry) ->
 	cond = @getCondition()
 	if cond
-		cond.compile(compiler)
-	@getExecution().compile(compiler, loopEntry)
+		compiler.compile(cond)
+	compiler.compile(@getExecution(), loopEntry)
 	
 	
 
 PCIfStmt::compile = (compiler, loopEntry) ->
 	placeholders = []
-	b = @children[0].compile(compiler)
+	b = compiler.compile(@children[0])
 	control = compiler.emitChoice()
 	compiler.emitCondition(b)
-	breaks = @children[1].compile(compiler, loopEntry)
+	breaks = compiler.compile(@children[1], loopEntry)
 	if !compiler.isCurrentProcessCompleted()
 		placeholders.push(compiler.emitProcessApplicationPlaceholder())
 	control.setBranchFinished()	# left is finished
 	compiler.emitCondition(new PCCUnaryContainer("!", b))
-	(breaks = breaks.concat(@children[2].compile(compiler, loopEntry))) if (@children.length == 3)
+	(breaks = breaks.concat(compiler.compile(@children[2], loopEntry))) if (@children.length == 3)
 	if !compiler.isCurrentProcessCompleted()
 		placeholders.push(compiler.emitProcessApplicationPlaceholder())
 	control.setBranchFinished()	# right is finished
@@ -434,10 +434,10 @@ PCIfStmt::compile = (compiler, loopEntry) ->
 
 PCWhileStmt::compile = (compiler) ->
 	entry = compiler.emitNextProcessFrame()
-	b = @children[0].compile(compiler)
+	b = compiler.compile(@children[0])
 	control = compiler.emitChoice()
 	compiler.emitCondition(b)
-	breaks = @children[1].compile(compiler, entry)
+	breaks = compiler.compile(@children[1], entry)
 	entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
 	control.setBranchFinished()
 	compiler.emitCondition(new PCCUnaryContainer("!", b))
@@ -449,8 +449,8 @@ PCWhileStmt::compile = (compiler) ->
 PCDoStmt::compile = (compiler) ->
 	statusQuo = compiler.getProcessFrame()
 	entry = compiler.emitNextProcessFrame()
-	breaks = @children[0].compile(compiler, entry)
-	b = @children[1].compile(compiler)
+	breaks = compiler.compile(@children[0], entry)
+	b = compiler.compile(@children[1])
 	control = compiler.emitChoice()
 	compiler.emitCondition(b)
 	entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
@@ -470,19 +470,19 @@ PCForStmt::compile = (compiler) ->
 	statusQuo = compiler.getProcessFrame()
 	if @init
 		compiler.emitNewScope()
-		@init.compile(compiler)
+		compiler.compile(@init)
 	entry = compiler.emitNextProcessFrame()
 	breaks = []
 	control = null
 	if @expression 
-		b = @expression.compile(compiler)
+		b = compiler.compile(@expression)
 		control = compiler.emitChoice()
 		compiler.emitCondition(new PCCUnaryContainer("!", b))
 		breaks.push(compiler.emitProcessApplicationPlaceholder())
 		control.setBranchFinished()
 		compiler.emitCondition(b)
-	breaks = breaks.concat(@body.compile(compiler, entry))
-	u.compile(compiler) for u in @update
+	breaks = breaks.concat(compiler.compile(@body, entry))
+	compiler.compile(u) for u in @update
 	entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
 	control.setBranchFinished() if control
 	out = compiler.emitNextProcessFrame([statusQuo])
@@ -492,14 +492,14 @@ PCForStmt::compile = (compiler) ->
 	
 
 PCForInit::compile = (compiler) ->
-	c.compile(compiler) for c in @children
+	compiler.compile(c) for c in @children
 	[]
 	
 	
 
 PCReturnStmt::compile = (compiler, loopEntry) ->
 	if @children.length == 1
-		res = @children[0].compile(compiler)
+		res = compiler.compile(@children[0])
 		compiler.emitOutput("return", null, res)
 	compiler.getCurrentProcedure().emitExit(compiler)
 	[]
@@ -509,20 +509,20 @@ PCReturnStmt::compile = (compiler, loopEntry) ->
 PCPrimitiveStmt::compile = (compiler, loopEntry) ->
 	switch @kind
 		when PCPrimitiveStmt.JOIN
-			c = @children[0].compile(compiler, loopEntry)
+			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("join_register", c, null)
 			compiler.emitOutput("join", c, null)
 		when PCPrimitiveStmt.LOCK  
-			c = @children[0].compile(compiler, loopEntry)
+			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("lock", c, null)
 		when PCPrimitiveStmt.UNLOCK  
-			c = @children[0].compile(compiler, loopEntry)
+			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("unlock", c, null)
 		when PCPrimitiveStmt.WAIT
 			throw new Error("Unexpected expression!") if !(@children[0] instanceof PCIdentifierExpression)
 			cond = compiler.getVariableWithName(@children[0].identifier)
 			entry = compiler.emitNextProcessFrame()
-			b = cond.node.getExpression().compile(compiler)
+			b = compiler.compile(cond.node.getExpression())
 			control = compiler.emitChoice()
 			compiler.emitCondition(new PCCUnaryContainer("!", b))
 			c = cond.getContainer(compiler)
@@ -536,10 +536,10 @@ PCPrimitiveStmt::compile = (compiler, loopEntry) ->
 			compiler.emitCondition(b)
 			
 		when PCPrimitiveStmt.SIGNAL  
-			c = @children[0].compile(compiler, loopEntry)
+			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("signal", c, null)
 		when PCPrimitiveStmt.SIGNAL_ALL
-			c = if @children.length > 0 then @children[0].compile(compiler, loopEntry) else null
+			c = if @children.length > 0 then compiler.compile(@children[0], loopEntry) else null
 			vars = []
 			if c
 				throw new Error("Unexpected expression!") if !(@children[0] instanceof PCIdentifierExpression)
@@ -555,9 +555,9 @@ PCPrimitiveStmt::compile = (compiler, loopEntry) ->
 
 PCPrintStmt::compile = (compiler, loopEntry) ->
 	return if @children.length == 0
-	out = @children[0].compile(compiler)
+	out = compiler.compile(@children[0])
 	# Wrong: I have to protect containers!!!
-	(out = new PCCBinaryContainer(out, @children[i].compile(compiler), "+")) for i in [1...@children.length] by 1
+	(out = new PCCBinaryContainer(out, compiler.compile(@children[i]), "+")) for i in [1...@children.length] by 1
 	compiler.emitOutput("println", null, out)
 	[]
 	

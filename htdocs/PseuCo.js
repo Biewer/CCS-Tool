@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	toString returns the string representation of the tree with minimal brackets and correctly indented.
 */
 
-var PCAdditiveExpression, PCAndExpression, PCArrayExpression, PCArrayType, PCAssignDestination, PCAssignExpression, PCBaseType, PCBreakStmt, PCCase, PCChannelType, PCClass, PCClassCall, PCClassType, PCConditionDecl, PCConditionalExpression, PCContinueStmt, PCDecl, PCDoStmt, PCEnvironmentController, PCEnvironmentNode, PCEqualityExpression, PCExpression, PCForInit, PCForStmt, PCFormalParameter, PCIdentifierExpression, PCIfStmt, PCIndent, PCLiteralExpression, PCMainAgent, PCMonitor, PCMultiplicativeExpression, PCNode, PCOrExpression, PCPostfixExpression, PCPrimitiveStmt, PCPrintStmt, PCProcedure, PCProcedureCall, PCProcedureDecl, PCProgram, PCReceiveExpression, PCRelationalExpression, PCReturnStmt, PCSelectStmt, PCSendExpression, PCSimpleType, PCStartExpression, PCStatement, PCStmtBlock, PCStmtExpression, PCStruct, PCTArrayType, PCTChannelType, PCTClassType, PCTProcedureType, PCTType, PCTTypeType, PCUnaryExpression, PCVariable, PCVariableDeclarator, PCVariableInitializer, PCWhileStmt, _ref, _ref1, _ref10, _ref11, _ref12, _ref13, _ref14, _ref15, _ref16, _ref17, _ref18, _ref19, _ref2, _ref20, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9,
+var PCAdditiveExpression, PCAndExpression, PCArrayExpression, PCArrayType, PCAssignDestination, PCAssignExpression, PCBaseType, PCBreakStmt, PCCase, PCChannelType, PCClassCall, PCClassType, PCConditionDecl, PCConditionalExpression, PCContinueStmt, PCDecl, PCDeclStmt, PCDoStmt, PCEqualityExpression, PCExpression, PCForInit, PCForStmt, PCFormalParameter, PCIdentifierExpression, PCIfStmt, PCIndent, PCLiteralExpression, PCMainAgent, PCMonitor, PCMultiplicativeExpression, PCNode, PCOrExpression, PCPostfixExpression, PCPrimitiveStmt, PCPrintStmt, PCProcedureCall, PCProcedureDecl, PCProgram, PCReceiveExpression, PCRelationalExpression, PCReturnStmt, PCSelectStmt, PCSendExpression, PCSimpleType, PCStartExpression, PCStatement, PCStmtBlock, PCStmtExpression, PCStruct, PCTArrayType, PCTChannelType, PCTClass, PCTClassType, PCTEnvironmentController, PCTEnvironmentNode, PCTProcedure, PCTProcedureType, PCTType, PCTTypeType, PCTVariable, PCUnaryExpression, PCVariableDeclarator, PCVariableInitializer, PCWhileStmt, _ref, _ref1, _ref10, _ref11, _ref12, _ref13, _ref14, _ref15, _ref16, _ref17, _ref18, _ref19, _ref2, _ref20, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9,
   __slice = [].slice,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -215,7 +215,7 @@ PCFormalParameter = (function(_super) {
   }
 
   PCFormalParameter.prototype.getVariable = function(env) {
-    return new PCVariable(this, this.identifier, this.children[0].getType(env).type);
+    return new PCTVariable(this, this.identifier, this.children[0].getType(env).type);
   };
 
   PCFormalParameter.prototype.toString = function() {
@@ -325,7 +325,7 @@ PCConditionDecl = (function(_super) {
   };
 
   PCConditionDecl.prototype.collectEnvironment = function(env) {
-    return env.processNewVariable(new PCVariable(this, this.name, new PCTType(PCTType.CONDITION)));
+    return env.processNewVariable(new PCTVariable(this, this.name, new PCTType(PCTType.CONDITION)));
   };
 
   PCConditionDecl.prototype.toString = function(indent) {
@@ -381,6 +381,19 @@ PCDecl = (function(_super) {
 
 })(PCNode);
 
+PCDeclStmt = (function(_super) {
+  __extends(PCDeclStmt, _super);
+
+  function PCDeclStmt() {
+    var children;
+    children = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+    PCDeclStmt.__super__.constructor.apply(this, [true].concat(__slice.call(children)));
+  }
+
+  return PCDeclStmt;
+
+})(PCDecl);
+
 PCVariableDeclarator = (function(_super) {
   __extends(PCVariableDeclarator, _super);
 
@@ -406,7 +419,7 @@ PCVariableDeclarator = (function(_super) {
   };
 
   PCVariableDeclarator.prototype.collectEnvironment = function(env, type) {
-    return env.processNewVariable(new PCVariable(this, this.name, type));
+    return env.processNewVariable(new PCTVariable(this, this.name, type));
   };
 
   PCVariableDeclarator.prototype.toString = function() {
@@ -1852,18 +1865,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-PCEnvironmentController = (function() {
-  function PCEnvironmentController() {
-    this.root = new PCEnvironmentNode(null, "");
+PCTEnvironmentController = (function() {
+  function PCTEnvironmentController() {
+    this.root = new PCTEnvironmentNode(null, "");
     this.classes = {};
     this._envStack = this.root;
   }
 
-  PCEnvironmentController.prototype.getGlobal = function() {
+  PCTEnvironmentController.prototype.getGlobal = function() {
     return this.root;
   };
 
-  PCEnvironmentController.prototype.getClassWithName = function(name) {
+  PCTEnvironmentController.prototype.getClassWithName = function(name) {
     var result;
     result = this.classes[name];
     if (result === void 0) {
@@ -1872,25 +1885,25 @@ PCEnvironmentController = (function() {
     return result;
   };
 
-  PCEnvironmentController.prototype.getAllClasses = function() {
+  PCTEnvironmentController.prototype.getAllClasses = function() {
     return this.root.getAllClasses();
   };
 
-  PCEnvironmentController.prototype.getVariableWithName = function(name) {
+  PCTEnvironmentController.prototype.getVariableWithName = function(name) {
     return this._envStack.getVariableWithName(name);
   };
 
-  PCEnvironmentController.prototype.getProcedureWithName = function(name) {
+  PCTEnvironmentController.prototype.getProcedureWithName = function(name) {
     return this._envStack.getProcedureWithName(name);
   };
 
-  PCEnvironmentController.prototype.processNewClass = function(node, classType) {
+  PCTEnvironmentController.prototype.processNewClass = function(node, classType) {
     var tnode;
-    tnode = new PCClass(node, classType);
+    tnode = new PCTClass(node, classType);
     return this._processNewClass(tnode);
   };
 
-  PCEnvironmentController.prototype._processNewClass = function(node) {
+  PCTEnvironmentController.prototype._processNewClass = function(node) {
     if (this.classes[node.getName()]) {
       throw new Error("Class already registered!");
     }
@@ -1898,7 +1911,7 @@ PCEnvironmentController = (function() {
     return this.classes[node.getName()] = node;
   };
 
-  PCEnvironmentController.prototype.beginClass = function(className) {
+  PCTEnvironmentController.prototype.beginClass = function(className) {
     var node;
     node = this.getClassWithName(className);
     if (!node) {
@@ -1908,25 +1921,25 @@ PCEnvironmentController = (function() {
     return node;
   };
 
-  PCEnvironmentController.prototype.endClass = function() {
-    if (!this._envStack instanceof PCClass) {
+  PCTEnvironmentController.prototype.endClass = function() {
+    if (!this._envStack instanceof PCTClass) {
       throw new Error("No class did begin!");
     }
     return this._envStack = this._envStack.parent;
   };
 
-  PCEnvironmentController.prototype.beginNewProcedure = function(node, procedureName, returnType, args) {
+  PCTEnvironmentController.prototype.beginNewProcedure = function(node, procedureName, returnType, args) {
     var tnode;
-    tnode = new PCProcedure(node, procedureName, returnType, args);
-    return this._processNewProcedure(tnode);
+    tnode = new PCTProcedure(node, procedureName, returnType, args);
+    return this._beginNewProcedure(tnode);
   };
 
-  PCEnvironmentController.prototype._beginNewProcedure = function(node) {
+  PCTEnvironmentController.prototype._beginNewProcedure = function(node) {
     this._envStack.addChild(node);
     return this.beginProcedure(node.getName());
   };
 
-  PCEnvironmentController.prototype.beginProcedure = function(procedureName) {
+  PCTEnvironmentController.prototype.beginProcedure = function(procedureName) {
     var node;
     node = this._envStack.getProcedureWithName(procedureName);
     if (!node) {
@@ -1936,14 +1949,14 @@ PCEnvironmentController = (function() {
     return node;
   };
 
-  PCEnvironmentController.prototype.endProcedure = function() {
-    if (!this._envStack instanceof PCProcedure) {
+  PCTEnvironmentController.prototype.endProcedure = function() {
+    if (!this._envStack instanceof PCTProcedure) {
       throw new Error("No procedure did begin!");
     }
     return this._envStack = this._envStack.parent;
   };
 
-  PCEnvironmentController.prototype.beginMainAgent = function(node) {
+  PCTEnvironmentController.prototype.beginMainAgent = function(node) {
     if (this._envStack.getProcedureWithName("#mainAgent")) {
       return this.beginProcedure("#mainAgent");
     } else {
@@ -1951,25 +1964,25 @@ PCEnvironmentController = (function() {
     }
   };
 
-  PCEnvironmentController.prototype.endMainAgent = function() {
+  PCTEnvironmentController.prototype.endMainAgent = function() {
     return this.endProcedure();
   };
 
-  PCEnvironmentController.prototype.processNewVariable = function(variable) {
+  PCTEnvironmentController.prototype.processNewVariable = function(variable) {
     return this._processNewVariable(variable);
   };
 
-  PCEnvironmentController.prototype._processNewVariable = function(node) {
+  PCTEnvironmentController.prototype._processNewVariable = function(node) {
     this._envStack.addChild(node);
     return node;
   };
 
-  return PCEnvironmentController;
+  return PCTEnvironmentController;
 
 })();
 
-PCEnvironmentNode = (function() {
-  function PCEnvironmentNode(node, label) {
+PCTEnvironmentNode = (function() {
+  function PCTEnvironmentNode(node, label) {
     this.node = node;
     this.label = label;
     this.parent = null;
@@ -1978,93 +1991,93 @@ PCEnvironmentNode = (function() {
     this.procedures = {};
   }
 
-  PCEnvironmentNode.prototype.addChild = function(child) {
+  PCTEnvironmentNode.prototype.addChild = function(child) {
     this.children.push(child);
     child.parent = this;
-    if (child instanceof PCProcedure) {
+    if (child instanceof PCTProcedure) {
       this.procedures[child.getName()] = child;
-    } else if (child instanceof PCVariable) {
+    } else if (child instanceof PCTVariable) {
       this.variables[child.getIdentifier()] = child;
     }
     return child;
   };
 
-  PCEnvironmentNode.prototype.getVariableWithName = function(name) {
+  PCTEnvironmentNode.prototype.getVariableWithName = function(name) {
     return this.variables[name];
   };
 
-  PCEnvironmentNode.prototype.getProcedureWithName = function(name) {
+  PCTEnvironmentNode.prototype.getProcedureWithName = function(name) {
     return this.procedures[name];
   };
 
-  PCEnvironmentNode.prototype.getComposedLabel = function() {
+  PCTEnvironmentNode.prototype.getComposedLabel = function() {
     return "" + (this.parent ? "" + (this.parent.getComposedLabel()) + "_" : "") + this.label;
   };
 
-  PCEnvironmentNode.prototype.getAllClasses = function() {
+  PCTEnvironmentNode.prototype.getAllClasses = function() {
     var c, result, _i, _len, _ref21;
     result = [];
     _ref21 = this.children;
     for (_i = 0, _len = _ref21.length; _i < _len; _i++) {
       c = _ref21[_i];
-      if (c instanceof PCClass) {
+      if (c instanceof PCTClass) {
         result.push(c);
       }
     }
     return result;
   };
 
-  return PCEnvironmentNode;
+  return PCTEnvironmentNode;
 
 })();
 
-PCClass = (function(_super) {
-  __extends(PCClass, _super);
+PCTClass = (function(_super) {
+  __extends(PCTClass, _super);
 
-  function PCClass(node, type) {
+  function PCTClass(node, type) {
     this.type = type;
-    PCClass.__super__.constructor.call(this, node, this.type.identifier);
+    PCTClass.__super__.constructor.call(this, node, this.type.identifier);
   }
 
-  PCClass.prototype.getName = function() {
+  PCTClass.prototype.getName = function() {
     return this.label;
   };
 
-  PCClass.prototype.isMonitor = function() {
+  PCTClass.prototype.isMonitor = function() {
     return this.type.isMonitor();
   };
 
-  return PCClass;
+  return PCTClass;
 
-})(PCEnvironmentNode);
+})(PCTEnvironmentNode);
 
-PCProcedure = (function(_super) {
-  __extends(PCProcedure, _super);
+PCTProcedure = (function(_super) {
+  __extends(PCTProcedure, _super);
 
-  function PCProcedure(node, name, returnType, _arguments) {
+  function PCTProcedure(node, name, returnType, _arguments) {
     this.returnType = returnType;
     this["arguments"] = _arguments;
-    PCProcedure.__super__.constructor.call(this, node, name);
+    PCTProcedure.__super__.constructor.call(this, node, name);
   }
 
-  PCProcedure.prototype.getName = function() {
+  PCTProcedure.prototype.getName = function() {
     return this.label;
   };
 
-  PCProcedure.prototype.isClassProcedure = function() {
+  PCTProcedure.prototype.isClassProcedure = function() {
     return this.parent instanceof PCClass;
   };
 
-  PCProcedure.prototype.isMonitorProcedure = function() {
+  PCTProcedure.prototype.isMonitorProcedure = function() {
     return this.parent instanceof PCClass && this.parent.isMonitor();
   };
 
-  return PCProcedure;
+  return PCTProcedure;
 
-})(PCEnvironmentNode);
+})(PCTEnvironmentNode);
 
-PCVariable = (function() {
-  function PCVariable(node, name, type) {
+PCTVariable = (function() {
+  function PCTVariable(node, name, type) {
     this.node = node;
     this.type = type;
     if (typeof this.node === "string") {
@@ -2074,18 +2087,18 @@ PCVariable = (function() {
     this.parent = null;
   }
 
-  PCVariable.prototype.getName = function() {
+  PCTVariable.prototype.getName = function() {
     return this.label;
   };
 
-  PCVariable.prototype.getIdentifier = function() {
+  PCTVariable.prototype.getIdentifier = function() {
     return this.label;
   };
 
-  PCVariable.prototype.getComposedLabel = function() {
+  PCTVariable.prototype.getComposedLabel = function() {
     return "" + (this.parent ? "" + (this.parent.getComposedLabel()) + "_" : "") + this.label;
   };
 
-  return PCVariable;
+  return PCTVariable;
 
 })();

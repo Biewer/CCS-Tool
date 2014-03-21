@@ -24,9 +24,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	ToDo
 ###
 
-class PCEnvironmentController
+class PCTEnvironmentController
 	constructor: ->
-		@root = new PCEnvironmentNode(null, "")		# global
+		@root = new PCTEnvironmentNode(null, "")		# global
 		@classes = {}
 		@_envStack = @root
 	
@@ -47,7 +47,7 @@ class PCEnvironmentController
 	
 	
 	processNewClass: (node, classType) ->
-		tnode = new PCClass(node, classType)
+		tnode = new PCTClass(node, classType)
 		@_processNewClass tnode
 	
 	_processNewClass: (node) ->
@@ -62,14 +62,14 @@ class PCEnvironmentController
 		node
 		
 	endClass: ->
-		throw new Error("No class did begin!") if not @_envStack instanceof PCClass
+		throw new Error("No class did begin!") if not @_envStack instanceof PCTClass
 		@_envStack = @_envStack.parent
 	
 	
 	
 	beginNewProcedure: (node, procedureName, returnType, args) ->
-		tnode = new PCProcedure(node, procedureName, returnType, args)
-		@_processNewProcedure(tnode)
+		tnode = new PCTProcedure(node, procedureName, returnType, args)
+		@_beginNewProcedure(tnode)
 	
 	_beginNewProcedure: (node) ->
 		@_envStack.addChild(node)
@@ -82,7 +82,7 @@ class PCEnvironmentController
 		node
 	
 	endProcedure: ->
-		throw new Error("No procedure did begin!") if not @_envStack instanceof PCProcedure
+		throw new Error("No procedure did begin!") if not @_envStack instanceof PCTProcedure
 		@_envStack = @_envStack.parent
 	
 	beginMainAgent: (node) -> 
@@ -109,7 +109,7 @@ class PCEnvironmentController
 
 
 
-class PCEnvironmentNode
+class PCTEnvironmentNode
 	constructor: (@node, @label) ->
 		@parent = null
 		@children = []
@@ -119,9 +119,9 @@ class PCEnvironmentNode
 	addChild: (child) -> 
 		@children.push(child)
 		child.parent = @
-		if child instanceof PCProcedure
+		if child instanceof PCTProcedure
 			@procedures[child.getName()] = child
-		else if child instanceof PCVariable
+		else if child instanceof PCTVariable
 			@variables[child.getIdentifier()] = child
 		child
 	getVariableWithName: (name) -> @variables[name]
@@ -130,18 +130,18 @@ class PCEnvironmentNode
 	getAllClasses: -> 
 		result = []
 		for c in @children
-			result.push(c) if c instanceof PCClass
+			result.push(c) if c instanceof PCTClass
 		result
 
 
-class PCClass extends PCEnvironmentNode
+class PCTClass extends PCTEnvironmentNode
 	constructor: (node, @type) -> super node, @type.identifier
 	getName: -> @label
 	isMonitor: -> @type.isMonitor()
 
 
-class PCProcedure extends PCEnvironmentNode
-	constructor: (node, name, @returnType, @arguments) -> super node, name		# string x PCType x PCVariable*
+class PCTProcedure extends PCTEnvironmentNode
+	constructor: (node, name, @returnType, @arguments) -> super node, name		# string x PCType x PCTVariable*
 	getName: -> @label
 	#isStructProcedure: -> @parent instanceof PCStruct
 	#isMonitorProcedure: -> @parent instanceof PCMonitor
@@ -152,7 +152,7 @@ class PCProcedure extends PCEnvironmentNode
 
 
 
-class PCVariable
+class PCTVariable
 	constructor: (@node, name, @type) ->
 		debugger if typeof @node == "string"
 		@label = name
