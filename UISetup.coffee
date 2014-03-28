@@ -71,7 +71,7 @@ UILoad = ->
 	UI.toolTabBar = new UITabBar($$("tabBar"), $$("tabContent"))
 	UI.history = new UICCSHistory($$("history"))
 	UI.executor = new UIExecutor($$("runButton"))
-	UI.pseuCoEditor = new UIPseuCoHack($$("pseucoField"), $$("pseucoJSField"))
+	UI.pseuCoEditor = new UIPseuCoEditor($$("pseucoField"))#, $$("pseucoJSField"))
 	UI.ccsEditor = new UICCSEditor($$("ccsField"))
 	UI.app = new UIAppController(UI.pseuCoEditor, UI.ccsEditor, UI.executor, UI.console, UI.history)
 

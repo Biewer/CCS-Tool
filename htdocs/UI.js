@@ -78,7 +78,7 @@ UILoad = function() {
   UI.toolTabBar = new UITabBar($$("tabBar"), $$("tabContent"));
   UI.history = new UICCSHistory($$("history"));
   UI.executor = new UIExecutor($$("runButton"));
-  UI.pseuCoEditor = new UIPseuCoHack($$("pseucoField"), $$("pseucoJSField"));
+  UI.pseuCoEditor = new UIPseuCoEditor($$("pseucoField"));
   UI.ccsEditor = new UICCSEditor($$("ccsField"));
   return UI.app = new UIAppController(UI.pseuCoEditor, UI.ccsEditor, UI.executor, UI.console, UI.history);
 };
@@ -686,13 +686,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 UIPseuCoEditor = (function() {
-  function UIPseuCoEditor() {
+  function UIPseuCoEditor(editor) {
+    var handler;
+    this.editor = editor;
+    this.editor._editorController = this;
+    handler = function() {
+      return this._editorController.handleChange();
+    };
+    $(this.editor).on("blur", handler);
+    $(this.editor).on("input", handler);
     this.state = UIEditorState.possible;
     this.tree = null;
   }
 
+  UIPseuCoEditor.prototype.handleChange = function() {
+    return this.setText(this.editor.value);
+  };
+
   UIPseuCoEditor.prototype.setText = function(text) {
-    throw new Error("Not yet implemented!");
+    var col, e;
+    this._setState(UIEditorState.possible);
+    try {
+      this.tree = PseuCoParser.parse(text);
+      return this._setState(UIEditorState.valid);
+    } catch (_error) {
+      e = _error;
+      col = e.column ? ", column " + e.column : "";
+      UIError("Line " + e.line + col + ": " + e.message);
+      this.tree = null;
+      return this._setState(UIEditorState.invalid);
+    }
   };
 
   UIPseuCoEditor.prototype.setTree = function(program) {};
