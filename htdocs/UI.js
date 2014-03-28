@@ -493,27 +493,15 @@ UIExecutor = (function() {
     return this.setButtonEnabled(app.ccs ? true : false);
   };
 
+  UIExecutor.prototype.executorPrint = function(exec, msg) {
+    return UILog(msg);
+  };
+
+  UIExecutor.prototype.executorDidPerformStep = function(exec, step, system) {};
+
   UIExecutor.prototype.execute = function() {
-    var app, elapsedMS, perStep, stepCount, steps, t;
-    this.setButtonEnabled(false);
-    app = UI.app;
-    app.resetCCS();
-    if (!ccs) {
-      return;
-    }
-    UILog("Starting CCS execution.");
-    t = new Date();
-    steps = app.system.getPossibleSteps();
-    stepCount = 0;
-    while (steps.length > 0) {
-      app.performStep(steps[0]);
-      steps = app.system.getPossibleSteps();
-      stepCount++;
-    }
-    elapsedMS = (new Date()).getTime() - t.getTime();
-    perStep = Math.round(elapsedMS / stepCount * 100) / 100;
-    UILog("Finished CCS execution after performing " + stepCount + " steps in " + (elapsedMS / 1000) + " seconds (" + perStep + "ms per step).\n-------------------------------------------------------------------------------------------");
-    return this.setButtonEnabled(UI.app.ccs ? true : false);
+    this.executor = new PCExecutor(UI.app.ccs, this);
+    return this.executor.execute();
   };
 
   return UIExecutor;

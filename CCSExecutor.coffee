@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+CCSExecutorCopyOnPerformStepPolicy = false
 CCSExecutorStepCountPerExecutionUnit = 20
 CCSExecutorDefaultStepPicker = (steps) ->
 	steps[0]	# ToDo: random!
@@ -43,13 +44,14 @@ class CCSExecutor
 	
 	
 	continueExecution: ->
-		steps = @system.getPossibleSteps()
+		steps = @system.getPossibleSteps(CCSExecutorCopyOnPerformStepPolicy)
+		throw new Error("Time exceeded. Info: \n\t" + steps.join("\n\t")) if @stepCount > 5000
 		count = CCSExecutorStepCountPerExecutionUnit
 		while steps.length > 0 and count > 0
 			step = @_chooseStep(steps)
 			@_performStep(step)
 			@_printStep(step)
-			steps = @system.getPossibleSteps()
+			steps = @system.getPossibleSteps(CCSExecutorCopyOnPerformStepPolicy)
 			@stepCount++
 			count--
 		steps.length > 0

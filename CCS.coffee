@@ -55,7 +55,7 @@ class CCS
 		result = null
 		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pd in @processDefinitions
 		return result
-	getPossibleSteps: (env) -> @system.getPossibleSteps(env)
+	getPossibleSteps: (copyOnPerform) -> @system.getPossibleSteps(copyOnPerform)
 	#performStep: (step) -> @system = step.perform()
 	
 	toString: -> "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
@@ -104,7 +104,9 @@ class CCSProcess
 			type = CCSGetMostGeneralType(type, t)
 		type
 	getApplicapleRules: -> []
-	getPossibleSteps: () -> (rule.getPossibleSteps(this) for rule in @getApplicapleRules()).concatChildren()
+	getPossibleSteps: (copyOnPerform) -> 
+		copyOnPerform = false if not copyOnPerform
+		(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules()).concatChildren()
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
@@ -361,7 +363,6 @@ CCSInternalActionCreate = (name) ->
 class CCSInput extends CCSAction
 	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x {int x int) ; range must be copy in!
 		super channel
-		@incommingValue = null
 	
 	isInputAction: -> true
 	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
@@ -371,7 +372,10 @@ class CCSInput extends CCSAction
 		@variable != varName	# stop replacing if identifier is equal to its own variable name
 	
 	toString: -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
-	transferDescription: -> "#{super}#{ if @supportsValuePassing() then ": " + @incommingValue else ""}"
+	transferDescription: (inputValue) -> 
+		if @supportsValuePassing() and (inputValue == null or inputValue == undefined)
+			throw new Error("CCSInput.transferDescription needs an input value as argument if it supports value passing!") 
+		"#{super}#{ if @supportsValuePassing() then ": " + inputValue else ""}"
 	copy: -> new CCSInput(@channel.copy(), @variable, @range)
 
 
