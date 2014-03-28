@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 class CCSStep
 	constructor: (@index, @process, @action, @rule, @actionDetails, @substeps...) ->		# int x Action
 		(if s == undefined or s == null then throw "substep must not be nil!") for s in @substeps
+		@copyOnPerform = false
 		if !@actionDetails
 			@actionDetails = if @substeps.length == 1 then @substeps[0].actionDetails else ""
 	
@@ -31,9 +32,11 @@ class CCSStep
 		else (step.getLeafProcesses() for step in @substeps).concatChildren()
 	perform : -> @rule.performStep @
 	toString: -> @action.toString() + (if @actionDetails.length>0 then " #{@actionDetails}" else "")
+	
+	_getMutableProcess: -> if @copyOnPerform then @process.copy() else @process
 
 
-# - CCSBaseStep  -> Der Ur-Schritt :D, also das was prefix, input, output, match oder exit liefert
+# - CCSBaseStep  -> Der Ur-Schritt :D, also das was prefix, input, output oder match liefert
 class CCSBaseStep extends CCSStep		
 	constructor: (prefix, rule) -> super 0, prefix, prefix.action, rule
 	
@@ -64,7 +67,7 @@ CCSInputRule =
 	performStep: (step) ->
 		if step.process.action.incommingValue == undefined
 			throw new Error("Input action's incomming value was not set!")
-		result = step.process.getProcess()
+		result = step.process.getProcess()._getMutableProcess()
 		result.replaceVariableWithValue(step.process.action.variable, step.process.action.incommingValue)
 		result
 
@@ -98,11 +101,12 @@ CCSParLRule =
 			parallel._CCSParLRule = (new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getLeft().getPossibleSteps().filterActVPSteps())
 		parallel._CCSParLRule
 	performStep: (step) -> 
-		step.process._CCSSyncRule = undefined
-		step.process._CCSParRRule = undefined
-		step.process._CCSParLRule = undefined
-		step.process.setLeft(step.substeps[0].perform())
-		step.process
+		res = step._getMutableProcess()
+		res._CCSSyncRule = undefined
+		res._CCSParRRule = undefined
+		res._CCSParLRule = undefined
+		res.setLeft(step.substeps[0].perform())
+		res
 
 # - ParRRule
 CCSParRRule = 
@@ -112,11 +116,12 @@ CCSParRRule =
 			parallel._CCSParRRule = (new CCSStep(i++, parallel, step.action, @, null, step) for step in parallel.getRight().getPossibleSteps().filterActVPSteps())
 		parallel._CCSParRRule
 	performStep: (step) -> 
-		step.process._CCSSyncRule = undefined
-		step.process._CCSParRRule = undefined
-		step.process._CCSParLRule = undefined
-		step.process.setRight(step.substeps[0].perform())
-		step.process
+		res = step._getMutableProcess()
+		res._CCSSyncRule = undefined
+		res._CCSParRRule = undefined
+		res._CCSParLRule = undefined
+		res.setRight(step.substeps[0].perform())
+		res
 
 # - SyncRule
 CCSSyncRule =
@@ -138,9 +143,10 @@ CCSSyncRule =
 			parallel._CCSSyncRule = result
 		parallel._CCSSyncRule
 	performStep: (step) -> 
-		step.process._CCSSyncRule = undefined
-		step.process._CCSParRRule = undefined
-		step.process._CCSParLRule = undefined
+		res = step._getMutableProcess()
+		res._CCSSyncRule = undefined
+		res._CCSParRRule = undefined
+		res._CCSParLRule = undefined
 		inp = null
 		out = null
 		prefix = step.substeps[0].getLeafProcesses()[0]

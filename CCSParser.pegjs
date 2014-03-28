@@ -40,7 +40,7 @@ Process
 
 
 
-Restriction	// ToDo: Fix: Star in combination with following actions is possible!
+Restriction
   = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  as; })?
   										{
   											return res == "" ? P : new CCSRestriction(P, res);
