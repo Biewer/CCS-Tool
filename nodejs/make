@@ -1,0 +1,10 @@
+all: merge
+
+#core:
+					#cd ../ && make -f make
+
+merge: cmain #core 
+					cat ../htdocs/CCS.js ../htdocs/CCSParser.js ../htdocs/PseuCo.js ../htdocs/PseuCoParser.js ../htdocs/PCCompiler.js main.js > node.js
+
+cmain:
+					coffee -c -b -j main.js main.coffee

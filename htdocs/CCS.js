@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-var ActionSets, CCS, CCSAction, CCSAdditiveExpression, CCSBaseStep, CCSChannel, CCSChoice, CCSChoiceLRule, CCSChoiceRRule, CCSConcatenatingExpression, CCSCondRule, CCSCondition, CCSConstantExpression, CCSEqualityExpression, CCSExit, CCSExitChannel, CCSExitRule, CCSExpression, CCSGetMostGeneralType, CCSInput, CCSInputRule, CCSInputStep, CCSInternalActionCreate, CCSInternalChannel, CCSMatch, CCSMatchRule, CCSMultiplicativeExpression, CCSOutput, CCSOutputRule, CCSParLRule, CCSParRRule, CCSParallel, CCSPrefix, CCSPrefixRule, CCSProcess, CCSProcessApplication, CCSProcessDefinition, CCSRecRule, CCSRelationalExpression, CCSResRule, CCSRestriction, CCSSeq1Rule, CCSSeq2Rule, CCSSequence, CCSSimpleAction, CCSStep, CCSStop, CCSSyncExitRule, CCSSyncRule, CCSTypeChannel, CCSTypeUnknown, CCSTypeValue, CCSUIChannel, CCSVariableExpression, DP, DS, DSteps, ObjID, _DEBUG, _ref, _ref1, _ref2, _ref3,
+var ActionSets, CCS, CCSAction, CCSAdditiveExpression, CCSBaseStep, CCSChannel, CCSChoice, CCSChoiceLRule, CCSChoiceRRule, CCSConcatenatingExpression, CCSCondRule, CCSCondition, CCSConstantExpression, CCSEqualityExpression, CCSExit, CCSExitChannel, CCSExitRule, CCSExpression, CCSGetMostGeneralType, CCSInput, CCSInputRule, CCSInternalActionCreate, CCSInternalChannel, CCSMatch, CCSMatchRule, CCSMultiplicativeExpression, CCSOutput, CCSOutputRule, CCSParLRule, CCSParRRule, CCSParallel, CCSPrefix, CCSPrefixRule, CCSProcess, CCSProcessApplication, CCSProcessDefinition, CCSRecRule, CCSRelationalExpression, CCSResRule, CCSRestriction, CCSSeq1Rule, CCSSeq2Rule, CCSSequence, CCSSimpleAction, CCSStep, CCSStop, CCSSyncExitRule, CCSSyncRule, CCSTypeChannel, CCSTypeUnknown, CCSTypeValue, CCSUIChannel, CCSVariableExpression, DP, DS, DSteps, ObjID, _DEBUG, _ref, _ref1, _ref2,
   __slice = [].slice,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -98,8 +98,12 @@ CCS = (function() {
     return result;
   };
 
-  CCS.prototype.getPossibleSteps = function(copyOnPerform) {
-    return this.system.getPossibleSteps(copyOnPerform);
+  CCS.prototype.getPossibleSteps = function(env) {
+    return this.system.getPossibleSteps(env);
+  };
+
+  CCS.prototype.performStep = function(step) {
+    return this.system = step.perform();
   };
 
   CCS.prototype.toString = function() {
@@ -276,18 +280,15 @@ CCSProcess = (function() {
     return [];
   };
 
-  CCSProcess.prototype.getPossibleSteps = function(copyOnPerform) {
+  CCSProcess.prototype.getPossibleSteps = function() {
     var rule;
-    if (!copyOnPerform) {
-      copyOnPerform = false;
-    }
     return ((function() {
       var _i, _len, _ref, _results;
       _ref = this.getApplicapleRules();
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         rule = _ref[_i];
-        _results.push(rule.getPossibleSteps(this, copyOnPerform));
+        _results.push(rule.getPossibleSteps(this));
       }
       return _results;
     }).call(this)).concatChildren();
@@ -928,6 +929,7 @@ CCSInput = (function(_super) {
     this.variable = variable;
     this.range = range;
     CCSInput.__super__.constructor.call(this, channel);
+    this.incommingValue = null;
   }
 
   CCSInput.prototype.isInputAction = function() {
@@ -951,11 +953,8 @@ CCSInput = (function(_super) {
     return "" + CCSInput.__super__.toString.apply(this, arguments) + "?" + (this.supportsValuePassing() ? this.variable : "");
   };
 
-  CCSInput.prototype.transferDescription = function(inputValue) {
-    if (this.supportsValuePassing() && (inputValue === null || inputValue === void 0)) {
-      throw new Error("CCSInput.transferDescription needs an input value as argument if it supports value passing!");
-    }
-    return "" + CCSInput.__super__.transferDescription.apply(this, arguments) + (this.supportsValuePassing() ? ": " + inputValue : "");
+  CCSInput.prototype.transferDescription = function() {
+    return "" + CCSInput.__super__.transferDescription.apply(this, arguments) + (this.supportsValuePassing() ? ": " + this.incommingValue : "");
   };
 
   CCSInput.prototype.copy = function() {
@@ -1136,10 +1135,6 @@ CCSExpression = (function() {
     return false;
   };
 
-  CCSExpression.prototype.typeOfEvaluation = function() {
-    throw new Error("Abstract method!");
-  };
-
   CCSExpression.prototype.needsBracketsForSubExp = function(exp) {
     return (this.getPrecedence != null) && (exp.getPrecedence != null) && exp.getPrecedence() < this.getPrecedence();
   };
@@ -1182,10 +1177,6 @@ CCSConstantExpression = (function(_super) {
 
   CCSConstantExpression.prototype.isEvaluatable = function() {
     return true;
-  };
-
-  CCSConstantExpression.prototype.typeOfEvaluation = function() {
-    return typeof this.value;
   };
 
   CCSConstantExpression.prototype.toString = function() {
@@ -1245,10 +1236,6 @@ CCSVariableExpression = (function(_super) {
     throw new Error('Unbound identifier!');
   };
 
-  CCSVariableExpression.prototype.typeOfEvaluation = function() {
-    throw new Error('Unbound identifier!');
-  };
-
   CCSVariableExpression.prototype.isEvaluatable = function() {
     return false;
   };
@@ -1296,10 +1283,6 @@ CCSAdditiveExpression = (function(_super) {
     return this.getLeft().isEvaluatable() && this.getRight().isEvaluatable();
   };
 
-  CCSAdditiveExpression.prototype.typeOfEvaluation = function() {
-    return "number";
-  };
-
   CCSAdditiveExpression.prototype.toString = function() {
     return this.stringForSubExp(this.getLeft()) + this.op + this.stringForSubExp(this.getRight());
   };
@@ -1341,10 +1324,6 @@ CCSMultiplicativeExpression = (function(_super) {
     return this.getLeft().isEvaluatable() && this.getRight().isEvaluatable();
   };
 
-  CCSMultiplicativeExpression.prototype.typeOfEvaluation = function() {
-    return "number";
-  };
-
   CCSMultiplicativeExpression.prototype.toString = function() {
     return this.stringForSubExp(this.getLeft()) + this.op + this.stringForSubExp(this.getRight());
   };
@@ -1374,10 +1353,6 @@ CCSConcatenatingExpression = (function(_super) {
 
   CCSConcatenatingExpression.prototype.isEvaluatable = function() {
     return this.getLeft().isEvaluatable() && this.getRight().isEvaluatable();
-  };
-
-  CCSConcatenatingExpression.prototype.typeOfEvaluation = function() {
-    return "string";
   };
 
   CCSConcatenatingExpression.prototype.toString = function() {
@@ -1428,10 +1403,6 @@ CCSRelationalExpression = (function(_super) {
     return this.getLeft().isEvaluatable() && this.getRight().isEvaluatable();
   };
 
-  CCSRelationalExpression.prototype.typeOfEvaluation = function() {
-    return "boolean";
-  };
-
   CCSRelationalExpression.prototype.toString = function() {
     return this.stringForSubExp(this.getLeft()) + this.op + this.stringForSubExp(this.getRight());
   };
@@ -1474,10 +1445,6 @@ CCSEqualityExpression = (function(_super) {
 
   CCSEqualityExpression.prototype.isEvaluatable = function() {
     return this.getLeft().isEvaluatable() && this.getRight().isEvaluatable();
-  };
-
-  CCSEqualityExpression.prototype.typeOfEvaluation = function() {
-    return "boolean";
   };
 
   CCSEqualityExpression.prototype.toString = function() {
@@ -1668,13 +1635,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 CCSStep = (function() {
   function CCSStep() {
-    var action, actionDetails, copyOnPerform, index, process, rule, s, substeps, _i, _len, _ref3;
-    index = arguments[0], process = arguments[1], action = arguments[2], rule = arguments[3], copyOnPerform = arguments[4], actionDetails = arguments[5], substeps = 7 <= arguments.length ? __slice.call(arguments, 6) : [];
+    var action, actionDetails, index, process, rule, s, substeps, _i, _len, _ref3;
+    index = arguments[0], process = arguments[1], action = arguments[2], rule = arguments[3], actionDetails = arguments[4], substeps = 6 <= arguments.length ? __slice.call(arguments, 5) : [];
     this.index = index;
     this.process = process;
     this.action = action;
     this.rule = rule;
-    this.copyOnPerform = copyOnPerform;
     this.actionDetails = actionDetails;
     this.substeps = substeps;
     _ref3 = this.substeps;
@@ -1715,14 +1681,6 @@ CCSStep = (function() {
     return this.action.toString() + (this.actionDetails.length > 0 ? " " + this.actionDetails : "");
   };
 
-  CCSStep.prototype._getMutableProcess = function() {
-    if (this.copyOnPerform) {
-      return this.process.copy();
-    } else {
-      return this.process;
-    }
-  };
-
   return CCSStep;
 
 })();
@@ -1730,49 +1688,18 @@ CCSStep = (function() {
 CCSBaseStep = (function(_super) {
   __extends(CCSBaseStep, _super);
 
-  function CCSBaseStep(prefix, rule, copyOnPerform) {
-    CCSBaseStep.__super__.constructor.call(this, 0, prefix, prefix.action, rule, copyOnPerform);
+  function CCSBaseStep(prefix, rule) {
+    CCSBaseStep.__super__.constructor.call(this, 0, prefix, prefix.action, rule);
   }
 
   return CCSBaseStep;
 
 })(CCSStep);
 
-CCSInputStep = (function(_super) {
-  __extends(CCSInputStep, _super);
-
-  function CCSInputStep() {
-    _ref3 = CCSInputStep.__super__.constructor.apply(this, arguments);
-    return _ref3;
-  }
-
-  CCSInputStep.prototype.performWithInputValue = function(inputValue) {
-    return this.rule.performStep(this, inputValue);
-  };
-
-  CCSInputStep.prototype.perform = function() {
-    throw new Error("perform is not supported on input steps! Use performWithInputValue with an input value as argument instead!");
-  };
-
-  return CCSInputStep;
-
-})(CCSBaseStep);
-
-CCSBaseStep.prototype.performWithInputValue = function() {
-  throw new Error("performWithInputValue is only allowed for input steps!");
-};
-
-CCSStep.prototype.performWithInputValue = function(inputValue) {
-  if (this.substeps.length !== 1) {
-    throw new Error("Forwarding of performWithInputValue only supported for linear step tree!");
-  }
-  return this.substeps[0].performWithInputValue(inputValue);
-};
-
 CCSPrefixRule = {
-  getPossibleSteps: function(prefix, copyOnPerform) {
+  getPossibleSteps: function(prefix) {
     if ((prefix != null ? prefix.action.isSimpleAction() : void 0) || !prefix.action.supportsValuePassing()) {
-      return [new CCSBaseStep(prefix, this, copyOnPerform)];
+      return [new CCSBaseStep(prefix, this)];
     } else {
       return [];
     }
@@ -1783,9 +1710,9 @@ CCSPrefixRule = {
 };
 
 CCSOutputRule = {
-  getPossibleSteps: function(prefix, copyOnPerform) {
+  getPossibleSteps: function(prefix) {
     if ((prefix != null ? prefix.action.isOutputAction() : void 0) && prefix.action.supportsValuePassing()) {
-      return [new CCSBaseStep(prefix, this, copyOnPerform)];
+      return [new CCSBaseStep(prefix, this)];
     } else {
       return [];
     }
@@ -1796,28 +1723,28 @@ CCSOutputRule = {
 };
 
 CCSInputRule = {
-  getPossibleSteps: function(prefix, copyOnPerform) {
+  getPossibleSteps: function(prefix) {
     if ((prefix != null ? prefix.action.isInputAction() : void 0) && prefix.action.supportsValuePassing()) {
-      return [new CCSInputStep(prefix, this, copyOnPerform)];
+      return [new CCSBaseStep(prefix, this)];
     } else {
       return [];
     }
   },
-  performStep: function(step, inputValue) {
+  performStep: function(step) {
     var result;
-    if (!inputValue) {
-      throw new Error("Input value was not set!");
+    if (step.process.action.incommingValue === void 0) {
+      throw new Error("Input action's incomming value was not set!");
     }
-    result = step._getMutableProcess().getProcess();
-    result.replaceVariableWithValue(step.process.action.variable, inputValue);
+    result = step.process.getProcess();
+    result.replaceVariableWithValue(step.process.action.variable, step.process.action.incommingValue);
     return result;
   }
 };
 
 CCSMatchRule = {
-  getPossibleSteps: function(prefix, copyOnPerform) {
+  getPossibleSteps: function(prefix) {
     if (prefix != null ? prefix.action.isMatchAction() : void 0) {
-      return [new CCSBaseStep(prefix, this, copyOnPerform)];
+      return [new CCSBaseStep(prefix, this)];
     } else {
       return [];
     }
@@ -1828,14 +1755,14 @@ CCSMatchRule = {
 };
 
 CCSChoiceLRule = {
-  getPossibleSteps: function(choice, copyOnPerform) {
-    var i, step, _i, _len, _ref4, _results;
+  getPossibleSteps: function(choice) {
+    var i, step, _i, _len, _ref3, _results;
     i = 0;
-    _ref4 = choice.getLeft().getPossibleSteps(copyOnPerform).filterActVPPlusSteps();
+    _ref3 = choice.getLeft().getPossibleSteps().filterActVPPlusSteps();
     _results = [];
-    for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
-      step = _ref4[_i];
-      _results.push(new CCSStep(i++, choice, step.action, this, copyOnPerform, null, step));
+    for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+      step = _ref3[_i];
+      _results.push(new CCSStep(i++, choice, step.action, this, null, step));
     }
     return _results;
   },
@@ -1845,14 +1772,14 @@ CCSChoiceLRule = {
 };
 
 CCSChoiceRRule = {
-  getPossibleSteps: function(choice, copyOnPerform) {
-    var i, step, _i, _len, _ref4, _results;
+  getPossibleSteps: function(choice) {
+    var i, step, _i, _len, _ref3, _results;
     i = 0;
-    _ref4 = choice.getRight().getPossibleSteps(copyOnPerform).filterActVPPlusSteps();
+    _ref3 = choice.getRight().getPossibleSteps().filterActVPPlusSteps();
     _results = [];
-    for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
-      step = _ref4[_i];
-      _results.push(new CCSStep(i++, choice, step.action, this, copyOnPerform, null, step));
+    for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+      step = _ref3[_i];
+      _results.push(new CCSStep(i++, choice, step.action, this, null, step));
     }
     return _results;
   },
@@ -1862,17 +1789,17 @@ CCSChoiceRRule = {
 };
 
 CCSParLRule = {
-  getPossibleSteps: function(parallel, copyOnPerform) {
+  getPossibleSteps: function(parallel) {
     var i, step;
     if (!parallel._CCSParLRule) {
       i = 0;
       parallel._CCSParLRule = (function() {
-        var _i, _len, _ref4, _results;
-        _ref4 = parallel.getLeft().getPossibleSteps(copyOnPerform).filterActVPSteps();
+        var _i, _len, _ref3, _results;
+        _ref3 = parallel.getLeft().getPossibleSteps().filterActVPSteps();
         _results = [];
-        for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
-          step = _ref4[_i];
-          _results.push(new CCSStep(i++, parallel, step.action, this, copyOnPerform, null, step));
+        for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+          step = _ref3[_i];
+          _results.push(new CCSStep(i++, parallel, step.action, this, null, step));
         }
         return _results;
       }).call(this);
@@ -1880,28 +1807,26 @@ CCSParLRule = {
     return parallel._CCSParLRule;
   },
   performStep: function(step) {
-    var res;
-    res = step._getMutableProcess();
-    res._CCSSyncRule = void 0;
-    res._CCSParRRule = void 0;
-    res._CCSParLRule = void 0;
-    res.setLeft(step.substeps[0].perform());
-    return res;
+    step.process._CCSSyncRule = void 0;
+    step.process._CCSParRRule = void 0;
+    step.process._CCSParLRule = void 0;
+    step.process.setLeft(step.substeps[0].perform());
+    return step.process;
   }
 };
 
 CCSParRRule = {
-  getPossibleSteps: function(parallel, copyOnPerform) {
+  getPossibleSteps: function(parallel) {
     var i, step;
     if (!parallel._CCSParRRule) {
       i = 0;
       parallel._CCSParRRule = (function() {
-        var _i, _len, _ref4, _results;
-        _ref4 = parallel.getRight().getPossibleSteps(copyOnPerform).filterActVPSteps();
+        var _i, _len, _ref3, _results;
+        _ref3 = parallel.getRight().getPossibleSteps().filterActVPSteps();
         _results = [];
-        for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
-          step = _ref4[_i];
-          _results.push(new CCSStep(i++, parallel, step.action, this, copyOnPerform, null, step));
+        for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+          step = _ref3[_i];
+          _results.push(new CCSStep(i++, parallel, step.action, this, null, step));
         }
         return _results;
       }).call(this);
@@ -1909,13 +1834,11 @@ CCSParRRule = {
     return parallel._CCSParRRule;
   },
   performStep: function(step) {
-    var res;
-    res = step._getMutableProcess();
-    res._CCSSyncRule = void 0;
-    res._CCSParRRule = void 0;
-    res._CCSParLRule = void 0;
-    res.setRight(step.substeps[0].perform());
-    return res;
+    step.process._CCSSyncRule = void 0;
+    step.process._CCSParRRule = void 0;
+    step.process._CCSParLRule = void 0;
+    step.process.setRight(step.substeps[0].perform());
+    return step.process;
   }
 };
 
@@ -1931,11 +1854,11 @@ CCSSyncRule = {
     }
     return result;
   },
-  getPossibleSteps: function(parallel, copyOnPerform) {
+  getPossibleSteps: function(parallel) {
     var c, l, left, r, result, right, _i, _j, _len, _len1, _right;
     if (!parallel._CCSSyncRule) {
-      left = parallel.getLeft().getPossibleSteps(copyOnPerform);
-      right = parallel.getRight().getPossibleSteps(copyOnPerform);
+      left = parallel.getLeft().getPossibleSteps();
+      right = parallel.getRight().getPossibleSteps();
       result = [];
       c = 0;
       for (_i = 0, _len = left.length; _i < _len; _i++) {
@@ -1943,7 +1866,7 @@ CCSSyncRule = {
         _right = CCSSyncRule.filterStepsSyncableWithStep(l, right);
         for (_j = 0, _len1 = _right.length; _j < _len1; _j++) {
           r = _right[_j];
-          result.push(new CCSStep(c++, parallel, new CCSInternalActionCreate(CCSInternalChannel), this, copyOnPerform, "" + (l.action.isOutputAction() ? l.action.transferDescription() : r.action.transferDescription()), l, r));
+          result.push(new CCSStep(c++, parallel, new CCSInternalActionCreate(CCSInternalChannel), this, "" + (l.action.isOutputAction() ? l.action.transferDescription() : r.action.transferDescription()), l, r));
         }
       }
       parallel._CCSSyncRule = result;
@@ -1951,35 +1874,26 @@ CCSSyncRule = {
     return parallel._CCSSyncRule;
   },
   performStep: function(step) {
-    var inp, left, out, prefix, res, right;
-    res = step._getMutableProcess();
-    res._CCSSyncRule = void 0;
-    res._CCSParRRule = void 0;
-    res._CCSParLRule = void 0;
+    var inp, out, prefix;
+    step.process._CCSSyncRule = void 0;
+    step.process._CCSParRRule = void 0;
+    step.process._CCSParLRule = void 0;
     inp = null;
     out = null;
-    left = null;
-    right = null;
     prefix = step.substeps[0].getLeafProcesses()[0];
     if (prefix.action.supportsValuePassing()) {
       if (prefix.action.isInputAction()) {
         inp = prefix;
         out = step.substeps[1].getLeafProcesses()[0];
-        left = step.substeps[0].performWithInputValue(out.action.expression.evaluate());
-        right = step.substeps[1].perform();
       } else {
         out = prefix;
         inp = step.substeps[1].getLeafProcesses()[0];
-        left = step.substeps[0].perform();
-        right = step.substeps[1].performWithInputValue(out.action.expression.evaluate());
       }
-    } else {
-      left = step.substeps[0].perform();
-      right = step.substeps[1].perform();
+      inp.action.incommingValue = out.action.expression.evaluate();
     }
-    res.setLeft(left);
-    res.setRight(right);
-    return res;
+    step.process.setLeft(step.substeps[0].perform());
+    step.process.setRight(step.substeps[1].perform());
+    return step.process;
   }
 };
 
@@ -1997,15 +1911,15 @@ CCSResRule = {
       return restr.indexOf(chan) !== -1;
     }
   },
-  getPossibleSteps: function(restriction, copyOnPerform) {
+  getPossibleSteps: function(restriction) {
     var c, result, step, steps, _i, _len;
-    steps = restriction.getProcess().getPossibleSteps(copyOnPerform).filterActVPPlusSteps();
+    steps = restriction.getProcess().getPossibleSteps().filterActVPPlusSteps();
     result = [];
     c = 0;
     for (_i = 0, _len = steps.length; _i < _len; _i++) {
       step = steps[_i];
       if (!this.shouldRestrictChannel(step.action.channel.name, restriction.restrictedChannels)) {
-        result.push(new CCSStep(c++, restriction, step.action, this, copyOnPerform, null, step));
+        result.push(new CCSStep(c++, restriction, step.action, this, null, step));
       }
     }
     return result;
@@ -2017,12 +1931,12 @@ CCSResRule = {
 };
 
 CCSCondRule = {
-  getPossibleSteps: function(condition, copyOnPerform) {
+  getPossibleSteps: function(condition) {
     if (CCSCondRule.DEBUGGER) {
       debugger;
     }
     if (condition.expression.evaluate() === "1") {
-      return condition.getProcess().getPossibleSteps(copyOnPerform).filterActVPPlusSteps();
+      return condition.getProcess().getPossibleSteps().filterActVPPlusSteps();
     } else {
       return [];
     }
@@ -2033,8 +1947,8 @@ CCSCondRule = {
 };
 
 CCSExitRule = {
-  getPossibleSteps: function(exit, copyOnPerform) {
-    return [new CCSStep(0, exit, new CCSInternalActionCreate(CCSExitChannel), this, copyOnPerform)];
+  getPossibleSteps: function(exit) {
+    return [new CCSStep(0, exit, new CCSInternalActionCreate(CCSExitChannel), this)];
   },
   performStep: function(step) {
     return new CCSStop();
@@ -2042,20 +1956,20 @@ CCSExitRule = {
 };
 
 CCSSyncExitRule = {
-  getPossibleSteps: function(parallel, copyOnPerform) {
+  getPossibleSteps: function(parallel) {
     var c, filter, l, left, r, result, right, _i, _j, _len, _len1;
     filter = function(step) {
       return step.action.channel.name === CCSExitChannel;
     };
-    left = parallel.getLeft().getPossibleSteps(copyOnPerform).filter(filter);
-    right = parallel.getRight().getPossibleSteps(copyOnPerform).filter(filter);
+    left = parallel.getLeft().getPossibleSteps().filter(filter);
+    right = parallel.getRight().getPossibleSteps().filter(filter);
     c = 0;
     result = [];
     for (_i = 0, _len = left.length; _i < _len; _i++) {
       l = left[_i];
       for (_j = 0, _len1 = right.length; _j < _len1; _j++) {
         r = right[_j];
-        result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), this, copyOnPerform, "" + (l.action.isOutput() ? l.action.transferDescription() : r.action.transferDescription()), l, r));
+        result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), this, "" + (l.action.isOutput() ? l.action.transferDescription() : r.action.transferDescription()), l, r));
       }
     }
     return result;
@@ -2066,14 +1980,14 @@ CCSSyncExitRule = {
 };
 
 CCSSeq1Rule = {
-  getPossibleSteps: function(sequence, copyOnPerform) {
-    var c, step, _i, _len, _ref4, _results;
+  getPossibleSteps: function(sequence) {
+    var c, step, _i, _len, _ref3, _results;
     c = 0;
-    _ref4 = sequence.getLeft().getPossibleSteps(copyOnPerform).filterActVPSteps();
+    _ref3 = sequence.getLeft().getPossibleSteps().filterActVPSteps();
     _results = [];
-    for (_i = 0, _len = _ref4.length; _i < _len; _i++) {
-      step = _ref4[_i];
-      _results.push(new CCSStep(c++, sequence, step.action, this, copyOnPerform, null, step));
+    for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+      step = _ref3[_i];
+      _results.push(new CCSStep(c++, sequence, step.action, this, null, step));
     }
     return _results;
   },
@@ -2084,17 +1998,17 @@ CCSSeq1Rule = {
 };
 
 CCSSeq2Rule = {
-  getPossibleSteps: function(sequence, copyOnPerform) {
+  getPossibleSteps: function(sequence) {
     var c, filter, result, rho, rhos, _i, _len;
     filter = function(step) {
       return step.action.channel.name === CCSExitChannel;
     };
-    rhos = sequence.getLeft().getPossibleSteps(copyOnPerform).filter(filter);
+    rhos = sequence.getLeft().getPossibleSteps().filter(filter);
     result = [];
     c = 0;
     for (_i = 0, _len = rhos.length; _i < _len; _i++) {
       rho = rhos[_i];
-      result.push(new CCSStep(c++, sequence, new CCSInternalActionCreate(CCSInternalChannel), this, copyOnPerform, "" + CCSExitChannel, rho));
+      result.push(new CCSStep(c++, sequence, new CCSInternalActionCreate(CCSInternalChannel), this, "" + CCSExitChannel, rho));
     }
     return result;
   },
@@ -2104,14 +2018,14 @@ CCSSeq2Rule = {
 };
 
 CCSRecRule = {
-  getPossibleSteps: function(application, copyOnPerform) {
+  getPossibleSteps: function(application) {
     var c, step, steps, _i, _len, _results;
-    steps = application.getProcess().getPossibleSteps(copyOnPerform);
+    steps = application.getProcess().getPossibleSteps();
     c = 0;
     _results = [];
     for (_i = 0, _len = steps.length; _i < _len; _i++) {
       step = steps[_i];
-      _results.push(new CCSStep(c++, application, step.action, this, copyOnPerform, null, step));
+      _results.push(new CCSStep(c++, application, step.action, this, null, step));
     }
     return _results;
   },
