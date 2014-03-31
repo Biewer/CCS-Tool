@@ -195,8 +195,9 @@ CCSResRule =
 		(result.push(new CCSStep(c++, restriction, step.action, @, copyOnPerform, null, step)) if  !@shouldRestrictChannel(step.action.channel.name, restriction.restrictedChannels)) for step in steps
 		return result
 	performStep: (step) -> 
-		step.process.setProcess(step.substeps[0].perform())
-		step.process
+		res = step._getMutableProcess()
+		res.setProcess(step.substeps[0].perform())
+		res
 
 
 # - CondRule
@@ -227,7 +228,7 @@ CCSSyncExitRule =
 			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, copyOnPerform, "#{if l.action.isOutput() then l.action.transferDescription() else r.action.transferDescription()}", l, r))) for r in right
 		) for l in left
 		return result
-	performStep: (step) -> SyncRule.performStep step
+	performStep: (step) -> CCSSyncRule.performStep step
 
 
 # - Seq1Rule
@@ -236,8 +237,9 @@ CCSSeq1Rule =
 		c = 0
 		(new CCSStep(c++, sequence, step.action, @, copyOnPerform, null, step)) for step in sequence.getLeft().getPossibleSteps(copyOnPerform).filterActVPSteps()
 	performStep: (step) -> 
-		step.process.setLeft(step.substeps[0].perform())
-		step.process
+		res = step._getMutableProcess()
+		res.setLeft(step.substeps[0].perform())
+		res
 
 
 # - Seq2Rule
