@@ -1,6 +1,6 @@
 {
   "name": "PseuCoCo",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "PseuCo Compiler",
   "main": "htdocs/index.html",
   "repository": {
