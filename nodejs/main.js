@@ -18,11 +18,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ### */;
-var NJSMain, NJSReadline, NJSSharedMain, NSJReadlineOptions;
+var Jasmine, NJSMain, NJSReadline, NJSReadlineOptions, NJSSharedMain;
 
 NJSReadline = require("readline");
 
-NSJReadlineOptions = {
+Jasmine = require("jasmine-node");
+
+NJSReadlineOptions = {
   input: process.stdin,
   output: process.stdout
 };
@@ -33,10 +35,48 @@ NJSMain = (function() {
     cmd = process.argv[2];
     if (cmd === "-help" || cmd === "-h") {
       this.printHelp();
+    } else if (cmd === "-test" || cmd === "-t") {
+      this.performTests(process.argv.slice(3));
     } else {
       this.printSummary();
     }
   }
+
+  NJSMain.prototype.performTests = function(paths) {
+    var code, coffee, comps, file, fs, info, path, _i, _len, _results;
+    fs = require("fs");
+    coffee = require("coffee-script");
+    _results = [];
+    for (_i = 0, _len = paths.length; _i < _len; _i++) {
+      path = paths[_i];
+      info = fs.statSync(path);
+      if (!info) {
+        _results.push(console.warn("WARNING: File " + path + " not found!"));
+      } else if (info.isDirectory()) {
+        _results.push(this.performTests((function() {
+          var _j, _len1, _ref, _results1;
+          _ref = fs.readdirSync(path);
+          _results1 = [];
+          for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+            file = _ref[_j];
+            _results1.push("" + path + "/" + file);
+          }
+          return _results1;
+        })()));
+      } else if (info.isFile()) {
+        code = fs.readFileSync(path, "utf8");
+        comps = path.split(".");
+        if (comps[comps.length - 1] === "coffee") {
+          _results.push(coffee.run(code));
+        } else {
+          _results.push(eval(code));
+        }
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
 
   NJSMain.prototype.printHelp = function() {
     console.log("First line of help");

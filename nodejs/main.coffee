@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 NJSReadline = require "readline"
 
+Jasmine = require "jasmine-node"
+
 
 NJSReadlineOptions = 
 	input:
@@ -32,9 +34,30 @@ class NJSMain
 		cmd = process.argv[2]
 		if cmd == "-help" or cmd == "-h"
 			@printHelp()
+		else if cmd == "-test" or cmd == "-t"
+			@performTests(process.argv[3..])
 		else
 			@printSummary()
 	
+	
+	
+	
+	performTests: (paths) ->
+		fs = require "fs"
+		coffee = require "coffee-script"
+		for path in paths
+			info = fs.statSync path
+			if not info
+				console.warn "WARNING: File #{path} not found!"
+			else if info.isDirectory()
+				@performTests ("#{path}/#{file}" for file in fs.readdirSync path)
+			else if info.isFile()
+				code = fs.readFileSync path, "utf8"
+				comps = path.split(".")
+				if comps[comps.length-1] == "coffee"
+					coffee.run code
+				else
+					eval code
 	
 	
 	printHelp: ->

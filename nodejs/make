@@ -1,7 +1,11 @@
-all: merge
+all: pseuco
+all+: core pseuco
 
-#core:
-					#cd ../ && make -f make
+core:
+					cd ../ && make -f make
+
+pseuco:
+					coffee -c -b -j ./.PseuCoExport.js PseuCoExport.coffee && mkdir -p node_modules && cat ../htdocs/PseuCoParser.js ../htdocs/PseuCo.js ./.PseuCoExport.js > node_modules/PseuCo.js
 
 merge: cmain #core 
 					cat ../htdocs/CCS.js ../htdocs/CCSParser.js ../htdocs/PseuCo.js ../htdocs/PseuCoParser.js ../htdocs/PCCompiler.js main.js > node.js
