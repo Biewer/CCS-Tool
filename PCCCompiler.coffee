@@ -60,7 +60,7 @@ class PCCCompiler
 			@endSystemProcess()
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@program.compile(@)
-		new CCS(@controller.root.collectPDefs(), @_getSystem())
+		new CCS.CCS(@controller.root.collectPDefs(), @_getSystem())
 	
 	compile: (node, args...) ->
 		@compilingNodes.push(node)
@@ -79,8 +79,8 @@ class PCCCompiler
 		@endSystemProcess()
 		system = @systemProcesses[0]
 		for i in [1...@systemProcesses.length] by 1
-			system = new CCSParallel(system, @systemProcesses[i])
-		new CCSRestriction(system, ["*", "println"])
+			system = new CCS.Parallel(system, @systemProcesses[i])
+		new CCS.Restriction(system, ["*", "println"])
 	
 	###
 		Delegates must implement the following methods:

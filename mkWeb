@@ -1,0 +1,10 @@
+all: modules gui browser
+					
+gui:
+						coffee -c -b -j _UI.js UISetup.coffee UITabBar.coffee UIConsole.coffee UICCSHistory.coffee UIEventRecognizer.coffee UIExecutor.coffee UIAppController.coffee UIPseuCoEditor.coffee UICCSEditor.coffee
+						
+modules:
+						make -f make
+
+browser:	
+						browserify _UI.js -o htdocs/main.js
