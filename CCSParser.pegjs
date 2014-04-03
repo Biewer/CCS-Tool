@@ -34,16 +34,16 @@ CCS
 Process
   = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ "\n"
 		                                { 
-		                                  return new CCSProcessDefinition(n.name, P, params == "" ? null : params);
+		                                  return new CCSProcessDefinition(n.name, P, params ? params : null);
 		                                }
 
 
 
 
-Restriction	// ToDo: Fix: Star in combination with following actions is possible!
+Restriction
   = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  as; })?
   										{
-  											return res == "" ? P : new CCSRestriction(P, res);
+  											return res ? new CCSRestriction(P, res) : P;
   										}
 
 
@@ -112,7 +112,7 @@ Condition
 /*Match
   = a:Action _ "?" _ "=" _ e:expression
 									{ 
-										return new CCSMatch(a, (e == "") ? null : e); 
+										return new CCSMatch(a, e ? e : null); 
 									}*/
   								
 
@@ -126,7 +126,7 @@ Input
 Output
   = a:Action _ "!" e:(_ t:expression { return t; })?
 	  								{ 
-	  									return new CCSOutput(a, (e == "") ? null : e); 
+	  									return new CCSOutput(a, e ? e : null); 
 	  								}
 
 
@@ -141,7 +141,7 @@ SimpleAction
 Action
   = c:channel e:( "(" e:expression? ")" { return e; } )?
   									{
-  										if (e == "") e = null;
+  										if (!e) e = null;
   										return new CCSChannel(c, e);
   									}
 	                                

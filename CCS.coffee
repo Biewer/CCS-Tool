@@ -21,17 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # - Constants
 CCSInternalChannel = "\u03c4"	# tau
 CCSExitChannel = "\u03b4"		# rho	
-CCSUIChannel = "\u03c8"			# psi	
+CCSUIChannel = "\u03c8"			# psi		# remove?
 ObjID = 1
 _DEBUG = []
 
 DSteps = []
-DS = ->
+DS = ->			# remove?
 	console.log ccs.system.toString()
 	DSteps = ccs.getPossibleSteps()
 	console.log("\"#{i}\": #{s.toString()}") for s, i in DSteps
 	null
-DP = (i) -> 
+DP = (i) -> 		# remove?
 	ccs.performStep(DSteps[i])
 	DS()
 
@@ -55,10 +55,10 @@ class CCS
 		result = null
 		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pd in @processDefinitions
 		return result
-	getPossibleSteps: (env) -> @system.getPossibleSteps(env)
-	performStep: (step) -> @system = step.perform()
+	getPossibleSteps: (copyOnPerform) -> @system.getPossibleSteps(copyOnPerform)
+	#performStep: (step) -> @system = step.perform()
 	
-	toString: -> "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
+	toString: (expressionOnly) -> if expressionOnly then @system.toString() else "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
 
 
 # - ProcessDefinition
@@ -104,7 +104,9 @@ class CCSProcess
 			type = CCSGetMostGeneralType(type, t)
 		type
 	getApplicapleRules: -> []
-	getPossibleSteps: () -> (rule.getPossibleSteps(this) for rule in @getApplicapleRules()).concatChildren()
+	getPossibleSteps: (copyOnPerform) -> 
+		copyOnPerform = false if not copyOnPerform
+		(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules()).concatChildren()
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
@@ -196,7 +198,7 @@ class CCSPrefix extends CCSProcess
 		type = @action.getTypeOfIdentifier(identifier, type)
 		if @action.isInputAction() and @action.variable == identifier	# new var starts with type "value"
 			super identifier, CCSTypeValue
-			type
+			type		# Was macht das da?
 		else
 			super identifier, type
 		
@@ -322,7 +324,7 @@ class CCSInternalChannel extends CCSChannel
 # -- Action (abstract class)
 class CCSAction
 	constructor: (@channel) ->		# CCSChannel
-		if @channel == "i"
+		if @channel == "i"		# ??? TODO @channel is not a string?
 			if !@isSimpleAction() then throw new Error("Internal channel i is only allowed as simple action!")
 			@channel = CCSInternalChannel
 		else if @channel == "e"
@@ -361,7 +363,6 @@ CCSInternalActionCreate = (name) ->
 class CCSInput extends CCSAction
 	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x {int x int) ; range must be copy in!
 		super channel
-		@incommingValue = null
 	
 	isInputAction: -> true
 	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
@@ -371,7 +372,10 @@ class CCSInput extends CCSAction
 		@variable != varName	# stop replacing if identifier is equal to its own variable name
 	
 	toString: -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
-	transferDescription: -> "#{super}#{ if @supportsValuePassing() then ": " + @incommingValue else ""}"
+	transferDescription: (inputValue) -> 
+		if @supportsValuePassing() and (inputValue == null or inputValue == undefined)
+			throw new Error("CCSInput.transferDescription needs an input value as argument if it supports value passing!") 
+		"#{super}#{ if @supportsValuePassing() then ": " + inputValue else ""}"
 	copy: -> new CCSInput(@channel.copy(), @variable, @range)
 
 
@@ -443,6 +447,7 @@ class CCSExpression
 		type
 	evaluate: -> throw new Error("Abstract method!")
 	isEvaluatable: -> false
+	typeOfEvaluation: -> throw new Error("Abstract method!")
 		
 	needsBracketsForSubExp: (exp) -> 
 		@getPrecedence? and exp.getPrecedence? and exp.getPrecedence() < @getPrecedence()
@@ -464,6 +469,7 @@ class CCSConstantExpression extends CCSExpression
 	evaluate: -> CCSConstantExpression.valueToString @value
 		#if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
 	isEvaluatable: -> true
+	typeOfEvaluation: -> typeof @value
 	toString: -> if typeof @value == "string" then '"'+@value+'"' else "" + @value
 	copy: -> new CCSConstantExpression(@value)
 
@@ -484,6 +490,7 @@ class CCSVariableExpression extends CCSExpression
 	replaceChannelName: (old, newID) ->
 		@variableName = newID if @variableName == old
 	evaluate: -> throw new Error('Unbound identifier!')
+	typeOfEvaluation: -> throw new Error('Unbound identifier!')
 	isEvaluatable: -> false
 	toString: -> @variableName
 	
@@ -500,6 +507,7 @@ class CCSAdditiveExpression extends CCSExpression
 		r = parseInt(@getRight().evaluate())
 		"" + (if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!"))
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "number"
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSAdditiveExpression(@getLeft().copy(), @getRight().copy(), @op)
@@ -516,6 +524,7 @@ class CCSMultiplicativeExpression extends CCSExpression
 		if @op == "*" then l * r else if @op == "/" then Math.floor(l/r) 
 		else throw new Error("Invalid operator!")
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "number"
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSMultiplicativeExpression(@getLeft().copy(), @getRight().copy(), @op)
@@ -528,6 +537,7 @@ class CCSConcatenatingExpression extends CCSExpression
 	getPrecedence: -> 9
 	evaluate: -> "" + @getLeft().evaluate() + @getRight().evaluate()
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "string"
 	toString: -> @stringForSubExp(@getLeft()) + "^" + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
@@ -546,6 +556,7 @@ class CCSRelationalExpression extends CCSExpression
 		else throw new Error("Invalid operator!")
 		CCSConstantExpression.valueToString res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "boolean"
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSRelationalExpression(@getLeft().copy(), @getRight().copy(), @op)
@@ -563,9 +574,13 @@ class CCSEqualityExpression extends CCSExpression
 		else throw new Error("Invalid operator!")
 		CCSConstantExpression.valueToString res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "boolean"
 	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSEqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
+
+
+# Felix? ToDo: Operatoren && und ||
 	
 
 	
