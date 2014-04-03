@@ -19,9 +19,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-var $$, UI, UIAppController, UICCSConsole, UICCSEditor, UICCSHistory, UIClickRecognizer, UIConsole, UIEditorState, UIError, UIEventRecognizer, UIExecutor, UIID, UILoad, UILog, UIPseuCoEditor, UIPseuCoHack, UITabBar, UIWarn, _ref,
+var $$, CCS, PC, PCC, UI, UIAppController, UICCSConsole, UICCSEditor, UICCSHistory, UIClickRecognizer, UIConsole, UIEditorState, UIError, UIEventRecognizer, UIExecutor, UIID, UILoad, UILog, UIPseuCoEditor, UIPseuCoHack, UITabBar, UIWarn, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+CCS = require("CCS");
+
+PC = require("PseuCo");
+
+PCC = require("CCSCompiler");
 
 UIEditorState = {
   possible: 0,
@@ -500,7 +506,7 @@ UIExecutor = (function() {
   UIExecutor.prototype.executorDidPerformStep = function(exec, step, system) {};
 
   UIExecutor.prototype.execute = function() {
-    this.executor = new PCExecutor(UI.app.ccs, this);
+    this.executor = new PCC.Executor(UI.app.ccs, this);
     return this.executor.execute();
   };
 
@@ -695,7 +701,7 @@ UIPseuCoEditor = (function() {
     var col, e;
     this._setState(UIEditorState.possible);
     try {
-      this.tree = PseuCoParser.parse(text);
+      this.tree = PC.parser.parse(text);
       return this._setState(UIEditorState.valid);
     } catch (_error) {
       e = _error;
@@ -797,7 +803,7 @@ UICCSEditor = (function() {
     if (editor !== app.pseuCoEditor || editor.state !== UIEditorState.valid) {
       return;
     }
-    compiler = new PCCCompiler(editor.tree);
+    compiler = new PCC.Compiler(editor.tree);
     ccs = compiler.compileProgram();
     return app.setCCS(ccs);
   };

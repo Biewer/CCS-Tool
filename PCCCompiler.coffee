@@ -24,6 +24,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	You start the compilation process by creating a new PCCCompiler object with the node of your PseuCo tree and call compile() on it. You'll get a CCS tree on success
 ###
 
+debugger
+PC = require "PseuCo"
+CCS = require "CCS"
+
 
 class PCCCompiler
 	constructor: (@program) ->
@@ -560,20 +564,20 @@ class PCCCompiler
 
 
 
-PCTEnvironmentNode::compilerPushPDef = (pdef) ->
+PC.EnvironmentNode::compilerPushPDef = (pdef) ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.push(pdef)
-PCTVariable::compilerPushPDef = PCTEnvironmentNode::compilerPushPDef
-PCTEnvironmentNode::collectPDefs = ->
+PC.Variable::compilerPushPDef = PC.EnvironmentNode::compilerPushPDef
+PC.EnvironmentNode::collectPDefs = ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.concat((c.collectPDefs() for c in @children).concatChildren())
-PCTVariable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
+PC.Variable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
 
 
-PCNode::addCalculusComponent = (component) ->
+PC.Node::addCalculusComponent = (component) ->
 	@calculusComponents = [] if not @calculusComponents
 	@calculusComponents.push(component)
-PCNode::getCalculusComponents = ->
+PC.Node::getCalculusComponents = ->
 	@calculusComponents = [] if not @calculusComponents
 	@calculusComponents
 

@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 
+CCS = require "CCS"
+PC = require "PseuCo"
+PCC = require "CCSCompiler"
 
 
 UIEditorState = 

@@ -19,17 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 
-
-class UICCSEditor
-	constructor: (@textarea) ->
+class PCCExecutor extends CCS.Executor
+	_printStep: (step) ->
+		if step.action.channel.name == "println" and step.action.isOutputAction() and step.action.expression	# Intercept println
+			@_output "#{step.action.expression.evaluate()}"
 	
-	appDidChangeEditorState: (app, editor) ->
-		return if editor != app.pseuCoEditor or editor.state != UIEditorState.valid
-		compiler = new PCC.Compiler(editor.tree)
-		ccs = compiler.compileProgram()
-		app.setCCS(ccs)
-	
-	appDidChangeCCS: (app, newCCS) ->
-		@textarea.value = newCCS.toString()
-		
-		
+	_printExecutionIntro: -> @_output("<i>Starting CCS execution.</i>")
+	_printExecutionSummary: ->
+		elapsedMS = ((new Date()).getTime()-@executionStart.getTime())
+		perStep = Math.round(elapsedMS / @stepCount * 100) / 100
+		@_output("<i>Finished CCS execution after performing #{@stepCount} steps in #{elapsedMS/1000} seconds (#{perStep}ms per step).<\/i> \n-------------------------------------------------------------------------------------------")

@@ -36,7 +36,7 @@ class UIPseuCoEditor
 	setText: (text) -> 
 		@_setState UIEditorState.possible
 		try
-			@tree = PseuCoParser.parse(text);
+			@tree = PC.parser.parse(text);
 			@_setState UIEditorState.valid
 		catch e
 			col = if e.column then ", column " + e.column else ""
