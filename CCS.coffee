@@ -192,7 +192,8 @@ class CCSPrefix extends CCSProcess
 	replaceVariable: (varName, exp) ->
 		super varName, exp if @action.replaceVariable(varName, exp)
 	replaceChannelName: (old, newID) ->
-		super old, newID if @action.replaceChannelName(old, newID)
+		@action.replaceChannelName(old, newID)
+		super old, newID #if @action.replaceChannelName(old, newID)
 	getPrefixes: -> return [@]
 	getTypeOfIdentifier: (identifier, type) ->
 		type = @action.getTypeOfIdentifier(identifier, type)
@@ -379,6 +380,7 @@ class CCSInput extends CCSAction
 	copy: -> new CCSInput(@channel.copy(), @variable, @range)
 
 
+###
 # - Match
 class CCSMatch extends CCSAction
 	constructor: (channel, @expression) -> super channel	# CCSChannel x Expression
@@ -397,6 +399,7 @@ class CCSMatch extends CCSAction
 	toString: -> "#{super}?=#{if @expression then @expression.toString() else ""}"
 	transferDescription: -> throw new Error("Currently unsupported action")
 	copy: -> new CCSMatch(@channel.copy(), @expression?.copy())
+###
 	
 
 # - Output
