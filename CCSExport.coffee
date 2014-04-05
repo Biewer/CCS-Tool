@@ -63,7 +63,7 @@ exports["actionSets"] = ActionSets
 
 exports["Step"] = CCSStep
 exports["BaseStep"] = CCSBaseStep
-exports["InputStep"] = CCSInputStep
+# exports["InputStep"] = CCSInputStep
 
 exports["PrefixRule"] = CCSPrefixRule
 exports["OutputRule"] = CCSOutputRule

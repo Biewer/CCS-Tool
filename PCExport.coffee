@@ -89,3 +89,7 @@ exports["PrimitiveStmt"] = PCPrimitiveStmt
 exports["PrintStmt"] = PCPrintStmt
 
 
+
+@window.PC = exports if @window
+
+

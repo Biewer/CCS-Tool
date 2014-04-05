@@ -89,4 +89,8 @@ exports["PCCProgramController"] = PCCProgramController
 
 
 
+@window.PCC = exports if @window
+
+
+
 
