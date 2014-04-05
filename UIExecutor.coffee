@@ -44,7 +44,7 @@ class UIExecutor
 	
 	
 	execute: ->
-		@executor = new PCExecutor(UI.app.ccs, @)
+		@executor = new PCC.Executor(UI.app.ccs, @)
 		@executor.execute()
 		
 		# @setButtonEnabled(false)

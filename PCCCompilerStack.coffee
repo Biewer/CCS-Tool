@@ -124,7 +124,7 @@ PCCStackElement::updateBinaryTargets = (destination) -> @parent?.updateBinaryTar
 class PCCStopStackElement extends PCCUnaryStackElement
 	getResults: ->
 		more = if @next then @next.getResults() else new PCCStackResultContainer()
-		more.addResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCSStop))
+		more.addResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCS.Stop))
 		more
 	isCompletedProcess: -> true
 		
@@ -132,29 +132,29 @@ class PCCStopStackElement extends PCCUnaryStackElement
 class PCCExitStackElement extends PCCUnaryStackElement
 	getResults: ->
 		more = if @next then @next.getResults() else new PCCStackResultContainer()
-		more.addResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCSExit))
+		more.addResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCS.Exit))
 		more
 	isCompletedProcess: -> true
 
 class PCCPrefixStackElement extends PCCUnaryStackElement
 	constructor: (@channel, @specificChannel) -> super
-	_getChannel: -> new CCSChannel(@channel, if @specificChannel then @specificChannel.ccsTree() else null)
+	_getChannel: -> new CCS.Channel(@channel, if @specificChannel then @specificChannel.ccsTree() else null)
 	_getAction: -> throw new Error("Abstract and not implemented!")
 	getResults: ->
 		container = @next.getResults()
 		pRes = container.getResult()
 		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
-		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCSPrefix, @_getAction(), pRes.data))
+		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCS.Prefix, @_getAction(), pRes.data))
 		container
 	isCompletedProcess: -> if @next then @next.isCompletedProcess() else false
 
 class PCCInputStackElement extends PCCPrefixStackElement
 	constructor: (channel, specificChannel, @container) -> super channel, specificChannel	# string x PCCContainer x string
-	_getAction: -> @createCalculusNode(CCSInput, @_getChannel(), if @container then @container.identifier else null)
+	_getAction: -> @createCalculusNode(CCS.Input, @_getChannel(), if @container then @container.identifier else null)
 
 class PCCOutputStackElement extends PCCPrefixStackElement
 	constructor: (channel, sepcificChannel, @container) -> super channel, sepcificChannel	# string x PCCContainer x PCCContainer
-	_getAction: -> @createCalculusNode(CCSOutput, @_getChannel(), if @container then @container.ccsTree() else null)
+	_getAction: -> @createCalculusNode(CCS.Output, @_getChannel(), if @container then @container.ccsTree() else null)
 
 class PCCConditionStackElement extends PCCUnaryStackElement
 	constructor: (@conditionContainer) -> super
@@ -162,7 +162,7 @@ class PCCConditionStackElement extends PCCUnaryStackElement
 		container = @next.getResults()
 		pRes = container.getResult()
 		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
-		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCSCondition, @conditionContainer.ccsTree(), pRes.data))
+		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCS.Condition, @conditionContainer.ccsTree(), pRes.data))
 		container
 	isCompletedProcess: -> if @next then @next.isCompletedProcess() else false
 
@@ -172,7 +172,7 @@ class PCCRestrictionStackElement extends PCCUnaryStackElement
 		container = @next.getResults()
 		pRes = container.getResult()
 		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
-		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCSRestriction, pRes.data, @restrictedChannels))
+		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCS.Restriction, pRes.data, @restrictedChannels))
 		container
 	isCompletedProcess: -> if @next then @next.isCompletedProcess() else false
 
@@ -184,7 +184,7 @@ class PCCApplicationStackElement extends PCCUnaryStackElement
 	getResults: ->
 		more = if @next then @next.getResults() else new PCCStackResultContainer()
 		values = (c.ccsTree() for c in @argContainers)
-		more.addResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCSProcessApplication, @processName, values))
+		more.addResult(PCCStackResult.TYPE_CCSPROCESS, @createCalculusNode(CCS.ProcessApplication, @processName, values))
 		more
 	isCompletedProcess: -> true
 
@@ -219,13 +219,13 @@ class PCCBinaryCCSStackElement extends PCCBinaryStackElement
 		if @leftStack and @rightStack then @leftStack.isCompletedProcess() and @rightStack.isCompletedProcess() else false
 
 class PCCChoiceStackElement extends PCCBinaryCCSStackElement
-	_createCCSProcess: (left, right) -> @createCalculusNode(CCSChoice, left, right)
+	_createCCSProcess: (left, right) -> @createCalculusNode(CCS.Choice, left, right)
 	
 class PCCParallelStackElement extends PCCBinaryCCSStackElement
-	_createCCSProcess: (left, right) -> @createCalculusNode(CCSParallel, left, right)
+	_createCCSProcess: (left, right) -> @createCalculusNode(CCS.Parallel, left, right)
 
 class PCCSequenceStackElement extends PCCBinaryCCSStackElement
-	_createCCSProcess: (left, right) -> @createCalculusNode(CCSSequence, left, right)
+	_createCCSProcess: (left, right) -> @createCalculusNode(CCS.Sequence, left, right)
 
 
 
@@ -247,7 +247,7 @@ class PCCProcessDefinitionStackElement extends PCCUnaryStackElement
 		pRes = container.getResult()
 		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
 		argNames = (c.identifier for c in @argContainers)
-		def = @createCalculusNode(CCSProcessDefinition, @processName, pRes.data, argNames)
+		def = @createCalculusNode(CCS.ProcessDefinition, @processName, pRes.data, argNames)
 		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS_DEFINITION, def)
 		container
 

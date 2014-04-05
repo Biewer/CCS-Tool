@@ -105,16 +105,7 @@ class CCSExecutor
 	
 	
 	
-class PCExecutor extends CCSExecutor
-	_printStep: (step) ->
-		if step.action.channel.name == "println" and step.action.isOutputAction() and step.action.expression	# Intercept println
-			@_output "#{step.action.expression.evaluate()}"
-	
-	_printExecutionIntro: -> @_output("<i>Starting CCS execution.</i>")
-	_printExecutionSummary: ->
-		elapsedMS = ((new Date()).getTime()-@executionStart.getTime())
-		perStep = Math.round(elapsedMS / @stepCount * 100) / 100
-		@_output("<i>Finished CCS execution after performing #{@stepCount} steps in #{elapsedMS/1000} seconds (#{perStep}ms per step).<\/i> \n-------------------------------------------------------------------------------------------")
+
 	
 	
 	

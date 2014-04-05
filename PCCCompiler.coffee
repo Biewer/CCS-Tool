@@ -24,15 +24,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	You start the compilation process by creating a new PCCCompiler object with the node of your PseuCo tree and call compile() on it. You'll get a CCS tree on success
 ###
 
+debugger
+PC = require "PseuCo"
+CCS = require "CCS"
+
+PCCFlags = 
+	trackGlobalVariables: 1
+	trackClassVariables: 2
+	trackLocalVariables: 4
+	trackVariables: 7
+	trackProcedureCalls: 8
+	trackAgents: 16
+
 
 class PCCCompiler
-	constructor: (@program) ->
+	constructor: (@program, @flags=31) ->
 		@controller = null
 		@stack = null	
 		@groupElements = []	
 		@controller = new PCCProgramController(@program)
 		@systemProcesses = []
 		@compilingNodes = []	# stack
+	
+	trackGlobalVars: -> (@flags & PCCFlags.trackGlobalVariables) == PCCFlags.trackGlobalVariables
+	trackClassVars: -> (@flags & PCCFlags.trackClassVariables) == PCCFlags.trackClassVariables
+	trackLocalVars: -> (@flags & PCCFlags.trackLocalVariables) == PCCFlags.trackLocalVariables
+	trackProcCalls: -> (@flags & PCCFlags.trackProcedureCalls) == PCCFlags.trackProcedureCalls
+	trackAgents: -> (@flags & PCCFlags.trackAgents) == PCCFlags.trackAgents
 	
 	compileProgram: -> 
 		@program.collectClasses(@controller)
@@ -56,7 +74,7 @@ class PCCCompiler
 			@endSystemProcess()
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@program.compile(@)
-		new CCS(@controller.root.collectPDefs(), @_getSystem())
+		new CCS.CCS(@controller.root.collectPDefs(), @_getSystem())
 	
 	compile: (node, args...) ->
 		@compilingNodes.push(node)
@@ -75,8 +93,23 @@ class PCCCompiler
 		@endSystemProcess()
 		system = @systemProcesses[0]
 		for i in [1...@systemProcesses.length] by 1
-			system = new CCSParallel(system, @systemProcesses[i])
-		new CCSRestriction(system, ["*", "println"])
+			system = new CCS.Parallel(system, @systemProcesses[i])
+		new CCS.Restriction(system, @_getRestrictedChannels())
+	
+	_getRestrictedChannels: -> 
+		res = ["*", "println", "exception"]
+		res.push("sys_var") if @trackGlobalVars() or @trackClassVars() or @trackLocalVars()
+		if @trackProcCalls()
+			res.push("sys_call") 
+			res.push("sys_return") 
+		if @trackAgents()
+			res.push("sys_start")
+			res.push("sys_terminate")
+		res
+	
+	didChangeVariable: (variable, container) ->
+		
+		
 	
 	###
 		Delegates must implement the following methods:
@@ -110,8 +143,8 @@ class PCCCompiler
 	
 	getFreshContainer: (ccsType, wish) -> 
 		res = @getProcessFrame().createContainer(ccsType, wish)
-		res.pseucoNode = @compilingNodes[@compilingNodes.length-1]
-		res.pseucoNode.addCalculusComponent(res.pseucoNode)
+		res.pseucoNode = @compilingNodes[@compilingNodes.length-1] if @compilingNodes.length > 0
+		res.pseucoNode.addCalculusComponent(res.pseucoNode) if res.pseucoNode
 		res
 	
 	handleNewVariableWithDefaultValueCallback: (variable, callback, context) ->		# callback returns a container
@@ -392,6 +425,22 @@ class PCCCompiler
 		@endProcessDefinition()
 		@emitSystemProcessApplication("WaitRoom_cons", [new PCCConstantContainer(1)])
 		
+	throwException: (comps...) ->
+		containerFromComp = (comp) ->
+			if comp instanceof PCCContainer then comp else new PCCConstantContainer(comp)
+		
+		container = null
+		if comps.length == 0
+			container = new PCCConstantContainer("Exception")
+		else
+			container = containerFromComp(comps.shift())
+		
+		while comps.length > 0
+			container = new PCCBinaryContainer(container, containerFromComp(comps.shift()), "^")
+		@emitOutput("exception", null, container)
+		@emitStop()
+		null
+			
 	
 	compileArrayWithCapacity: (size) ->
 		i = new PCCVariableContainer("i", PCCType.INT)
@@ -409,11 +458,13 @@ class PCCCompiler
 			compiler.emitInput("array_set", i, args[j+1])
 			compiler.emitProcessApplication("Array#{size}", args)
 			inner.setBranchFinished()
-		for j in [0...size-1]
+		for j in [0...size]
 			control = @emitChoice()
 			emitAccessors(@, i, size, j, args)
 			control.setBranchFinished()
-		emitAccessors(@, i, size, size-1, args)
+		#emitAccessors(@, i, size, size-1, args)
+		@emitCondition(new PCCBinaryContainer(index, new PCCConstantContainer(size), ">="))
+		@throwException("Index ", index, " is out of array bounds ([0..#{size-1}])!")
 		@endProcessDefinition()
 		
 		i = new PCCVariableContainer("next_i", PCCType.INT)
@@ -560,20 +611,20 @@ class PCCCompiler
 
 
 
-PCTEnvironmentNode::compilerPushPDef = (pdef) ->
+PC.EnvironmentNode::compilerPushPDef = (pdef) ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.push(pdef)
-PCTVariable::compilerPushPDef = PCTEnvironmentNode::compilerPushPDef
-PCTEnvironmentNode::collectPDefs = ->
+PC.Variable::compilerPushPDef = PC.EnvironmentNode::compilerPushPDef
+PC.EnvironmentNode::collectPDefs = ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.concat((c.collectPDefs() for c in @children).concatChildren())
-PCTVariable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
+PC.Variable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
 
 
-PCNode::addCalculusComponent = (component) ->
+PC.Node::addCalculusComponent = (component) ->
 	@calculusComponents = [] if not @calculusComponents
 	@calculusComponents.push(component)
-PCNode::getCalculusComponents = ->
+PC.Node::getCalculusComponents = ->
 	@calculusComponents = [] if not @calculusComponents
 	@calculusComponents
 

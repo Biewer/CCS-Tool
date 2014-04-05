@@ -206,7 +206,8 @@ VariableInitializer
 																													{
 																														inits.push(test[1][i][3]);
 																													}
-																													return new PCVariableInitializer(uncomplete != null, inits);
+																													inits.unshift(uncomplete != null)
+																													return construct(PCVariableInitializer, inits);
 																												}
 																												else
 																												{
@@ -268,12 +269,13 @@ AssignmentExpression
 
 AssignDestination
 	= id:Identifier pos:("[" Expression "]")*	{
-													var ind = [];
+													var index = [];
 													for (var i = 0; i < pos.length; ++i)
 													{
-														ind.push(pos[i][1]);
+														index.push(pos[i][1]);
 													}
-													return new PCAssignDestination(id, ind);
+													index.unshift(id);
+													return construct(PCAssignDestination, index);
 												}
 
 AssignmentOperator
@@ -366,7 +368,10 @@ CallExpression
 	/ call:ArrayExpression { return call; }
 
 ProcCall
-	= id:Identifier _ args:Arguments { return new PCProcedureCall(id, args); }
+	= id:Identifier _ args:Arguments	{
+											args.unshift(id);
+											return construct(PCProcedureCall, args);
+										}
 
 Arguments
 	= "(" _ expList:(ExpressionList)? _ ")" { return expList != null ? expList : []; }
@@ -423,6 +428,7 @@ BlockStatement
 
 Statement
 	= stmt:StatementBlock { return new PCStatement(stmt); }
+	/ stmt:Println { return new PCStatement(stmt); }
 	/ stmt:StatementExpression ";" { return new PCStatement(stmt); }
 	/ stmt:SelectStatement { return new PCStatement(stmt); }
 	/ stmt:IfStatement { return new PCStatement(stmt); }
@@ -433,7 +439,6 @@ Statement
 	/ "continue" _ ";" { return new PCStatement(new PCContinueStmt()); }
 	/ stmt:ReturnStatement { return new PCStatement(stmt); }
 	/ stmt:PrimitiveStatement { return new PCStatement(stmt); }
-	/ stmt:Println { return new PCStatement(stmt); }
 	/ _ ";" { return new PCStatement(); }
 
 StatementExpression
@@ -515,4 +520,4 @@ PrimitiveStatement
 	/ "signalAll" _ exp:(Expression)? _ ";" { return exp != null ? new PCPrimitiveStmt(PCPrimitiveStmt.SIGNAL_ALL, exp) : new PCPrimitiveStmt(PCPrimitiveStmt.SIGNAL_ALL); }
 
 Println
-	= "println" _ "(" _ expList:ExpressionList _ ")" _ ";" { return new PCPrintStmt(expList); }
+	= "println" _ "(" _ expList:ExpressionList _ ")" _ ";" { return construct(PCPrintStmt, expList); }

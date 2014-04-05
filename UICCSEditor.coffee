@@ -25,7 +25,7 @@ class UICCSEditor
 	
 	appDidChangeEditorState: (app, editor) ->
 		return if editor != app.pseuCoEditor or editor.state != UIEditorState.valid
-		compiler = new PCCCompiler(editor.tree)
+		compiler = new PCC.Compiler(editor.tree)
 		ccs = compiler.compileProgram()
 		app.setCCS(ccs)
 	
