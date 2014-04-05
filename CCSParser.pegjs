@@ -233,7 +233,7 @@ expression
  		{ 
  			while (relational.length > 0) {
  				t = relational.shift();
- 				left = new CCSEqualityExpression(left, t[1], t[0]);
+ 				left = new CCSRelationalExpression(left, t[1], t[0]);
  			}
  			return left;
  		}
