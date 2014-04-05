@@ -88,7 +88,7 @@ exports["RecRule"] = CCSRecRule
 # Private: CCSExecutorDefaultStepPicker
 exports["Executor"] = CCSExecutor
 
-window.CCS = exports if window
+@window.CCS = exports if @window
 
 
 

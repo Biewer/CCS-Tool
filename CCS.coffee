@@ -184,7 +184,7 @@ class CCSProcessApplication extends CCSProcess
 		throw new Error("Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!") if not pd
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
-				type = @valuesToPass[i].computeTypes(env)
+				type = @valuesToPass[i].computeTypes(env, true)
 				pd.env.setType(pd.params[i], type)
 		super
 	getApplicapleRules: -> [CCSRecRule]
@@ -248,7 +248,7 @@ class CCSCondition extends CCSProcess
 		type = @expression.getTypeOfIdentifier(identifier, type)
 		super identifier, type###
 	computeTypes: (env) ->
-		type = @expression.computeTypes(env)
+		type = @expression.computeTypes(env, false)
 		throw new Error("Conditions can only check values, channel names are not supported!") if type == CCSTypeChannel
 		super
 	replaceVariable: (varName, exp) ->
@@ -334,7 +334,7 @@ class CCSChannel
 	computeTypes: (env) ->
 		env.setType(@name, CCSTypeChannel)
 		if @expression
-			type = @expression.computeTypes(env)
+			type = @expression.computeTypes(env, false)
 			throw new Error("Channel variables are not allowed in channel specifier expression!")
 		null
 	toString: ->
@@ -463,7 +463,7 @@ class CCSOutput extends CCSAction
 		super identifier, type###
 	computeTypes: (env) ->
 		if @expression
-			type = @expression.computeTypes(env)
+			type = @expression.computeTypes(env, false)
 			throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
 		super
 			
@@ -537,10 +537,11 @@ class CCSVariableExpression extends CCSExpression
 	
 	getPrecedence: -> 18
 	computeTypes: (env, allowsChannel) -> 
-		type = env.getType(@variableName)	# Ensure that the variable is bound
 		if allowsChannel
-			type	# Any type is allowed, so just return the variable currently has
+			env.setType(@variableName, CCSTypeUnknown)
+			env.getType(@variableName)
 		else	
+			env.getType(@variableName)	# Ensure that the variable is bound
 			env.setType(@variableName, CCSTypeValue)	# We have to force type "value"
 			super
 	#usesIdentifier: (identifier) -> identifier == @variableName
