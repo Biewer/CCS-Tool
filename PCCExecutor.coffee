@@ -23,6 +23,10 @@ class PCCExecutor extends CCS.Executor
 	_printStep: (step) ->
 		if step.action.channel.name == "println" and step.action.isOutputAction() and step.action.expression	# Intercept println
 			@_output "#{step.action.expression.evaluate()}"
+		else if step.action.channel.name == "exception" and step.action.isOutputAction() and step.action.expression
+			@_output "EXCEPTION: #{step.action.expression.evaluate()}"
+		else
+			super
 	
 	_printExecutionIntro: -> @_output("<i>Starting CCS execution.</i>")
 	_printExecutionSummary: ->

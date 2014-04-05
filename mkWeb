@@ -8,3 +8,13 @@ modules:
 
 browser:	
 						browserify _UI.js -o htdocs/main.js
+
+
+CCS:
+						make -f make CCS
+
+PC:
+						make -f make PC
+
+PCC:
+						make -f make PCC

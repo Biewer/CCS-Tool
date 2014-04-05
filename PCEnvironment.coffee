@@ -145,8 +145,8 @@ class PCTProcedure extends PCTEnvironmentNode
 	getName: -> @label
 	#isStructProcedure: -> @parent instanceof PCStruct
 	#isMonitorProcedure: -> @parent instanceof PCMonitor
-	isClassProcedure: -> @parent instanceof PCClass
-	isMonitorProcedure: -> @parent instanceof PCClass and @parent.isMonitor()
+	isClassProcedure: -> @parent instanceof PCTClass
+	isMonitorProcedure: -> @parent instanceof PCTClass and @parent.isMonitor()
 
 
 

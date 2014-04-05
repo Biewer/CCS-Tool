@@ -293,6 +293,7 @@ class PCCVariable extends PCCVariableInfo
 
 class PCCGlobalVariable extends PCCVariable
 	accessorChannel: (set) -> "env_global_#{if set then "set" else "get"}_#{@getName()}"
+	trackValue: (compiler) -> compiler.trackGlobalVars()
 	getContainer: (compiler) ->
 		result = compiler.getFreshContainer(@type.getCCSType())
 		compiler.emitInput(@accessorChannel(false), null, result)
@@ -309,6 +310,10 @@ class PCCGlobalVariable extends PCCVariable
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 		control.setBranchFinished()
 		compiler.emitInput(@accessorChannel(true), instance, c)
+		if @trackValue(compiler)
+			cid = new PCCConstantContainer(@getName())
+			cid = new PCCBinaryContainer(instance, cid, "^") if instance
+			compiler.emitOutput("sys_var", cid, c)
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 		control.setBranchFinished()
 	emitConstructor: (compiler) ->
@@ -317,6 +322,9 @@ class PCCGlobalVariable extends PCCVariable
 		compiler.endProcessGroup()
 		compiler.beginProcessGroup(@)
 		container = @compileDefaultValue(compiler)
+		if @trackValue(compiler)
+			cid = new PCCConstantContainer(@getName())
+			compiler.emitOutput("sys_var", cid, container)
 		compiler.emitProcessApplication(@getEnvProcessName(), [container])
 		compiler.endProcessGroup()
 		compiler.emitSystemProcessApplication(@getProcessName(), [])
@@ -326,6 +334,7 @@ class PCCGlobalVariable extends PCCVariable
 
 class PCCField extends PCCGlobalVariable
 	accessorChannel: (set) -> "env_class_#{@parent.getName()}_#{if set then "set" else "get"}_#{@getName()}"
+	trackValue: (compiler) -> compiler.trackClassVars()
 	getContainer: (compiler) ->
 		if @getIdentifier() == "#guard"
 			result = compiler.getFreshContainer(PCCType.INT)
@@ -357,8 +366,13 @@ class PCCCondition extends PCCField
 	constructor: (name, @expressionNode) -> super name, new PC.Type(PC.Type.CONDITION)
 
 class PCCLocalVariable extends PCCVariable
+	trackValue: (compiler) -> compiler.trackLocalVars()
 	getContainer: (compiler) -> compiler.getProcessFrame().getContainerForVariable(@getIdentifier())
-	setContainer: (compiler, container) -> compiler.getProcessFrame().assignContainerToVariable(@getIdentifier(), container)
+	setContainer: (compiler, container) -> 
+		if @trackValue(compiler)
+			cid = new PCCConstantContainer(@getName())
+			compiler.emitOutput("sys_var", cid, container)
+		compiler.getProcessFrame().assignContainerToVariable(@getIdentifier(), container)
 
 
 
