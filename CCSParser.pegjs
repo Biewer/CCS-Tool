@@ -164,7 +164,7 @@ Trivial
   / _ n:name 
   		args:(_ "[" _ e:expression es:(_ "," _ e1:expression { return e1; })* _ "]" { es.unshift(e); return es; } )?
   			                     	{ 
-                                  		return new CCSProcessApplication(n.name, (typeof args == "string" ? null : args));
+                                  		return new CCSProcessApplication(n.name, args);
                                 	}
 
 name "name"
@@ -294,7 +294,7 @@ expression
  		/ 'false' { return new CCSConstantExpression(false); }
  	
  	exp_integer "integer literal"
- 		= minus:('-')? digits:[0-9]+ { return new CCSConstantExpression(parseInt(minus + digits.join(""))); }
+ 		= minus:('-')? digits:[0-9]+ { return new CCSConstantExpression(parseInt((minus ? minus : "") + digits.join(""))); }
  		
  	
  	exp_string "string literal"

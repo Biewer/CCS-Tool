@@ -8,6 +8,9 @@ pctree:
 ccsmain:
 						coffee -c -b -j node_modules/CCS/_main.js CCS.coffee CCSRules.coffee CCSExecutor.coffee CCSExport.coffee
 
+ccsparser:
+						pegjs -e CCSParser CCSParser.pegjs node_modules/CCS/_parser.js
+
 
 PCC:
 						coffee -c -b -j node_modules/CCSCompiler/CCSCompiler.js PCCCompiler.coffee PCCProcessFrame.coffee PCCProgramController.coffee PCCContainer.coffee PCCCompilerStack.coffee PseuCo+Compiler.coffee PCCExecutor.coffee PCCExport.coffee
@@ -17,5 +20,5 @@ PC:		pctree
 						cat node_modules/PseuCo/_parser.js node_modules/PseuCo/_tree.js > node_modules/PseuCo/PseuCo.js
 
 
-CCS:		ccsmain
+CCS:		ccsmain ccsparser
 						cat node_modules/CCS/_parser.js node_modules/CCS/_main.js > node_modules/CCS/CCS.js
