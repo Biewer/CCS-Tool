@@ -35,7 +35,7 @@ DP = (i) -> 		# remove?
 	ccs.performStep(DSteps[i])
 	DS()
 
-CCSTypeUnknown = 0
+CCSTypeUnknown = 3
 CCSTypeChannel = 1
 CCSTypeValue = 2
 CCSGetMostGeneralType = (t1, t2) ->
@@ -44,12 +44,26 @@ CCSGetMostGeneralType = (t1, t2) ->
 	return t1 if t1 == t2
 	throw new Error("Incopatible Types: #{t1} and #{t2}!");
 
+class CCSEnvironment
+	constructor: -> @env = {}
+	getType: (id) ->
+		res = @env[id]
+		throw new Error("Unbound identifier \"#{id}\"!") if ! res
+		res
+	setType: (id, type) ->
+		now = @env[id]
+		if now
+			@env[id] = CCSGetMostGeneralType(now, type)
+		else
+			@env[id] = type
+
 
 # - CCS
 class CCS
 	constructor: (@processDefinitions, @system) ->
 		@system.setCCS @
-		(pd.setCCS @; pd.computeArgTypes()) for pd in @processDefinitions
+		(pd.setCCS @; pd.computeTypes()) for pd in @processDefinitions
+		@system.computeTypes(new CCSEnvironment())
 	
 	getProcessDefinition: (name, argCount) -> 
 		result = null
@@ -64,15 +78,14 @@ class CCS
 # - ProcessDefinition
 class CCSProcessDefinition
 	constructor: (@name, @process, @params) ->					# string x Process x string*
-		(@types = (CCSTypeUnknown for p in @params)) if @params	# init with default value
+		@env = new CCSEnvironment()
+		if @params
+			for x in @params
+				@env.setType(x, CCSTypeUnknown)
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (ccs) -> @process.setCCS ccs
-	computeArgTypes: ->
-		return null if !@params
-		@types = ((								# ToDo: Repeat until types won't change anymore
-			@process.getTypeOfIdentifier x, CCSTypeUnknown
-		) for x in @params)
+	computeTypes: -> @process.computeTypes(@env)
 	
 	toString: -> 
 		result = @name
@@ -99,10 +112,14 @@ class CCSProcess
 		@replaceVariable varName, new CCSConstantExpression(val)
 	replaceChannelName: (old, newID) ->
 		p.replaceChannelName(old, newID) for p in @subprocesses
-	getTypeOfIdentifier: (identifier, type) ->
+	###getTypeOfIdentifier: (identifier, type) ->
 		for t in (p.getTypeOfIdentifier(identifier, type) for p in @subprocesses)
 			type = CCSGetMostGeneralType(type, t)
-		type
+		type###
+	computeTypes: (env) ->
+		p.computeTypes(env) for p in @subprocesses
+		null
+	
 	getApplicapleRules: -> []
 	getPossibleSteps: (copyOnPerform) -> 
 		copyOnPerform = false if not copyOnPerform
@@ -147,21 +164,29 @@ class CCSProcessApplication extends CCSProcess
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		@process = pd.process.copy()
 		if pd.params
-			for i in [0..pd.params.length-1]
+			for i in [0..pd.params.length-1] by 1
 				id = pd.params[i]
-				if pd.types[i] == CCSTypeChannel
+				if pd.env.getType(pd.params[i]) == CCSTypeChannel
 					@process.replaceChannelName(id, @valuesToPass[i].variableName)
 				else
 					@process.replaceVariable(id, @valuesToPass[i])	
 		@process
 	getPrecedence: -> 12
-	getTypeOfIdentifier: (identifier, type) ->
+	###getTypeOfIdentifier: (identifier, type) ->
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
 				type = @valuesToPass[i].getTypeOfIdentifier(identifier, type)
 				type = CCSGetMostGeneralType(type, pd.types[i])
-		type
+		type###
+	computeTypes: (env) ->
+		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
+		throw new Error("Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!") if not pd
+		if pd.params
+			for i in [0..pd.params.length-1] by 1
+				type = @valuesToPass[i].computeTypes(env)
+				pd.env.setType(pd.params[i], type)
+		super
 	getApplicapleRules: -> [CCSRecRule]
 	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
 	getExits: -> if @process then @process.getExits() else []
@@ -195,13 +220,18 @@ class CCSPrefix extends CCSProcess
 		@action.replaceChannelName(old, newID)
 		super old, newID #if @action.replaceChannelName(old, newID)
 	getPrefixes: -> return [@]
-	getTypeOfIdentifier: (identifier, type) ->
+	###getTypeOfIdentifier: (identifier, type) ->
 		type = @action.getTypeOfIdentifier(identifier, type)
 		if @action.isInputAction() and @action.variable == identifier	# new var starts with type "value"
 			super identifier, CCSTypeValue
 			type		# Was macht das da?
 		else
-			super identifier, type
+			super identifier, type###
+	computeTypes: (env) ->
+		if @action.isInputAction() and @action.supportsValuePassing()
+			env.setType(@action.variable, CCSTypeValue)
+		super
+			
 		
 	toString: -> "#{@action.toString()}.#{@stringForSubprocess @getProcess()}"
 	copy: -> (new CCSPrefix(@action.copy(), @getProcess().copy()))._setCCS(@ccs)
@@ -214,9 +244,13 @@ class CCSCondition extends CCSProcess
 	getPrecedence: -> 12
 	getApplicapleRules: -> [CCSCondRule]
 	getProcess: -> @subprocesses[0]
-	getTypeOfIdentifier: (identifier, type) ->
+	###getTypeOfIdentifier: (identifier, type) ->
 		type = @expression.getTypeOfIdentifier(identifier, type)
-		super identifier, type
+		super identifier, type###
+	computeTypes: (env) ->
+		type = @expression.computeTypes(env)
+		throw new Error("Conditions can only check values, channel names are not supported!") if type == CCSTypeChannel
+		super
 	replaceVariable: (varName, exp) ->
 		@expression = @expression.replaceVariable(varName, exp)
 		super varName, exp
@@ -293,10 +327,16 @@ class CCSChannel
 	replaceChannelName: (old, newID) ->
 		@name = newID if @name == old
 		null
-	getTypeOfIdentifier: (identifier, type) ->
+	###getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, CCSTypeChannel) if @name == identifier
 		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
-		type
+		type###
+	computeTypes: (env) ->
+		env.setType(@name, CCSTypeChannel)
+		if @expression
+			type = @expression.computeTypes(env)
+			throw new Error("Channel variables are not allowed in channel specifier expression!")
+		null
 	toString: ->
 		result = "" + @name
 		if @expression
@@ -345,7 +385,8 @@ class CCSAction
 		@channel.replaceVariable(varName, exp)
 		true
 	replaceChannelName: (old, newID) -> @channel.replaceChannelName old, newID
-	getTypeOfIdentifier: (identifier, type) -> @channel.getTypeOfIdentifier(identifier, type)
+	#getTypeOfIdentifier: (identifier, type) -> @channel.getTypeOfIdentifier(identifier, type)
+	computeTypes: (env) -> @channel.computeTypes(env)
 
 
 # - Simple Action
@@ -417,9 +458,14 @@ class CCSOutput extends CCSAction
 		super varName, exp
 		@expression = @expression.replaceVariable(varName, exp) if @expression
 		true
-	getTypeOfIdentifier: (identifier, type) -> 
+	###getTypeOfIdentifier: (identifier, type) -> 
 		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
-		super identifier, type
+		super identifier, type###
+	computeTypes: (env) ->
+		if @expression
+			type = @expression.computeTypes(env)
+			throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
+		super
 			
 	toString: -> "#{super}!#{if @expression then @expression.toString() else ""}"
 	transferDescription: -> "#{super}#{if @expression then ": " + @expression.evaluate() else ""}"
@@ -439,15 +485,18 @@ class CCSExpression
 		@
 	replaceChannelName: (old, newID) -> null
 	
-	usesIdentifier: (identifier) ->
+	###usesIdentifier: (identifier) ->
 		@_childrenUseIdentifier identifier
 	_childrenUseIdentifier: (identifier) ->
 		result = false;
 		(result || e.usesIdentifier()) for e in @subExps
-		result
-	getTypeOfIdentifier: (identifier, type) ->
+		result###
+	computeTypes: (env, allowsChannel) ->
+		e.computeTypes(env, false) for e in @subExps
+		CCSTypeValue
+	###getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, CCSTypeValue) if @_childrenUseIdentifier(identifier)
-		type
+		type###
 	evaluate: -> throw new Error("Abstract method!")
 	isEvaluatable: -> false
 	typeOfEvaluation: -> throw new Error("Abstract method!")
@@ -487,7 +536,14 @@ class CCSVariableExpression extends CCSExpression
 		super()
 	
 	getPrecedence: -> 18
-	usesIdentifier: (identifier) -> identifier == @variableName
+	computeTypes: (env, allowsChannel) -> 
+		type = env.getType(@variableName)	# Ensure that the variable is bound
+		if allowsChannel
+			type	# Any type is allowed, so just return the variable currently has
+		else	
+			env.setType(@variableName, CCSTypeValue)	# We have to force type "value"
+			super
+	#usesIdentifier: (identifier) -> identifier == @variableName
 	replaceVariable: (varName, exp) -> 
 		if varName == @variableName then exp else @
 	replaceChannelName: (old, newID) ->
