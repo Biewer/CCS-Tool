@@ -41,6 +41,11 @@ programs =
 		X[a,b] := a.b.X[b,a]
 		X[c,d]
 		"""
+	"6":
+		"""
+		X[x] := when (x<3)a.b.X[x+1]
+		X[1]
+		"""
 	
 
 CCS = require("CCS")

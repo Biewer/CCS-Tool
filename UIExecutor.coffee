@@ -47,6 +47,10 @@ class UIExecutor
 		@executor = new PCC.Executor(UI.app.ccs, @)
 		@executor.execute()
 		
+	
+	executorDidPerformStep: (exec, step, system) ->
+		UI.history.addState(step, system)
+		
 		# @setButtonEnabled(false)
 # 		app = UI.app
 # 		app.resetCCS()

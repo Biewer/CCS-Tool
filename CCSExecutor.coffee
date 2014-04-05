@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-CCSExecutorCopyOnPerformStepPolicy = false
+CCSExecutorCopyOnPerformStepPolicy = true
 CCSExecutorStepCountPerExecutionUnit = 20
 CCSExecutorDefaultStepPicker = (steps) ->
 	steps[0]	# ToDo: random!

@@ -29,7 +29,9 @@ class CCSStep
 	getLeafProcesses: ->
 		if @substeps.length == 0 then [@process]
 		else (step.getLeafProcesses() for step in @substeps).concatChildren()
-	perform : -> @rule.performStep @
+	perform : (info) -> 
+		info = {} if not info
+		@rule.performStep @, info
 	toString: -> @action.toString() + (if @actionDetails.length>0 then " #{@actionDetails}" else "")
 	
 	_getMutableProcess: -> if @copyOnPerform then @process.copy() else @process
@@ -39,7 +41,7 @@ class CCSStep
 class CCSBaseStep extends CCSStep		
 	constructor: (prefix, rule, copyOnPerform) -> super 0, prefix, prefix.action, rule, copyOnPerform
 
-
+###
 class CCSInputStep extends CCSBaseStep
 	performWithInputValue: (inputValue) -> @rule.performStep(this, inputValue)
 	perform: -> throw new Error("perform is not supported on input steps! Use performWithInputValue with an input value as argument instead!")
@@ -48,7 +50,7 @@ CCSBaseStep::performWithInputValue = -> throw new Error("performWithInputValue i
 CCSStep::performWithInputValue = (inputValue) ->
 	throw new Error("Forwarding of performWithInputValue only supported for linear step tree!") if @substeps.length != 1
 	@substeps[0].performWithInputValue inputValue
-	
+	###
 
 
 # - PrefixRule
@@ -57,7 +59,7 @@ CCSPrefixRule =
 		if prefix?.action.isSimpleAction() or !prefix.action.supportsValuePassing() 
 		then [(new CCSBaseStep(prefix, @, copyOnPerform))] 
 		else []
-	performStep: (step) -> step.process.getProcess()
+	performStep: (step, info) -> step.process.getProcess()
 
 # - OutputRule
 CCSOutputRule = 
@@ -65,26 +67,26 @@ CCSOutputRule =
 		if prefix?.action.isOutputAction() and prefix.action.supportsValuePassing()
 		then [new CCSBaseStep(prefix, @, copyOnPerform)]
 		else []
-	performStep: (step) -> step.process.getProcess()
+	performStep: (step, info) -> step.process.getProcess()
 
 # - InputRule
 CCSInputRule = 
 	getPossibleSteps: (prefix, copyOnPerform) ->
 		if prefix?.action.isInputAction() and prefix.action.supportsValuePassing()
-		then [new CCSInputStep(prefix, @, copyOnPerform)]
+		then [new CCSBaseStep(prefix, @, copyOnPerform)]
 		else []
-	performStep: (step, inputValue) ->
-		if not inputValue #step.process.action.incommingValue == undefined
+	performStep: (step, info) ->
+		if not info["inputValue"] #step.process.action.incommingValue == undefined
 			throw new Error("Input value was not set!")
 		result = step._getMutableProcess().getProcess()
-		result.replaceVariableWithValue(step.process.action.variable, inputValue)
+		result.replaceVariableWithValue(step.process.action.variable, info["inputValue"])
 		result
 
 # - MatchRule
 CCSMatchRule = 
 	getPossibleSteps: (prefix, copyOnPerform) -> # ToDo: Check if evaluatable!
 		if prefix?.action.isMatchAction() then [new CCSBaseStep(prefix, @, copyOnPerform)] else []
-	performStep: (step) -> step.process.getProcess()
+	performStep: (step, info) -> step.process.getProcess()
 
 
 # - ChoiceLRule
@@ -92,14 +94,14 @@ CCSChoiceLRule =
 	getPossibleSteps: (choice, copyOnPerform) -> 
 		i = 0
 		new CCSStep(i++, choice, step.action, @, copyOnPerform, null, step) for step in choice.getLeft().getPossibleSteps(copyOnPerform).filterActVPPlusSteps()
-	performStep: (step) -> step.substeps[0].perform()
+	performStep: (step, info) -> step.substeps[0].perform(info)
 
 # - ChoiceRRule
 CCSChoiceRRule = 
 	getPossibleSteps: (choice, copyOnPerform) ->
 		i = 0
 		new CCSStep(i++, choice, step.action, @, copyOnPerform, null, step) for step in choice.getRight().getPossibleSteps(copyOnPerform).filterActVPPlusSteps()
-	performStep: (step) -> step.substeps[0].perform()
+	performStep: (step, info) -> step.substeps[0].perform(info)
 
 
 # - ParLRule
@@ -110,12 +112,12 @@ CCSParLRule =
 			i = 0
 			parallel._CCSParLRule = (new CCSStep(i++, parallel, step.action, @, copyOnPerform, null, step) for step in parallel.getLeft().getPossibleSteps(copyOnPerform).filterActVPSteps())
 		parallel._CCSParLRule
-	performStep: (step) -> 
+	performStep: (step, info) -> 
 		res = step._getMutableProcess()
 		res._CCSSyncRule = undefined
 		res._CCSParRRule = undefined
 		res._CCSParLRule = undefined
-		res.setLeft(step.substeps[0].perform())
+		res.setLeft(step.substeps[0].perform(info))
 		res
 
 # - ParRRule
@@ -125,12 +127,12 @@ CCSParRRule =
 			i = 0
 			parallel._CCSParRRule = (new CCSStep(i++, parallel, step.action, @, copyOnPerform, null, step) for step in parallel.getRight().getPossibleSteps(copyOnPerform).filterActVPSteps())
 		parallel._CCSParRRule
-	performStep: (step) -> 
+	performStep: (step, info) -> 
 		res = step._getMutableProcess()
 		res._CCSSyncRule = undefined
 		res._CCSParRRule = undefined
 		res._CCSParLRule = undefined
-		res.setRight(step.substeps[0].perform())
+		res.setRight(step.substeps[0].perform(info))
 		res
 
 # - SyncRule
@@ -152,7 +154,8 @@ CCSSyncRule =
 			) for l in left
 			parallel._CCSSyncRule = result
 		parallel._CCSSyncRule
-	performStep: (step) -> 
+	performStep: (step, info) -> 
+		debugger
 		res = step._getMutableProcess()
 		res._CCSSyncRule = undefined
 		res._CCSParRRule = undefined
@@ -166,17 +169,19 @@ CCSSyncRule =
 			if prefix.action.isInputAction()
 				inp = prefix
 				out = step.substeps[1].getLeafProcesses()[0]
-				left = step.substeps[0].performWithInputValue(out.action.expression.evaluate())
-				right = step.substeps[1].perform()
+				info["inputValue"] = out.action.expression.evaluate()
+				left = step.substeps[0].perform(info)
+				right = step.substeps[1].perform(info)
 			else
 				out = prefix
 				inp = step.substeps[1].getLeafProcesses()[0]
-				left = step.substeps[0].perform()
-				right = step.substeps[1].performWithInputValue(out.action.expression.evaluate())
+				info["inputValue"] = out.action.expression.evaluate()
+				left = step.substeps[0].perform(info)
+				right = step.substeps[1].perform(info)
 			#inp.action.incommingValue = out.action.expression.evaluate()
 		else
-			left = step.substeps[0].perform()
-			right = step.substeps[1].perform()
+			left = step.substeps[0].perform(info)
+			right = step.substeps[1].perform(info)
 		res.setLeft(left)
 		res.setRight(right)
 		res
@@ -194,9 +199,9 @@ CCSResRule =
 		c = 0
 		(result.push(new CCSStep(c++, restriction, step.action, @, copyOnPerform, null, step)) if  !@shouldRestrictChannel(step.action.channel.name, restriction.restrictedChannels)) for step in steps
 		return result
-	performStep: (step) -> 
+	performStep: (step, info) -> 
 		res = step._getMutableProcess()
-		res.setProcess(step.substeps[0].perform())
+		res.setProcess(step.substeps[0].perform(info))
 		res
 
 
@@ -207,13 +212,13 @@ CCSCondRule =
 		if condition.expression.evaluate() == "1"
 		then condition.getProcess().getPossibleSteps(copyOnPerform).filterActVPPlusSteps() 
 		else []
-	performStep: (step) -> step.substeps[0].perform()
+	performStep: (step, info) -> step.substeps[0].perform(info)
 
 
 # - ExitRule
 CCSExitRule = 
 	getPossibleSteps: (exit, copyOnPerform) -> [new CCSStep(0, exit, new CCSInternalActionCreate(CCSExitChannel), @, copyOnPerform)]
-	performStep: (step) -> new CCSStop()
+	performStep: (step, info) -> new CCSStop()
 
 
 # - SyncExitRule
@@ -228,7 +233,7 @@ CCSSyncExitRule =
 			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, copyOnPerform, "#{if l.action.isOutput() then l.action.transferDescription() else r.action.transferDescription()}", l, r))) for r in right
 		) for l in left
 		return result
-	performStep: (step) -> CCSSyncRule.performStep step
+	performStep: (step, info) -> CCSSyncRule.performStep step, info
 
 
 # - Seq1Rule
@@ -236,9 +241,10 @@ CCSSeq1Rule =
 	getPossibleSteps: (sequence, copyOnPerform) -> 
 		c = 0
 		(new CCSStep(c++, sequence, step.action, @, copyOnPerform, null, step)) for step in sequence.getLeft().getPossibleSteps(copyOnPerform).filterActVPSteps()
-	performStep: (step) -> 
+	performStep: (step, info) -> 
+		debugger
 		res = step._getMutableProcess()
-		res.setLeft(step.substeps[0].perform())
+		res.setLeft(step.substeps[0].perform(info))
 		res
 
 
@@ -251,7 +257,7 @@ CCSSeq2Rule =
 		c = 0
 		(result.push(new CCSStep(c++, sequence, new CCSInternalActionCreate(CCSInternalChannel), @, copyOnPerform, "#{CCSExitChannel}", rho))) for rho in rhos
 		return result
-	performStep: (step) -> step.process.getRight()
+	performStep: (step, info) -> step.process.getRight()
 
 
 # - RecRule
@@ -260,8 +266,8 @@ CCSRecRule =
 		steps = application.getProcess().getPossibleSteps(copyOnPerform)
 		c = 0 
 		new CCSStep(c++, application, step.action, @, copyOnPerform, null, step) for step in steps
-	performStep: (step) -> 
-		step.substeps[0].perform()
+	performStep: (step, info) -> 
+		step.substeps[0].perform(info)
 
 
 

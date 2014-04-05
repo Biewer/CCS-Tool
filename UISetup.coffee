@@ -85,3 +85,5 @@ UIError = (msg) -> UI.console.error(msg)
 
 
 registerLoadCallback UILoad
+
+window.UI = UI if window

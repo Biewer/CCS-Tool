@@ -20,9 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-
 class UICCSHistory
-	constructor: (@container) ->
+	constructor: (@container) -> @clear()
 	appDidResetCCS: (app, system) ->
 		@clear()
 		@system = system
@@ -30,12 +29,14 @@ class UICCSHistory
 	clear: ->
 		@system = null
 		@container.innerHTML = ""
+		@stepStack = []
 	performStep: (step) -> 
 		throw new Error("Step must not be null!") if not step
-		@system = step.perform()
-		@_addState step
+		@addState step, step.perform()
 		@system
-	_addState: (step) ->
+	addState: (step, newSystem) ->
+		@stepStack.push step if step.copyOnPerform
+		@system = newSystem
 		action = ""
 		if step
 			action = step.action.transferDescription()
