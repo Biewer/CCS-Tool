@@ -3,13 +3,9 @@ Editor.esproj/*
 *.sh
 
 node_modules/CCS/*.js
-
-htdocs/*.js
 node_modules/PseuCo/*.js
 node_modules/CCSCompiler/*.js
 
-htdocs/main.js
+htdocs/*.js
 
-node_modules/CCSCompiler/CCSCompiler.js
 
-node_modules/PseuCo/PseuCo.js
