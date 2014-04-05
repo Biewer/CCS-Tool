@@ -35,7 +35,7 @@ DP = (i) -> 		# remove?
 	ccs.performStep(DSteps[i])
 	DS()
 
-CCSTypeUnknown = 0
+CCSTypeUnknown = 3
 CCSTypeChannel = 1
 CCSTypeValue = 2
 CCSGetMostGeneralType = (t1, t2) ->
@@ -79,7 +79,7 @@ class CCS
 class CCSProcessDefinition
 	constructor: (@name, @process, @params) ->					# string x Process x string*
 		@env = new CCSEnvironment()
-		if !@params
+		if @params
 			for x in @params
 				@env.setType(x, CCSTypeUnknown)
 	
@@ -166,7 +166,7 @@ class CCSProcessApplication extends CCSProcess
 		if pd.params
 			for i in [0..pd.params.length-1]
 				id = pd.params[i]
-				if pd.types[i] == CCSTypeChannel
+				if pd.env.getType(pd.params[i]) == CCSTypeChannel
 					@process.replaceChannelName(id, @valuesToPass[i].variableName)
 				else
 					@process.replaceVariable(id, @valuesToPass[i])	
@@ -491,8 +491,8 @@ class CCSExpression
 		result = false;
 		(result || e.usesIdentifier()) for e in @subExps
 		result###
-	checkTypes: (env, allowsChannel) ->
-		e.checkTypes(env, false) for e in @subExps
+	computeTypes: (env, allowsChannel) ->
+		e.computeTypes(env, false) for e in @subExps
 		CCSTypeValue
 	###getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, CCSTypeValue) if @_childrenUseIdentifier(identifier)
@@ -517,7 +517,6 @@ class CCSConstantExpression extends CCSExpression
 	constructor: (@value) -> 
 		super()
 	
-	_checkTypes: (env) -> CCSTypeValue
 	getPrecedence: -> 18
 	evaluate: -> CCSConstantExpression.valueToString @value
 		#if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
@@ -537,7 +536,7 @@ class CCSVariableExpression extends CCSExpression
 		super()
 	
 	getPrecedence: -> 18
-	checkTypes: (env, allowsChannel) -> 
+	computeTypes: (env, allowsChannel) -> 
 		type = env.getType(@variableName)	# Ensure that the variable is bound
 		if allowsChannel
 			type	# Any type is allowed, so just return the variable currently has
