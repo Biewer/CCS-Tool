@@ -164,7 +164,7 @@ class CCSProcessApplication extends CCSProcess
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		@process = pd.process.copy()
 		if pd.params
-			for i in [0..pd.params.length-1]
+			for i in [0..pd.params.length-1] by 1
 				id = pd.params[i]
 				if pd.env.getType(pd.params[i]) == CCSTypeChannel
 					@process.replaceChannelName(id, @valuesToPass[i].variableName)
