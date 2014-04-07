@@ -32,7 +32,7 @@ class CCSStep
 	perform : (info) -> 
 		info = {} if not info
 		@rule.performStep @, info
-	toString: -> @action.toString() + (if @actionDetails.length>0 then " #{@actionDetails}" else "")
+	toString: (fullExp) -> @action.toString(!fullExp) + (if @actionDetails.length>0 then " #{@actionDetails}" else "")
 	
 	_getMutableProcess: -> if @copyOnPerform then @process.copy() else @process
 
@@ -164,8 +164,8 @@ CCSSyncRule =
 		out = null
 		left = null
 		right = null
-		prefix = step.substeps[0].getLeafProcesses()[0]
-		if prefix.action.supportsValuePassing()
+		prefix = step.substeps[0].getLeafProcesses()[0]		# This method is also called by ExitSync, so "prefix" might also be an exit process
+		if prefix.action and prefix.action.supportsValuePassing()
 			if prefix.action.isInputAction()
 				inp = prefix
 				out = step.substeps[1].getLeafProcesses()[0]
@@ -230,7 +230,8 @@ CCSSyncExitRule =
 		c = 0
 		result = []
 		(
-			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, copyOnPerform, "#{if l.action.isOutput() then l.action.transferDescription() else r.action.transferDescription()}", l, r))) for r in right
+			#(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, copyOnPerform, "#{if l.action.isOutputAction() then l.action.transferDescription() else r.action.transferDescription()}", l, r))) for r in right
+			(result.push(new CCSStep(c++, parallel, CCSInternalActionCreate(CCSExitChannel), @, copyOnPerform, null, l, r))) for r in right
 		) for l in left
 		return result
 	performStep: (step, info) -> CCSSyncRule.performStep step, info
