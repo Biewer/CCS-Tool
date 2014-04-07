@@ -155,7 +155,6 @@ CCSSyncRule =
 			parallel._CCSSyncRule = result
 		parallel._CCSSyncRule
 	performStep: (step, info) -> 
-		debugger
 		res = step._getMutableProcess()
 		res._CCSSyncRule = undefined
 		res._CCSParRRule = undefined
@@ -243,7 +242,6 @@ CCSSeq1Rule =
 		c = 0
 		(new CCSStep(c++, sequence, step.action, @, copyOnPerform, null, step)) for step in sequence.getLeft().getPossibleSteps(copyOnPerform).filterActVPSteps()
 	performStep: (step, info) -> 
-		debugger
 		res = step._getMutableProcess()
 		res.setLeft(step.substeps[0].perform(info))
 		res

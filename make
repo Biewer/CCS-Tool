@@ -6,7 +6,7 @@ pctree:
 
 
 ccsmain:
-						coffee -c -b -j node_modules/CCS/_main.js CCS.coffee CCSRules.coffee CCSExecutor.coffee CCSExport.coffee
+						coffee -c -b -j node_modules/CCS/_main.js CCS.coffee CCSRules.coffee CCS+Traces.coffee CCSExecutor.coffee CCSExport.coffee
 
 ccsparser:
 						pegjs -e CCSParser CCSParser.pegjs node_modules/CCS/_parser.js

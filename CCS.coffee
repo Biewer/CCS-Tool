@@ -373,17 +373,19 @@ class CCSInternalChannel extends CCSChannel
 # -- Action (abstract class)
 class CCSAction
 	constructor: (@channel) ->		# CCSChannel
-		if @channel == "i"		# ??? TODO @channel is not a string?
+		if @channel.name == "i"		# ??? TODO @channel is not a string?
 			if !@isSimpleAction() then throw new Error("Internal channel i is only allowed as simple action!")
-			@channel = CCSInternalChannel
-		else if @channel == "e"
+			@channel.name = CCSInternalChannel
+		else if @channel.name == "e"
 			if !@isSimpleAction() then throw new Error("Exit channel e is only allowed as simple action!")
-			@channel = CCSExitChannel
+			@channel.name = CCSExitChannel
 	
 	isSimpleAction: -> false
 	isInputAction: -> false
 	isMatchAction: -> false
 	isOutputAction: ->false
+	
+	isInternalAction: -> @channel.name == CCSInternalChannel or @channel.name == CCSExitChannel
 	
 	
 	toString: (mini) -> @channel.toString(mini)

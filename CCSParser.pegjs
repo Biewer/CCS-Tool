@@ -229,7 +229,7 @@ expression
  	relationalExpression
  		= left:concatenatingExpression 
  			relational:( ___ op:( '<''=' / '>''=' / '<' / '>' ) ___ right:concatenatingExpression
- 				{ return [op, right]; } )*
+ 				{ if (op instanceof Array) {op = op.join("");} return [op, right]; } )*
  		{ 
  			while (relational.length > 0) {
  				t = relational.shift();
