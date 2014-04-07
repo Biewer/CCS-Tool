@@ -38,7 +38,7 @@ PCCFlags =
 
 
 class PCCCompiler
-	constructor: (@program, @flags=0) ->
+	constructor: (@program, @flags=31) ->
 		@controller = null
 		@stack = null	
 		@groupElements = []	

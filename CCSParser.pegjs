@@ -34,7 +34,7 @@ CCS
 Process
   = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ "\n"
 		                                { 
-		                                  return new CCSProcessDefinition(n.name, P, params ? params : null);
+		                                  return new CCSProcessDefinition(n.name, P, params ? params : null, line());
 		                                }
 
 

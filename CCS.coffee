@@ -77,7 +77,7 @@ class CCS
 
 # - ProcessDefinition
 class CCSProcessDefinition
-	constructor: (@name, @process, @params) ->					# string x Process x string*
+	constructor: (@name, @process, @params, @line=0) ->					# string x Process x string*
 		@env = new CCSEnvironment()
 		if @params
 			for x in @params
@@ -85,7 +85,15 @@ class CCSProcessDefinition
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (ccs) -> @process.setCCS ccs
-	computeTypes: -> @process.computeTypes(@env)
+	computeTypes: -> 
+		try
+			@process.computeTypes(@env)
+		catch e
+			e = new Error(e.message)
+			e.line = @line
+			e.column = 0
+			e.name = "TypeError"
+			throw e
 	
 	toString: -> 
 		result = @name
@@ -127,11 +135,11 @@ class CCSProcess
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
-	stringForSubprocess: (process) ->
+	stringForSubprocess: (process, mini) ->
 		if @needsBracketsForSubprocess process
-			"(#{process.toString()})"
+			"(#{process.toString(mini)})"
 		else
-			"#{process.toString()}"
+			"#{process.toString(mini)}"
 	getPrefixes: -> (p.getPrefixes() for p in @subprocesses).concatChildren()
 	getExits: -> (p.getExits() for p in @subprocesses).concatChildren()
 
@@ -198,10 +206,11 @@ class CCSProcessApplication extends CCSProcess
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		new ProcessApplicationProxy(@, pd.process.copy())###
 	
-	toString: -> 
+	toString: (mini) -> 
 		result = @processName
-		result += "[#{(e.toString() for e in @valuesToPass).join ", "}]" if @getArgCount()>0
+		result += "[#{(e.toString(mini) for e in @valuesToPass).join ", "}]" if @getArgCount()>0
 		return result
+		
 	copy: -> (new CCSProcessApplication(@processName, v.copy() for v in @valuesToPass))._setCCS(@ccs)
 
 
@@ -228,12 +237,11 @@ class CCSPrefix extends CCSProcess
 		else
 			super identifier, type###
 	computeTypes: (env) ->
-		if @action.isInputAction() and @action.supportsValuePassing()
-			env.setType(@action.variable, CCSTypeValue)
+		@action.computeTypes(env)
 		super
 			
 		
-	toString: -> "#{@action.toString()}.#{@stringForSubprocess @getProcess()}"
+	toString: (mini) -> "#{@action.toString(mini)}.#{@stringForSubprocess(@getProcess(), mini)}"
 	copy: -> (new CCSPrefix(@action.copy(), @getProcess().copy()))._setCCS(@ccs)
 
 
@@ -255,7 +263,7 @@ class CCSCondition extends CCSProcess
 		@expression = @expression.replaceVariable(varName, exp)
 		super varName, exp
 	
-	toString: -> "when (#{@expression.toString()}) #{@stringForSubprocess @getProcess()}"
+	toString: (mini) -> "when (#{@expression.toString(mini)}) #{@stringForSubprocess(@getProcess(), mini)}"
 	copy: -> (new CCSCondition(@expression.copy(), @getProcess().copy()))._setCCS(@ccs)
 
 
@@ -266,7 +274,7 @@ class CCSChoice extends CCSProcess
 	getPrecedence: -> 9
 	getApplicapleRules: -> [CCSChoiceLRule, CCSChoiceRRule]
 	
-	toString: -> "#{@stringForSubprocess @getLeft()} + #{@stringForSubprocess @getRight()}"
+	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} + #{@stringForSubprocess(@getRight(), mini)}"
 	copy: -> (new CCSChoice(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
@@ -277,7 +285,7 @@ class CCSParallel extends CCSProcess
 	getPrecedence: -> 6
 	getApplicapleRules: -> [CCSParLRule, CCSParRRule, CCSSyncRule, CCSSyncExitRule]
 	
-	toString: -> "#{@stringForSubprocess @getLeft()} | #{@stringForSubprocess @getRight()}"
+	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} | #{@stringForSubprocess(@getRight(), mini)}"
 	copy: -> (new CCSParallel(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
@@ -290,7 +298,7 @@ class CCSSequence extends CCSProcess
 	getPrefixes: -> @getLeft().getPrefixes()
 	getExits: -> @getLeft().getExits()
 	
-	toString: -> "#{@stringForSubprocess @getLeft()} ; #{@stringForSubprocess @getRight()}"
+	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} ; #{@stringForSubprocess(@getRight(), mini)}"
 	copy: -> (new CCSSequence(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
@@ -303,7 +311,7 @@ class CCSRestriction extends CCSProcess
 	getProcess: -> @subprocesses[0]
 	setProcess: (process) -> @subprocesses[0] = process 
 	
-	toString: -> "#{@stringForSubprocess @getProcess()} \\ {#{@restrictedChannels.join ", "}}"
+	toString: (mini) -> "#{@stringForSubprocess(@getProcess(), mini)} \\ {#{@restrictedChannels.join ", "}}"
 	copy: -> (new CCSRestriction(@getProcess().copy(), @restrictedChannels))._setCCS(@ccs)
 	
 
@@ -335,15 +343,15 @@ class CCSChannel
 		env.setType(@name, CCSTypeChannel)
 		if @expression
 			type = @expression.computeTypes(env, false)
-			throw new Error("Channel variables are not allowed in channel specifier expression!")
+			throw new Error("Channel variables are not allowed in channel specifier expression!") if type == CCSTypeChannel
 		null
-	toString: ->
+	toString: (mini) ->
 		result = "" + @name
 		if @expression
-				if @expression.isEvaluatable()
-					result += "(#{@expression.evaluate()})"
-				else
-					result += "(#{@expression.toString()})"
+				#if @expression.isEvaluatable()
+				#	result += "(#{@expression.evaluate()})"
+				#else
+				result += "(#{@expression.toString(mini)})"
 		result
 	copy: -> new CCSChannel(@name, @expression?.copy())
 
@@ -378,8 +386,8 @@ class CCSAction
 	isOutputAction: ->false
 	
 	
-	toString: -> @channel.toString()
-	transferDescription: -> @channel.toString()
+	toString: (mini) -> @channel.toString(mini)
+	transferDescription: -> @channel.toString(true)
 	isSyncableWithAction: (action) -> false
 	replaceVariable: (varName, exp) ->		# returns true if prefix should continue replacing the variable in its subprocess
 		@channel.replaceVariable(varName, exp)
@@ -412,8 +420,11 @@ class CCSInput extends CCSAction
 	replaceVariable: (varName, exp) -> 
 		super varName, exp
 		@variable != varName	# stop replacing if identifier is equal to its own variable name
+	computeTypes: (env) ->
+		env.setType(@variable, CCSTypeValue) if @supportsValuePassing()
+		super
 	
-	toString: -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
+	toString: (mini) -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
 	transferDescription: (inputValue) -> 
 		if @supportsValuePassing() and (inputValue == null or inputValue == undefined)
 			throw new Error("CCSInput.transferDescription needs an input value as argument if it supports value passing!") 
@@ -467,7 +478,7 @@ class CCSOutput extends CCSAction
 			throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
 		super
 			
-	toString: -> "#{super}!#{if @expression then @expression.toString() else ""}"
+	toString: (mini) -> "#{super}!#{if @expression then @expression.toString(mini) else ""}"
 	transferDescription: -> "#{super}#{if @expression then ": " + @expression.evaluate() else ""}"
 	copy: -> new CCSOutput(@channel.copy(), (@expression?.copy()))
 	
@@ -503,11 +514,11 @@ class CCSExpression
 		
 	needsBracketsForSubExp: (exp) -> 
 		@getPrecedence? and exp.getPrecedence? and exp.getPrecedence() < @getPrecedence()
-	stringForSubExp: (exp) ->
+	stringForSubExp: (exp, mini) ->
 		if @needsBracketsForSubExp exp
-			"(#{exp.toString()})"
+			"(#{exp.toString(mini)})"
 		else
-			"#{exp.toString()}"
+			"#{exp.toString(mini)}"
 	toString: -> throw new Error("Abstract method not implemented!")
 	copy: -> throw new Error("Abstract method not implemented!")
 
@@ -522,12 +533,15 @@ class CCSConstantExpression extends CCSExpression
 		#if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
 	isEvaluatable: -> true
 	typeOfEvaluation: -> typeof @value
-	toString: -> if typeof @value == "string" then '"'+@value+'"' else "" + @value
+	toString: -> CCSBestStringForValue @value #if typeof @value == "string" then '"'+@value+'"' else "" + @value
 	copy: -> new CCSConstantExpression(@value)
 
 CCSConstantExpression.valueToString = (value) ->
 	value = (if value == true then "1" else "0") if typeof value == "boolean"
 	value = "" + value
+
+CCSBestStringForValue = (value) ->
+	if ("" + value).match(/^-?[0-9]+$/) then "" + value else "\"#{value}\""
 	
 
 # - VariableExpression
@@ -568,7 +582,11 @@ class CCSAdditiveExpression extends CCSExpression
 		"" + (if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!"))
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "number"
-	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSAdditiveExpression(@getLeft().copy(), @getRight().copy(), @op)
 
@@ -585,7 +603,11 @@ class CCSMultiplicativeExpression extends CCSExpression
 		else throw new Error("Invalid operator!")
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "number"
-	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSMultiplicativeExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
@@ -598,7 +620,11 @@ class CCSConcatenatingExpression extends CCSExpression
 	evaluate: -> "" + @getLeft().evaluate() + @getRight().evaluate()
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "string"
-	toString: -> @stringForSubExp(@getLeft()) + "^" + @stringForSubExp(@getRight())
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + "^" + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
 
@@ -617,7 +643,11 @@ class CCSRelationalExpression extends CCSExpression
 		CCSConstantExpression.valueToString res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "boolean"
-	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSRelationalExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
@@ -635,7 +665,11 @@ class CCSEqualityExpression extends CCSExpression
 		CCSConstantExpression.valueToString res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "boolean"
-	toString: -> @stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
 	
 	copy: -> new CCSEqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
 
@@ -727,7 +761,6 @@ Array::assertNonNull = ->
 CCSProcess::findApp = (name) ->
 	(c.findApp name for c in @subprocesses).joinChildren()
 CCSProcessApplication::findApp = (name) ->
-	debugger
 	if name == @processName then [@] else []
 CCSPrefix::findApp = -> []
 	
