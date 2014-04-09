@@ -33,7 +33,7 @@ CCS
                                 
 
 Process
-  = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ "\n"
+  = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
 		                                  return new CCSProcessDefinition(n.name, P, params ? params : null, line());
 		                                }
@@ -192,14 +192,14 @@ channel "channel"
 
 _ "whitespace"
   = [' '\n\r\t] _               {}
-  / '#' [^\n]* '\n' _           {}
+  / '#' [^\n\r]* [\n\r]+ _           {}
   / __             				{}   
 
 
 __ "inline whitespace"
   = [' '\t] __               {}
-  / '#' [^\n]* '\n' __           {}
-  / '#' [^\n]* ![^]             {}
+  / '#' [^\n\r]* [\n\r]+ __           {}
+  / '#' [^\n\r]* ![^]             {}
   / 
 
 
