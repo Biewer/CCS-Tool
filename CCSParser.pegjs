@@ -27,6 +27,7 @@ CCS
 		                                  	for (var i = 0; i < PDefs.length; i++) {
 		                                  		defs.push(PDefs[i]);
 		                                  	}
+		                                  	System.line = line()
 		                                  	return new CCS(defs, System);
 		                                }
                                 

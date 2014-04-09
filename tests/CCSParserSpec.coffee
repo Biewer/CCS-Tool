@@ -94,6 +94,14 @@ programs =
 			"""
 		traces:
 			["strike?.off", "strike?.\u03c4.off.bang!.bang!", "strike?.\u03c4.bang!.off.bang!", "strike?.\u03c4.bang!.bang!.off"]
+	"8":
+		code:
+			"""
+			Counter[c] := when (c>0) rd?x. wr!(x+1+x). Counter[c-1] + when (c==0) done!. 0
+			(rd!5.rd!4.rd!3.0 | Counter[4]) \\ {rd}
+			"""
+		traces:
+			["\u03c4.wr!11.\u03c4.wr!9.\u03c4.wr!7"]
 	
 
 CCS = require("CCS")

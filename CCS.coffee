@@ -38,6 +38,7 @@ DP = (i) -> 		# remove?
 CCSTypeUnknown = 3
 CCSTypeChannel = 1
 CCSTypeValue = 2
+CCSTypeProcess = 10
 CCSGetMostGeneralType = (t1, t2) ->
 	return t1 if t2 == CCSTypeUnknown
 	return t2 if t1 == CCSTypeUnknown
@@ -53,6 +54,7 @@ class CCSEnvironment
 	setType: (id, type) ->
 		now = @env[id]
 		if now
+			throw new Error("Duplicate process variable \"#{id}\"") if type == CCSTypeProcess
 			@env[id] = CCSGetMostGeneralType(now, type)
 		else
 			@env[id] = type
@@ -62,8 +64,16 @@ class CCSEnvironment
 class CCS
 	constructor: (@processDefinitions, @system) ->
 		@system.setCCS @
-		(pd.setCCS @; pd.computeTypes()) for pd in @processDefinitions
-		@system.computeTypes(new CCSEnvironment())
+		penv = new CCSEnvironment()
+		(pd.setCCS @; pd.computeTypes(penv)) for pd in @processDefinitions
+		try
+			@system.computeTypes(new CCSEnvironment())
+		catch e
+			e = new Error(e.message)
+			e.line = @system.line
+			e.column = 0
+			e.name = "TypeError"
+			throw e
 	
 	getProcessDefinition: (name, argCount) -> 
 		result = null
@@ -85,8 +95,9 @@ class CCSProcessDefinition
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (ccs) -> @process.setCCS ccs
-	computeTypes: -> 
+	computeTypes: (penv) -> 
 		try
+			penv.setType(@name, CCSTypeProcess)
 			@process.computeTypes(@env)
 		catch e
 			e = new Error(e.message)
