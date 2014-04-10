@@ -71,7 +71,7 @@ class CCS
 		catch e
 			e = new Error(e.message)
 			e.line = @system.line
-			e.column = 0
+			e.column = 1
 			e.name = "TypeError"
 			throw e
 	
@@ -102,7 +102,7 @@ class CCSProcessDefinition
 		catch e
 			e = new Error(e.message)
 			e.line = @line
-			e.column = 0
+			e.column = 1
 			e.name = "TypeError"
 			throw e
 	
