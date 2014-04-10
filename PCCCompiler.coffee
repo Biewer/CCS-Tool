@@ -617,7 +617,7 @@ PC.EnvironmentNode::compilerPushPDef = (pdef) ->
 PC.Variable::compilerPushPDef = PC.EnvironmentNode::compilerPushPDef
 PC.EnvironmentNode::collectPDefs = ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
-	@PCCCompilerPDefs.concat((c.collectPDefs() for c in @children).concatChildren())
+	@PCCCompilerPDefs.concat(SBArrayConcatChildren(c.collectPDefs() for c in @children))
 PC.Variable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
 
 
@@ -668,5 +668,21 @@ class PCCConstructor
 			control.setBranchFinished()
 		@compiler.endProcessGroup()
 PCCConstructor.emitConstructor = (compiler, delegate, context) -> (new PCCConstructor(compiler, delegate, context)).emit()
+
+
+
+
+
+
+
+
+
+SBArrayConcatChildren = (array) ->
+	return [] if array.length == 0
+	target = array[..]
+	result = target.shift()[..]	# Result should always be a copy
+	while target.length > 0
+		result = result.concat(target.shift())
+	result
 	
 

@@ -142,7 +142,7 @@ class CCSProcess
 	getApplicapleRules: -> []
 	getPossibleSteps: (copyOnPerform) -> 
 		copyOnPerform = false if not copyOnPerform
-		(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules()).concatChildren()
+		SBArrayConcatChildren(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules())
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
@@ -151,8 +151,8 @@ class CCSProcess
 			"(#{process.toString(mini)})"
 		else
 			"#{process.toString(mini)}"
-	getPrefixes: -> (p.getPrefixes() for p in @subprocesses).concatChildren()
-	getExits: -> (p.getExits() for p in @subprocesses).concatChildren()
+	getPrefixes: -> SBArrayConcatChildren(p.getPrefixes() for p in @subprocesses)
+	getExits: -> SBArrayConcatChildren(p.getExits() for p in @subprocesses)
 
 	
 
@@ -730,8 +730,38 @@ Array::filterActVPPlusSteps = -> this
 
 
 
+SBStringReplaceAll = (text, needle, replacement) ->
+	t = text
+	tt = text
+	loop
+		t = tt;
+		tt = t.replace(needle, replacement)
+		break if t == tt
+	t
 
-# Workaround (replace all without reg exp)
+SBArrayConcatChildren = (array) ->
+	return [] if array.length == 0
+	target = array[..]
+	result = target.shift()[..]	# Result should always be a copy
+	while target.length > 0
+		result = result.concat(target.shift())
+	result
+
+SBArrayJoinChildren = (array, separator) ->
+	result = [];
+	i = 0;
+	loop
+		joinTarget = [];
+		for c in [0..array.length] by 1
+			joinTarget.push(this[c][i]) if array[c][i]
+		break if joinTarget.length == 0
+		result[i++] = joinTarget.join(separator)
+	result
+
+SBArrayAssertNonNull = (array) ->
+	(throw new Error("Null element found!") if typeof e == "undefined" or e == null) for e in array
+
+### Workaround (replace all without reg exp)
 `String.prototype.replaceAll = function(needle, replacement) {
 	var t = this
 	var tt = this
@@ -769,10 +799,11 @@ Array.prototype.joinChildren = function(separator) {
 }`
 Array::assertNonNull = ->
 	(throw new Error("Null element found!") if typeof e == "undefined" or e == null) for e in @
+###
 	
 
 CCSProcess::findApp = (name) ->
-	(c.findApp name for c in @subprocesses).joinChildren()
+	SBArrayJoinChildren(c.findApp name for c in @subprocesses)
 CCSProcessApplication::findApp = (name) ->
 	if name == @processName then [@] else []
 CCSPrefix::findApp = -> []

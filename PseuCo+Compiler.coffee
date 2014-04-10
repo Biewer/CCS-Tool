@@ -376,7 +376,7 @@ PC.ContinueStmt::compile = (compiler, loopEntry) ->
 PC.StmtBlock::compile = (compiler, loopEntry) ->
 	statusQuo = compiler.getProcessFrame()
 	compiler.emitNewScope()
-	breaks = (compiler.compile(c, loopEntry) for c in @children).concatChildren()
+	breaks = SBArrayConcatChildren(compiler.compile(c, loopEntry) for c in @children)
 	compiler.emitNewScope(statusQuo);
 	breaks
 	

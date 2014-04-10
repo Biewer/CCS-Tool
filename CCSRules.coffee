@@ -28,7 +28,7 @@ class CCSStep
 	
 	getLeafProcesses: ->
 		if @substeps.length == 0 then [@process]
-		else (step.getLeafProcesses() for step in @substeps).concatChildren()
+		else SBArrayConcatChildren(step.getLeafProcesses() for step in @substeps)
 	perform : (info) -> 
 		info = {} if not info
 		@rule.performStep @, info
