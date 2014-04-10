@@ -32,7 +32,7 @@ class CCSStep
 	perform : (info) -> 
 		info = {} if not info
 		@rule.performStep @, info
-	toString: (fullExp) -> @action.toString(!fullExp) + (if @actionDetails.length>0 then " #{@actionDetails}" else "")
+	toString: (fullExp) -> @action.toString(!fullExp) + (if @actionDetails.length>0 then " (#{@actionDetails})" else "")
 	
 	_getMutableProcess: -> if @copyOnPerform then @process.copy() else @process
 

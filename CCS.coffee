@@ -82,7 +82,7 @@ class CCS
 	getPossibleSteps: (copyOnPerform) -> @system.getPossibleSteps(copyOnPerform)
 	#performStep: (step) -> @system = step.perform()
 	
-	toString: (expressionOnly) -> if expressionOnly then @system.toString() else "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
+	toString: -> "#{ (process.toString() for process in @processDefinitions).join("") }\n#{ @system.toString() }";
 
 
 # - ProcessDefinition
