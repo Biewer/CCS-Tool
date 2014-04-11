@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 start = C:CCS { return C; }
 
 CCS
-  = PDefs:(Process)* _ System:Restriction _
+  = PDefs:(Process)* _ System:Restriction _ !.
 		                                { 
 		                                	var defs = [];
 		                                  	for (var i = 0; i < PDefs.length; i++) {
@@ -194,6 +194,7 @@ channel "channel"
 _ "whitespace"
   = [' '\n\r\t] _               {}
   / '#' [^\n\r]* [\n\r]+ _           {}
+  / '(*' commentA _		{}
   / __             				{}   
 
 
@@ -201,8 +202,16 @@ __ "inline whitespace"
   = [' '\t] __               {}
   / '#' [^\n\r]* [\n\r]+ __           {}
   / '#' [^\n\r]* ![^]             {}
-  / 
+  / '(*' commentA __		{}
+  / 			{}
 
+
+commentA
+	= "*)"		{ }
+	/ "*" !")" commentA		{}
+	/ "(*" commentA commentA		{}
+	/ "(" !"*" commentA		{}
+	/ f:[^*(] commentA		{}
 
 
 
