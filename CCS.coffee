@@ -46,7 +46,7 @@ CCSGetMostGeneralType = (t1, t2) ->
 	throw new Error("Incopatible Types: #{t1} and #{t2}!");
 
 class CCSEnvironment
-	constructor: -> @env = {}
+	constructor: (@ccs) -> @env = {}
 	getType: (id) ->
 		res = @env[id]
 		throw new Error("Unbound identifier \"#{id}\"!") if ! res
@@ -58,22 +58,31 @@ class CCSEnvironment
 			@env[id] = CCSGetMostGeneralType(now, type)
 		else
 			@env[id] = type
+	hasType: (id) -> if @env[id] then true else false
 
 
 # - CCS
 class CCS
 	constructor: (@processDefinitions, @system) ->
+		if @system instanceof CCSRestriction
+			@rootRestriction = @system
+		else
+			@rootRestriction = null
 		@system.setCCS @
-		penv = new CCSEnvironment()
-		(pd.setCCS @; pd.computeTypes(penv)) for pd in @processDefinitions
+		penv = new CCSEnvironment(@)
+		(pd.setCCS @) for pd in @processDefinitions
+		(pd.computeTypes(penv)) for pd in @processDefinitions
 		try
-			@system.computeTypes(new CCSEnvironment())
+			@system.computeTypes(new CCSEnvironment(@))
 		catch e
 			e = new Error(e.message)
 			e.line = @system.line
 			e.column = 1
 			e.name = "TypeError"
 			throw e
+	
+	allowsUnboundedInputOnChannelName: (name) ->
+		if @rootRestriction then @rootRestriction.restrictsChannelName(name) else false
 	
 	getProcessDefinition: (name, argCount) -> 
 		result = null
@@ -88,14 +97,21 @@ class CCS
 # - ProcessDefinition
 class CCSProcessDefinition
 	constructor: (@name, @process, @params, @line=0) ->					# string x Process x string*
-		@env = new CCSEnvironment()
+		if @process.isUnguardedRecursion()
+			e = new Error("Unguarded recursion") 
+			e.line = @line
+			e.column = 1
+			e.name = "TypeError"
+			throw e
+	
+	getArgCount: -> if @params then @params.length else 0
+	setCCS: (@ccs) -> 
+		@process.setCCS @ccs
+		@env = new CCSEnvironment(@ccs)
 		if @params
 			for x in @params
 				@env.setType(x, CCSTypeUnknown)
-	
-	getArgCount: -> if @params then @params.length else 0
-	setCCS: (ccs) -> @process.setCCS ccs
-	computeTypes: (penv) -> 
+	computeTypes: (penv) -> 	
 		try
 			penv.setType(@name, CCSTypeProcess)
 			@process.computeTypes(@env)
@@ -138,6 +154,9 @@ class CCSProcess
 	computeTypes: (env) ->
 		p.computeTypes(env) for p in @subprocesses
 		null
+	isUnguardedRecursion: ->
+		(return true if p.isUnguardedRecursion()) for p in @subprocesses
+		false
 	
 	getApplicapleRules: -> []
 	getPossibleSteps: (copyOnPerform) -> 
@@ -206,6 +225,8 @@ class CCSProcessApplication extends CCSProcess
 				type = @valuesToPass[i].computeTypes(env, true)
 				pd.env.setType(pd.params[i], type)
 		super
+	isUnguardedRecursion: -> true
+	
 	getApplicapleRules: -> [CCSRecRule]
 	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
 	getExits: -> if @process then @process.getExits() else []
@@ -250,6 +271,7 @@ class CCSPrefix extends CCSProcess
 	computeTypes: (env) ->
 		@action.computeTypes(env)
 		super
+	isUnguardedRecursion: -> false
 			
 		
 	toString: (mini) -> "#{@action.toString(mini)}.#{@stringForSubprocess(@getProcess(), mini)}"
@@ -321,6 +343,10 @@ class CCSRestriction extends CCSProcess
 	getApplicapleRules: -> [CCSResRule]
 	getProcess: -> @subprocesses[0]
 	setProcess: (process) -> @subprocesses[0] = process 
+	restrictsChannelName: (name) ->
+		return false if name == CCSInternalChannel or name == CCSExitChannel
+		return false if @restrictedChannels.length == 0
+		if @restrictedChannels[0] == "*" then @restrictedChannels.indexOf(name) == -1 else @restrictedChannels.indexOf(name) != -1
 	
 	toString: (mini) -> "#{@stringForSubprocess(@getProcess(), mini)} \\ {#{@restrictedChannels.join ", "}}"
 	copy: -> (new CCSRestriction(@getProcess().copy(), @restrictedChannels))._setCCS(@ccs)
@@ -422,9 +448,25 @@ CCSInternalActionCreate = (name) ->
 	new CCSSimpleAction(new CCSChannel(name, null))
 
 
+class CCSValueSet
+	constructor: (@type, @min, @max) ->
+		throw new Error("Unknown Type") if @type != "string" and @type != "number"
+	allowsValue: (value) ->
+		value = CCSStringDataForValue(value)
+		if @type == "string"
+			len = ("" + value).length
+			len >= @min and len <= @max
+		else
+			if CCSValueIsInt(value)
+				val = parseInt(value)
+				val >= @min and val <= @max
+			else
+				false
+	
+
 # - Input
 class CCSInput extends CCSAction
-	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x {int x int) ; range must be copy in!
+	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x CCSValueSet
 		super channel
 	
 	isInputAction: -> true
@@ -433,8 +475,14 @@ class CCSInput extends CCSAction
 	replaceVariable: (varName, exp) -> 
 		super varName, exp
 		@variable != varName	# stop replacing if identifier is equal to its own variable name
+	allowsValueAsInput: (value) ->
+		if @range then @range.allowsValue(value) else true
+	
 	computeTypes: (env) ->
-		env.setType(@variable, CCSTypeValue) if @supportsValuePassing()
+		if @supportsValuePassing()
+			env.setType(@variable, CCSTypeValue) 
+			if env.hasType(@channel.name) or not env.ccs.allowsUnboundedInputOnChannelName(@channel.name)
+				throw new Error("Unbounded input variable \"#{@variable}\"") if not @range
 		super
 	
 	toString: (mini) -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
@@ -542,19 +590,22 @@ class CCSConstantExpression extends CCSExpression
 		super()
 	
 	getPrecedence: -> 18
-	evaluate: -> CCSConstantExpression.valueToString @value
+	evaluate: -> CCSStringDataForValue @value
 		#if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
 	isEvaluatable: -> true
 	typeOfEvaluation: -> typeof @value
 	toString: -> CCSBestStringForValue @value #if typeof @value == "string" then '"'+@value+'"' else "" + @value
 	copy: -> new CCSConstantExpression(@value)
+	
 
-CCSConstantExpression.valueToString = (value) ->
+CCSStringDataForValue = (value) ->
 	value = (if value == true then "1" else "0") if typeof value == "boolean"
 	value = "" + value
 
+CCSValueIsInt = (value) -> ("" + value).match(/^-?[0-9]+$/)
+
 CCSBestStringForValue = (value) ->
-	if ("" + value).match(/^-?[0-9]+$/) then "" + value else "\"#{value}\""
+	if CCSValueIsInt(value) then "" + value else if value == true then "1" else if value == false then "0" else "\"#{value}\""
 	
 
 # - VariableExpression
@@ -653,7 +704,7 @@ class CCSRelationalExpression extends CCSExpression
 		res = if @op == "<" then l < r else if @op == "<=" then l <= r
 		else if @op == ">" then l > r else if @op == ">=" then l >= r
 		else throw new Error("Invalid operator!")
-		CCSConstantExpression.valueToString res
+		CCSStringDataForValue res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
@@ -675,7 +726,7 @@ class CCSEqualityExpression extends CCSExpression
 		r = @getRight().evaluate()
 		res = if @op == "==" then l == r else if @op == "!=" then l != r 
 		else throw new Error("Invalid operator!")
-		CCSConstantExpression.valueToString res
+		CCSStringDataForValue res
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 

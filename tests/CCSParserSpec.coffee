@@ -102,6 +102,103 @@ programs =
 			"""
 		traces:
 			["\u03c4.wr!11.\u03c4.wr!9.\u03c4.wr!7"]
+			
+	"Unbound process variable 1":
+		code:
+			"""
+			X := a.b.0
+			Y := X + Z
+			
+			X
+			"""
+		throws: true
+	"Unbound process variable 2":
+		code:
+			"""
+			X := a.b.0
+			
+			X+Z
+			"""
+		throws: true
+	
+	"Unbound variable 1":
+		code:
+			"""
+			X[x] := a.b!x+y.0
+			
+			X[2]
+			"""
+		throws: true
+	"Unbound variable 2":
+		code:
+			"""
+			X[x] := a.b.X[x+y]
+			
+			X[2]
+			"""
+		throws: true
+	
+	"Unguarded recursion":
+		code:
+			"""
+			A := a.b
+			B := A
+			
+			A
+			"""
+		throws: true
+	
+	"Unbounded input 1":
+		code:
+			"""
+			P := a?x. b!x. 0
+			
+			P
+			"""
+		throws: true
+	"Unbounded input 2":
+		code:
+			"""
+			P := a?x. b!x. 0
+			
+			P \\ {a}
+			"""
+		throws: false
+	"Unbounded input 3":
+		code:
+			"""
+			P := a?. b!. 0
+			
+			P
+			"""
+		throws: true
+	"Unbounded input 4":
+		code:
+			"""
+			P[a] := a?x. b!x. 0
+			
+			P[c] \\ {a}
+			"""
+		throws: true
+	"Unbounded input 5":
+		code:
+			"""
+			P[b] := a?x. b!x. 0
+			
+			P[c] \\ {a}
+			"""
+		throws: false
+	
+	"Type Clash":
+		code:
+			"""
+			P[a] := a?. b!a. 0
+			
+			P[c] \\ {a}
+			"""
+		throws: true
+	
+	
 	
 
 CCS = require("CCS")
@@ -152,6 +249,7 @@ compareTraces = (trace1, trace2) ->
 describe "CCS parser", ->
 	
 	testProgram = (i) ->				 # "it" must be wrapped in a function
+		return if programs[i].throws
 		it "should parse \"#{i}\"", ->
 			tree = null
 			try
@@ -173,16 +271,23 @@ describe "CCS parser", ->
 			expect(tree.toString() == str)
 	
 	testTraces = (i) ->
-		return if not programs[i].traces
+		return if not programs[i].traces or programs[i].throws
 		it "should match traces of program \"#{i}\":\n", ->
 			tree = CCS.parser.parse(programs[i].code)
 			traces = tree.getTraces()
 			expect(compareTraces(programs[i].traces, traces)).toBe(true)
+	
+	
+	testExceptions = (i) ->
+		return if not programs[i].throws
+		it "should throw an exception for program \"#{i}\":\n", ->
+			expect((i) -> CCS.parser.parse(programs[i].code)).toThrow()
 		
 
 	for i of programs
 		testProgram(i)
 		testTraces(i)
+		testExceptions(i)
 	null
 	
 	
