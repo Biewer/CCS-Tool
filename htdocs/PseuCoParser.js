@@ -219,7 +219,7 @@ PseuCoParser = (function() {
         peg$c108 = { type: "literal", value: "]", description: "\"]\"" },
         peg$c109 = function(type, ranges) {
         																var res = type;
-        																for (var i = ranges.length - 1; i >= 0; ++i)
+        																for (var i = ranges.length - 1; i >= 0; --i)
         																{
         																	res = new PCArrayType(line(), column(), res, ranges[i][2]);
         																}
@@ -271,7 +271,7 @@ PseuCoParser = (function() {
         peg$c145 = function(dest, op, exp) { return new PCAssignExpression(line(), column(), dest, op, exp); },
         peg$c146 = function(id, pos) {
         													var index = [];
-        													for (var i = pos.length - 1; i >= 0; ++i)
+        													for (var i = pos.length - 1; i >= 0; --i)
         													{
         														index.push(pos[i][2]);
         													}
@@ -400,7 +400,7 @@ PseuCoParser = (function() {
         peg$c214 = ".",
         peg$c215 = { type: "literal", value: ".", description: "\".\"" },
         peg$c216 = function(exp, call) {
-        														var res = new PCClassCall(exp, call[0][1]);
+        														var res = new PCClassCall(line(), column(), exp, call[0][1]);
         														for (var i = 1; i < call.length; ++i)
         														{
         															res = new PCClassCall(line(), column(), res, call[i][1]);
@@ -409,7 +409,7 @@ PseuCoParser = (function() {
         													},
         peg$c217 = function(exp, call) {
         															var res = exp;
-        															for (var i = call.length - 1; i >= 0; ++i)
+        															for (var i = call.length - 1; i >= 0; --i)
         															{
         																res = new PCArrayExpression(line(), column(), res, call[i][2]);
         															}

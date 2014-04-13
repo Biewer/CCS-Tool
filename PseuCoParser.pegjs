@@ -222,7 +222,7 @@ VariableInitializer
 Type
 	= type:PrimitiveType ranges:(_ "[" IntegerLiteral "]")*	{
 																var res = type;
-																for (var i = ranges.length - 1; i >= 0; ++i)
+																for (var i = ranges.length - 1; i >= 0; --i)
 																{
 																	res = new PCArrayType(line(), column(), res, ranges[i][2]);
 																}
@@ -273,7 +273,7 @@ AssignmentExpression
 AssignDestination
 	= id:Identifier pos:(_ "[" Expression "]")*	{
 													var index = [];
-													for (var i = pos.length - 1; i >= 0; ++i)
+													for (var i = pos.length - 1; i >= 0; --i)
 													{
 														index.push(pos[i][2]);
 													}
@@ -388,7 +388,7 @@ Arguments
 
 MonCall
 	= exp:PrimaryExpression call:("." ProcCall)+	{
-														var res = new PCClassCall(exp, call[0][1]);
+														var res = new PCClassCall(line(), column(), exp, call[0][1]);
 														for (var i = 1; i < call.length; ++i)
 														{
 															res = new PCClassCall(line(), column(), res, call[i][1]);
@@ -399,7 +399,7 @@ MonCall
 ArrayExpression
 	= exp:PrimaryExpression call:(_ "[" Expression "]")*	{
 															var res = exp;
-															for (var i = call.length - 1; i >= 0; ++i)
+															for (var i = call.length - 1; i >= 0; --i)
 															{
 																res = new PCArrayExpression(line(), column(), res, call[i][2]);
 															}
