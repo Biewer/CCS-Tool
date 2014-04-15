@@ -63,7 +63,7 @@ class CCSEnvironment
 
 # - CCS
 class CCS
-	constructor: (@processDefinitions, @system) ->
+	constructor: (@processDefinitions, @system, @allowUnguardedRecursion=true) ->
 		if @system instanceof CCSRestriction
 			@rootRestriction = @system
 		else
@@ -79,6 +79,7 @@ class CCS
 			e.line = @system.line
 			e.column = 1
 			e.name = "TypeError"
+			e.code = @toString()
 			throw e
 	
 	allowsUnboundedInputOnChannelName: (name) ->
@@ -97,12 +98,6 @@ class CCS
 # - ProcessDefinition
 class CCSProcessDefinition
 	constructor: (@name, @process, @params, @line=0) ->					# string x Process x string*
-		if @process.isUnguardedRecursion()
-			e = new Error("Unguarded recursion") 
-			e.line = @line
-			e.column = 1
-			e.name = "TypeError"
-			throw e
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (@ccs) -> 
@@ -111,7 +106,14 @@ class CCSProcessDefinition
 		if @params
 			for x in @params
 				@env.setType(x, CCSTypeUnknown)
-	computeTypes: (penv) -> 	
+	computeTypes: (penv) -> 
+		if not @ccs.allowUnguardedRecursion and @process.isUnguardedRecursion()
+			e = new Error("Unguarded recursion") 
+			e.line = @line
+			e.column = 1
+			e.name = "TypeError"
+			e.code = @ccs.toString()
+			throw e	
 		try
 			penv.setType(@name, CCSTypeProcess)
 			@process.computeTypes(@env)
@@ -120,6 +122,7 @@ class CCSProcessDefinition
 			e.line = @line
 			e.column = 1
 			e.name = "TypeError"
+			e.code = @ccs.toString()
 			throw e
 	
 	toString: -> 

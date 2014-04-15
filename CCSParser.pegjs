@@ -193,17 +193,26 @@ channel "channel"
 
 _ "whitespace"
   = [' '\n\r\t] _               {}
-  / '#' [^\n\r]* [\n\r]+ _           {}
+  / '#' inlineComment           {}
+  / '//' inlineComment			{}
   / '(*' commentA _		{}
   / __             				{}   
 
 
 __ "inline whitespace"
   = [' '\t] __               {}
-  / '#' [^\n\r]* [\n\r]+ __           {}
-  / '#' [^\n\r]* ![^]             {}
+  / '#' inlineCommentWhitespace           {}
+  / '//' inlineCommentWhitespace             {}
   / '(*' commentA __		{}
   / 			{}
+ 
+
+inlineComment
+  = [^\n\r]* [\n\r]+ _			{}
+
+inlineCommentWhitespace
+  = [^\n\r]* [\n\r]+ __			{}
+  / [^\n\r]* ![^]				{}
 
 
 commentA
