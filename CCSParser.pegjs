@@ -207,12 +207,21 @@ __ "inline whitespace"
   / 			{}
  
 
+/*
 inlineComment
   = [^\n\r]* [\n\r]+ _			{}
 
 inlineCommentWhitespace
   = [^\n\r]* [\n\r]+ __			{}
   / [^\n\r]* ![^]				{}
+*/
+
+inlineComment
+  = [^\n\r]* _			{}
+
+inlineCommentWhitespace
+  = [^\n\r]* __			{}
+  / [^\n\r]* !.				{}
 
 
 commentA
