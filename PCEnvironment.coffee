@@ -29,21 +29,50 @@ class PCTEnvironmentController
 		@root = new PCTEnvironmentNode(null, "")		# global
 		@classes = {}
 		@_envStack = @root
+		@blockCounter = 1
 	
 	getGlobal: -> @root
+
+	openEnvironment: (node) ->
+		node.__id = @blockCounter++
+		child = new PCTEnvironmentNode(node, "##{node.__id}")
+		child.__id = node.__id
+		@_envStack.addChild(child)
+		@_envStack = child
+		child
+
+	getEnvironment: (node, id) ->
+		node = @_envStack.getBlockWithId(id)
+		throw new Error("Block not found!") if not node
+		@_envStack = node
+		node
+
+	closeEnvironment: ->
+		throw new Error("No open environment!") if not @_envStack instanceof PCTEnvironmentNode
+		@_envStack.node.isReturnExhaustive = @_envStack.isReturnExhaustive()
+		@_envStack = @_envStack.parent
 	
 	getClassWithName: (name) ->
 		result = @classes[name]
-		throw new Error("Unknown class") if result == undefined
+		throw new Error("Unknown class '#{name}'") if result == undefined
 		result
 	
 	getAllClasses: -> @root.getAllClasses()
 	
-	getVariableWithName: (name) ->
-		@_envStack.getVariableWithName(name)
+	getVariableWithName: (name, line, column) ->
+		@_envStack.getVariableWithName(name, line, column)
 	
-	getProcedureWithName: (name) ->
-		@_envStack.getProcedureWithName(name)
+	getProcedureWithName: (name, line, column) ->
+		@_envStack.getProcedureWithName(name, line, column)
+	
+	getExpectedReturnValue: ->
+		@_envStack.getExpectedReturnValue()
+
+	isReturnExhaustive: -> @_envStack.isReturnExhaustive()
+
+	setReturnExhaustive: -> @_envStack.setReturnExhaustive()
+
+	unsetReturnExhaustive: -> @_envStack.unsetReturnExhaustive()
 	
 	
 	processNewClass: (node, classType) ->
@@ -63,6 +92,7 @@ class PCTEnvironmentController
 		
 	endClass: ->
 		throw new Error("No class did begin!") if not @_envStack instanceof PCTClass
+		@_envStack.node.isReturnExhaustive = @_envStack.isReturnExhaustive()
 		@_envStack = @_envStack.parent
 	
 	
@@ -76,27 +106,40 @@ class PCTEnvironmentController
 		@beginProcedure(node.getName())
 	
 	beginProcedure: (procedureName) ->
-		node = @_envStack.getProcedureWithName(procedureName)
-		throw new Error("Node must not be null!") if not node
-		@_envStack = node
-		node
+		try
+			node = @_envStack.getProcedureWithName(procedureName)
+			@_envStack = node
+			node
+		catch
+			throw new Error("Node must not be null!") if not node
 	
 	endProcedure: ->
 		throw new Error("No procedure did begin!") if not @_envStack instanceof PCTProcedure
+		@_envStack.node.isReturnExhaustive = @_envStack.isReturnExhaustive()
 		@_envStack = @_envStack.parent
 	
-	beginMainAgent: (node) -> 
-		if @_envStack.getProcedureWithName("#mainAgent")
-			@beginProcedure("#mainAgent")
-		else
+	beginMainAgent: (node) ->
+		try
+			@_envStack.getProcedureWithName("#mainAgent")
+		catch
 			@beginNewProcedure(node, "#mainAgent", new PCTType(PCTType.VOID), [])
+			return
+		@beginProcedure("#mainAgent")
+
+	_beginMainAgent: (node) ->
+		try
+			@_envStack.getProcedureWithName("#mainAgent")
+		catch
+			@beginNewProcedure(node, "#mainAgent", new PCTType(PCTType.VOID), [])
+			return
+		throw ({"line" : node.line, "column" : node.column, "message" : "Main agent can't be declared twice!"})
 	
 	endMainAgent: ->
 		@endProcedure()
 	
 	
 	
-	processNewVariable: (variable) ->			
+	processNewVariable: (variable) ->
 		@_processNewVariable(variable)
 	
 	_processNewVariable: (node) ->
@@ -115,33 +158,68 @@ class PCTEnvironmentNode
 		@children = []
 		@variables = {}
 		@procedures = {}
+		@blocks = {}
+		@isRetExhaust = false
 	
-	addChild: (child) -> 
+	addChild: (child) ->
 		@children.push(child)
 		child.parent = @
+		child.isRetExhaust = @isRetExhaust
 		if child instanceof PCTProcedure
 			@procedures[child.getName()] = child
 		else if child instanceof PCTVariable
 			@variables[child.getIdentifier()] = child
+		else if child instanceof PCTEnvironmentNode
+			@blocks[child.__id] = child
 		child
-	getVariableWithName: (name) -> @variables[name]
-	getProcedureWithName: (name) -> @procedures[name]
+	getVariableWithName: (name, line, column) ->
+		if not @variables[name]?
+			throw ({"line" : line, "column" : column, "message" : "Variable '#{name}' wasn't declared."}) if not @parent?
+			@parent.getVariableWithName(name, line, column)
+		else
+			@variables[name]
+	getProcedureWithName: (name, line, column) ->
+		if not @procedures[name]?
+			throw ({"line" : line, "column" : column, "message" : "Procedure '#{name}' wasn't declared."}) if not @parent?
+			@parent.getProcedureWithName(name, line, column)
+		else
+			@procedures[name]
+	getBlockWithId: (id) -> @blocks[id]
 	getComposedLabel: -> "#{if @parent then "#{@parent.getComposedLabel()}_" else ""}#{@label}"
-	getAllClasses: -> 
+	getAllClasses: ->
 		result = []
 		for c in @children
 			result.push(c) if c instanceof PCTClass
 		result
+	getExpectedReturnValue: ->
+		if @ instanceof PCTProcedure
+			@returnType
+		else
+			if @parent?
+				@parent.getExpectedReturnValue()
+			else
+				throw new Error("Return statements are only allowed inside procedures!")
+	isReturnExhaustive: -> @isRetExhaust
+	setReturnExhaustive: -> @isRetExhaust = true
+	unsetReturnExhaustive: -> @isRetExhaust = false
 
 
 class PCTClass extends PCTEnvironmentNode
-	constructor: (node, @type) -> super node, @type.identifier
+	constructor: (node, @type) ->
+		@usedClassTypes = []
+		super node, @type.identifier
 	getName: -> @label
 	isMonitor: -> @type.isMonitor()
-
+	addUseOfClassType: (type) -> @usedClassTypes.push(type)
+	getUsedClassTypes: ->
+		result = []
+		result.push(type) for type in @usedClassTypes
+		result
 
 class PCTProcedure extends PCTEnvironmentNode
-	constructor: (node, name, @returnType, @arguments) -> super node, name		# string x PCType x PCTVariable*
+	constructor: (node, name, @returnType, @arguments) ->
+		super node, name		# string x PCType x PCTVariable*
+		@variables[arg.getName()] = arg for arg in @arguments
 	getName: -> @label
 	#isStructProcedure: -> @parent instanceof PCStruct
 	#isMonitorProcedure: -> @parent instanceof PCMonitor
@@ -161,18 +239,37 @@ class PCTVariable
 	getIdentifier: -> @label
 	getComposedLabel: -> "#{if @parent then "#{@parent.getComposedLabel()}_" else ""}#{@label}"
 
-	
+# TODO comment
+class PCTCycleChecker
+	constructor: (classTypes) ->
+		throw new Error("List of class types must not be empty!") if not classTypes?
+		@classTypes = {}
+		@classTypes[type.getName()] = type for type in classTypes
+	cycleTraceForTypes: ->
+		while Object.keys(@classTypes).length > 0
+			for name, type of @classTypes
+				trace = @cycleTraceForType(type, {}, new PCTTrace(null))
+				return trace.toString() if trace
+		null
+	cycleTraceForType: (type, alreadyReachable, trace) ->
+		trace.add(type)
+		return trace if alreadyReachable[type.getName()]?
+		alreadyReachable[type.getName()] = type
+		return null if not delete @classTypes[type.getName()]
+		for t in type.getUsedClassTypes()
+			result = @cycleTraceForType(t, alreadyReachable, new PCTTrace(trace))
+			return result if result?
+		null
 
+# TODO comment
+class PCTTrace
+	constructor: (trace) ->
+		@elements = []
+		if trace?
+			@elements.push(elem) for elem in trace.elements
+	add: (element) -> @elements.push(element)
+	toString: ->
+		result = "#{@elements[0].getName() if @elements.length > 0}"
+		"#{result += " -> " + element.getName() for element in @elements[1..] by 1}"
+		result
 
-
-
-
-
-
-
-
-
-
-
-		
-		

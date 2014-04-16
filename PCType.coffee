@@ -31,6 +31,9 @@ class PCTType
 		throw new Error("Unknown kind of type!") if @kind < 0 || @kind > 14
 	isEqual: (type) ->
 		type.kind == @kind
+	isAssignableTo: (type) ->
+		return false if @kind is PCTType.WILDCARD
+		(@isEqual(type) or type.kind is PCTType.WILDCARD)
 	toString: ->
 		switch @kind
 			when PCTType.INT then "int"
@@ -87,7 +90,7 @@ class PCTChannelType extends PCTType
 	isEqual: (type) ->
 		@kind == type.kind and @capacity == type.capacity and @channelledType.isEqual(type.channelledType)
 	isAssignableTo: (type) ->	# is this assignable to type?
-		@kind == type.kind and (@capacity == type.capacity or type.capacity == 0) and @channelledType.isEqual(type.channelledType)
+		@kind == type.kind and (@capacity == type.capacity or type.capacity == 0) and @channelledType.isEqual(type.channelledType) # TODO type.capacity == 1?
 	getApplicableCapacity: -> if @capacity == PCChannelType.CAPACITY_UNKNOWN then 0 else @capacity
 	toString: ->
 		if @capacity == PCChannelType.CAPACITY_UNKNOWN
