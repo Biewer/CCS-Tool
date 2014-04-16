@@ -24,7 +24,7 @@
 <script type="text/javascript">
 
 var _inputField, _errorField, _resultField;
-var _mainScript = null, _parserScript = null, _pseucoScript = null, _pseucoParserScript = null, _compilerScript = null;
+var _mainScript = null, _parserScript = null, _pseucoScript = null, _pseucoParserScript = null<!--, _compilerScript = null-->;
 
 var stepView;
 
@@ -59,9 +59,9 @@ function reloadScripts() {
 	if (_pseucoScript) {
 		_pseucoScript.parentNode.removeChild(_pseucoScript);
 	}
-	if (_compilerScript) {
-		_compilerScript.parentNode.removeChild(_compilerScript);
-	}
+	<!--if (_compilerScript) {-->
+	<!--	_compilerScript.parentNode.removeChild(_compilerScript);-->
+	<!--}-->
 	if (_parserScript) {
 		_parserScript.parentNode.removeChild(_parserScript);
 	}
@@ -79,10 +79,10 @@ function reloadScripts() {
 	_pseucoScript.setAttribute("src", "PseuCo.js?x" + Math.ceil(Math.random()*10000));
 	document.head.appendChild(_pseucoScript);
 	
-	_compilerScript = document.createElement("SCRIPT");
-	_compilerScript.setAttribute("type", "text/javascript");
-	_compilerScript.setAttribute("src", "PCCompiler.js?x" + Math.ceil(Math.random()*10000));
-	document.head.appendChild(_compilerScript);
+	<!--_compilerScript = document.createElement("SCRIPT");-->
+	<!--_compilerScript.setAttribute("type", "text/javascript");-->
+	<!--_compilerScript.setAttribute("src", "PCCompiler.js?x" + Math.ceil(Math.random()*10000));-->
+	<!--document.head.appendChild(_compilerScript);-->
 	
 	_parserScript = document.createElement("SCRIPT");
 	_parserScript.setAttribute("type", "text/javascript");
@@ -103,6 +103,7 @@ function testPseuCo() {
 	try {
 		var ast = PseuCoParser.parse(_inputField.value);
 		_resultField.innerText = ast.toString();
+		ast.getType();
 		_errorField.innerText = "";
 		<!--var obj = eval("__t = " + _inputField.value);-->
 		<!--if (obj) {-->
@@ -133,9 +134,9 @@ function testPseuCo() {
 
 <pre id ="resultField" style="float: right; width:45%;"></pre>
 <div style="clear:both; margin-top:10px;" id="ccsView">
-<p class="ccs_view">
-<span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P<sup class="ccs_badge">3</sup></span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?x</a>=<input id="test" type="text" value="0" class="ccs_input" />.<span>b?.<span>0</span></span></span></span>
-</p>
+<!--<p class="ccs_view">-->
+<!--<span><span><span><a class="ccs_step" href="javascript:void(0)">a!</a>.<span>b!.<span>0</span></span></span> | <span><sup><a class="ccs_toggle_process" href="#">+</a></sup>P<sup class="ccs_badge">3</sup></span></span> | <span><sup><a class="ccs_toggle_process" href="javascript:void(0)">-</a></sup><a class="ccs_step" href="javascript:void(0)">a?x</a>=<input id="test" type="text" value="0" class="ccs_input" />.<span>b?.<span>0</span></span></span></span>-->
+<!--</p>-->
 </div>
 </body>
 

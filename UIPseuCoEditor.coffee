@@ -21,11 +21,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class UIPseuCoEditor
-	constructor: -> 
+	constructor: (@editor) -> 
+		@editor._editorController = @
+		handler = -> 
+			@_editorController.handleChange()
+		$(@editor).on("blur", handler)
+		$(@editor).on("input", handler)
 		@state = UIEditorState.possible
 		@tree = null
 	
-	setText: (text) -> throw new Error("Not yet implemented!")
+	handleChange: ->
+		@setText @editor.value
+	
+	setText: (text) -> 
+		@_setState UIEditorState.possible
+		try
+			@tree = PC.parser.parse(text);
+			@_setState UIEditorState.valid
+		catch e
+			col = if e.column then ", column " + e.column else ""
+			UIError("Line " + e.line + col + ": " + e.message)
+			#$$("ccsField")[0].value = ""
+			@tree = null
+			@_setState UIEditorState.invalid
+		
 	setTree: (program) ->
 	
 	_setState: (state) ->

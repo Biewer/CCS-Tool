@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 
-class PCCGlobal extends PCEnvironmentNode
+class PCCGlobal extends PC.EnvironmentNode
 	constructor: (program) -> super program, ""
 	getVariableClass: -> PCCGlobalVariable
 	
@@ -39,14 +39,14 @@ class PCCGlobal extends PCEnvironmentNode
 		
 
 
-class PCCClass extends PCClass
+class PCCClass extends PC.Class
 	constructor: ->
 		super
-		@addChild(new PCCInternalReadOnlyField(null, "guard", new PCTType(PCTType.MUTEX), true))
+		@addChild(new PCCInternalReadOnlyField(null, "guard", new PC.Type(PC.Type.MUTEX), true))	# ToDo: guard only in monitor?
 	getAllConditions: ->
 		result = []
 		for n, v of @variables
-			result.push(v) if v.type and v.type.kind == PCTType.CONDITION
+			result.push(v) if v.type and v.type.kind == PC.Type.CONDITION
 		result
 	getVariableClass: -> PCCField
 	
@@ -105,7 +105,7 @@ class PCCClass extends PCClass
 
 #class PCCStruct extends PCCClass
 		
-class PCCProcedure extends PCProcedure
+class PCCProcedure extends PC.Procedure
 	getProcessName: -> "Proc#{@getComposedLabel()}"
 	getAgentStarterChannel: -> "start#{@getComposedLabel()}"
 	getAgentProcessName: -> "Agent#{@getComposedLabel()}"
@@ -196,28 +196,28 @@ PCCType.BOOL = new PCCType(0)
 PCCType.INT = new PCCType(1)
 PCCType.STRING = new PCCType(2)
 
-PCTType::getCCSType = ->
+PC.Type::getCCSType = ->
 	switch @kind
-		when PCTType.INT then PCCType.INT
-		when PCTType.BOOL then PCCType.BOOL
-		when PCTType.STRING then PCCType.STRING
-		when PCTType.CHANNEL then throw new Error("Unexpected type kind!")
-		when PCTType.ARRAY then throw new Error("Unexpected type kind!")
-		when PCTType.MONITOR then PCCType.INT
-		when PCTType.STRUCTURE then PCCType.INT
-		when PCTType.MUTEX then PCCType.INT
-		when PCTType.CONDITION then PCCType.INT
-		when PCTType.PROCEDURE then throw new Error("Unexpected type kind!")
-		when PCTType.TYPE then throw new Error("Unexpected type kind!")
-		when PCTType.MAINAGENT then throw new Error("Unexpected type kind!")
-		when PCTType.AGENT then PCCType.INT
-		when PCTType.WILDCARD then throw new Error("Unexpected type kind!")
+		when PC.Type.INT then PCCType.INT
+		when PC.Type.BOOL then PCCType.BOOL
+		when PC.Type.STRING then PCCType.STRING
+		when PC.Type.CHANNEL then throw new Error("Unexpected type kind!")
+		when PC.Type.ARRAY then throw new Error("Unexpected type kind!")
+		when PC.Type.MONITOR then PCCType.INT
+		when PC.Type.STRUCTURE then PCCType.INT
+		when PC.Type.MUTEX then PCCType.INT
+		when PC.Type.CONDITION then PCCType.INT
+		when PC.Type.PROCEDURE then throw new Error("Unexpected type kind!")
+		when PC.Type.TYPE then throw new Error("Unexpected type kind!")
+		when PC.Type.MAINAGENT then throw new Error("Unexpected type kind!")
+		when PC.Type.AGENT then PCCType.INT
+		when PC.Type.WILDCARD then throw new Error("Unexpected type kind!")
 		else PCCType.VOID
 
-PCTArrayType::getCCSType = -> new PCCType(@elementsType.getCCSType())
-PCTChannelType::getCCSType = -> new PCCType(@channelledType.getCCSType())
-PCTProcedureType::getCCSType = -> @returnType.getCCSType()
-PCTProcedureType::getCCSArgumentTypes = -> t.getCCSType() for t in @argumentTypes
+PC.ArrayType::getCCSType = -> new PCCType(@elementsType.getCCSType())
+PC.ChannelType::getCCSType = -> new PCCType(@channelledType.getCCSType())
+PC.ProcedureType::getCCSType = -> @returnType.getCCSType()
+PC.ProcedureType::getCCSArgumentTypes = -> t.getCCSType() for t in @argumentTypes
 
 ###
 PCTArrayType::fulfillAssignment = (compiler, container) ->
@@ -225,7 +225,7 @@ PCTArrayType::fulfillAssignment = (compiler, container) ->
 	compiler.emitInput("array_copy", container, result)
 	result
 ###
-PCTArrayType::createContainer = (compiler, containers=[]) ->
+PC.ArrayType::createContainer = (compiler, containers=[]) ->
 	result = compiler.getFreshContainer(@getCCSType())
 	compiler.emitInput("array#{@capacity}_create", null, result)
 	compiler.emitOutput("array_setDefault", result, @elementsType.getCCSType().getDefaultContainer())
@@ -236,21 +236,21 @@ PCTArrayType::createContainer = (compiler, containers=[]) ->
 		compiler.emitOutput("array_access", result, new PCCConstantContainer(i))
 		compiler.emitOutput("array_set", result, c)
 	result
-PCTType::requiresCustomDefaultContainer = -> 
-	@kind != PCTType.INT and @kind != PCTType.BOOL and @kind != PCTType.STRING
-PCTType::createContainer = (compiler, container) ->
+PC.Type::requiresCustomDefaultContainer = -> 
+	@kind != PC.Type.INT and @kind != PC.Type.BOOL and @kind != PC.Type.STRING
+PC.Type::createContainer = (compiler, container) ->
 	return container if container
-	throw new Error("No default value for agents available") if @kind == PCTType.AGENT
-	throw new Error("No default value for void available") if @kind == PCTType.VOID
-	if @kind == PCTType.MUTEX
+	throw new Error("No default value for agents available") if @kind == PC.Type.AGENT
+	throw new Error("No default value for void available") if @kind == PC.Type.VOID
+	if @kind == PC.Type.MUTEX
 		result = compiler.getFreshContainer(PCCType.INT)
 		compiler.emitInput("mutex_create", null, result)
 		result
-	else if @kind == PCTType.STRING
+	else if @kind == PC.Type.STRING
 		new PCCConstantContainer("")
 	else
 		new PCCConstantContainer(0)
-PCTChannelType::createContainer = (compiler, container) ->
+PC.ChannelType::createContainer = (compiler, container) ->
 	return container if container
 	res = compiler.getFreshContainer(@getCCSType())
 	buffered = @capacity != PCChannelType.CAPACITY_UNKNOWN and @capacity != 0
@@ -259,7 +259,7 @@ PCTChannelType::createContainer = (compiler, container) ->
 	#if buffered
 		#compiler.emitOutput("channel_setDefault", res, @channelledType.getCCSType().getDefaultContainer())
 	res
-PCTClassType::createContainer = (compiler, container) ->
+PC.ClassType::createContainer = (compiler, container) ->
 	return container if container
 	result = compiler.getFreshContainer(PCCType.INT)
 	compiler.emitInput("class_#{@identifier}_create", null, result)
@@ -272,16 +272,16 @@ PCTClassType::createContainer = (compiler, container) ->
 
 # Variables
 
-class PCCVariableInfo extends PCVariable
+class PCCVariableInfo extends PC.Variable
 	constructor: (node, name, type, @isInternal=false) -> super node, name, type
 	getIdentifier: -> "#{if @isInternal then "#" else ""}#{@getName()}"	# default: x; internal: #x
 	getSuggestedContainerName: -> @getName() + (if @isInternal then "H" else "L")
 	 
 PCCVariableInfo.getNameForInternalVariableWithName = (name) -> "#"+name
 
-PCVariable::getSuggestedContainerName = -> @getName() + "L"
-PCVariable::getCCSType = -> @type.getCCSType()
-PCVariable::compileDefaultValue = (compiler) -> 
+PC.Variable::getSuggestedContainerName = -> @getName() + "L"
+PC.Variable::getCCSType = -> @type.getCCSType()
+PC.Variable::compileDefaultValue = (compiler) -> 
 	if @node then @node.compileDefaultValue(compiler) else @type.createContainer(compiler)
 PCCVariableInfo::getCCSType = -> if @type or not @isInternal then super else PCCType.INT
 	
@@ -293,6 +293,7 @@ class PCCVariable extends PCCVariableInfo
 
 class PCCGlobalVariable extends PCCVariable
 	accessorChannel: (set) -> "env_global_#{if set then "set" else "get"}_#{@getName()}"
+	trackValue: (compiler) -> compiler.trackGlobalVars()
 	getContainer: (compiler) ->
 		result = compiler.getFreshContainer(@type.getCCSType())
 		compiler.emitInput(@accessorChannel(false), null, result)
@@ -309,6 +310,10 @@ class PCCGlobalVariable extends PCCVariable
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 		control.setBranchFinished()
 		compiler.emitInput(@accessorChannel(true), instance, c)
+		if @trackValue(compiler)
+			cid = new PCCConstantContainer(@getName())
+			cid = new PCCBinaryContainer(instance, cid, "^") if instance
+			compiler.emitOutput("sys_var", cid, c)
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 		control.setBranchFinished()
 	emitConstructor: (compiler) ->
@@ -317,6 +322,9 @@ class PCCGlobalVariable extends PCCVariable
 		compiler.endProcessGroup()
 		compiler.beginProcessGroup(@)
 		container = @compileDefaultValue(compiler)
+		if @trackValue(compiler)
+			cid = new PCCConstantContainer(@getName())
+			compiler.emitOutput("sys_var", cid, container)
 		compiler.emitProcessApplication(@getEnvProcessName(), [container])
 		compiler.endProcessGroup()
 		compiler.emitSystemProcessApplication(@getProcessName(), [])
@@ -326,6 +334,7 @@ class PCCGlobalVariable extends PCCVariable
 
 class PCCField extends PCCGlobalVariable
 	accessorChannel: (set) -> "env_class_#{@parent.getName()}_#{if set then "set" else "get"}_#{@getName()}"
+	trackValue: (compiler) -> compiler.trackClassVars()
 	getContainer: (compiler) ->
 		if @getIdentifier() == "#guard"
 			result = compiler.getFreshContainer(PCCType.INT)
@@ -344,7 +353,7 @@ class PCCInternalReadOnlyField extends PCCField
 		local = compiler.getVariableWithName(@getIdentifier())
 		containers = (v.getContainer(compiler) for v in variables)
 		c = local.getContainer(compiler)
-		compiler.emitOutput("env_class_guard", instance, c)
+		compiler.emitOutput("env_class_guard", instance, c)						# too much hard coded?
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 	getContainer: (compiler) -> 
 		result = compiler.getFreshContainer(PCCType.INT)
@@ -354,11 +363,16 @@ class PCCInternalReadOnlyField extends PCCField
 	
 
 class PCCCondition extends PCCField
-	constructor: (name, @expressionNode) -> super name, new PCTType(PCTType.CONDITION)
+	constructor: (name, @expressionNode) -> super name, new PC.Type(PC.Type.CONDITION)
 
 class PCCLocalVariable extends PCCVariable
+	trackValue: (compiler) -> compiler.trackLocalVars()
 	getContainer: (compiler) -> compiler.getProcessFrame().getContainerForVariable(@getIdentifier())
-	setContainer: (compiler, container) -> compiler.getProcessFrame().assignContainerToVariable(@getIdentifier(), container)
+	setContainer: (compiler, container) -> 
+		if @trackValue(compiler)
+			cid = new PCCConstantContainer(@getName())
+			compiler.emitOutput("sys_var", cid, container)
+		compiler.getProcessFrame().assignContainerToVariable(@getIdentifier(), container)
 
 
 
@@ -367,7 +381,7 @@ class PCCLocalVariable extends PCCVariable
 
 
 
-class PCCProgramController extends PCEnvironmentController
+class PCCProgramController extends PC.EnvironmentController
 	constructor: ->
 		super
 		@root = new PCCGlobal()
@@ -394,7 +408,7 @@ class PCCProgramController extends PCEnvironmentController
 		res = []
 		for p of @agents
 			proc = @agents[p]
-			res.push(proc) if proc instanceof PCProcedure
+			res.push(proc) if proc instanceof PC.Procedure
 		res
 	
 	getUsedTypes: ->
@@ -406,36 +420,39 @@ class PCCProgramController extends PCEnvironmentController
 	
 	
 
-PCEnvironmentNode::getUsedTypes = (res) ->
+PC.EnvironmentNode::getUsedTypes = (res) ->
 	c.getUsedTypes(res) for c in @children
 	null
-PCVariable::getUsedTypes = (res) ->
+PC.Variable::getUsedTypes = (res) ->
 	@type.getUsedTypes(res)
-PCTType::getUsedTypes = -> null
-PCTArrayType::getUsedTypes = (res) ->
+PC.Type::getUsedTypes = -> null
+PC.ArrayType::getUsedTypes = (res) ->
 	res.arrays[@capacity] = true
 	@elementsType.getUsedTypes(res)
 	null
-PCTChannelType::getUsedTypes = (res) ->
+PC.ChannelType::getUsedTypes = (res) ->
 	res.channels[@getApplicableCapacity()] = true
 	null
 		
 
-PCNode::collectAgents = (env) -> c.collectAgents(env) for c in @children
-PCMonitor::collectAgents = (env) -> 
+PC.Node::collectAgents = (env) -> c.collectAgents(env) for c in @children
+_t = PC.Monitor		# CoffeeScript bug? Can't call super in PC.Monitor::...
+_t::collectAgents = (env) -> 
 	env.beginClass(@name)
 	super
 	env.endClass()
-PCStruct::collectAgents = (env) -> 
+_t = PC.Struct
+_t::collectAgents = (env) -> 
 	env.beginClass(@name)
 	super
 	env.endClass()
-PCProcedure::collectAgents = (env) -> 
+_t = PC.ProcedureDecl
+_t::collectAgents = (env) -> 		# ToDo: PCProcedure should be renamed to PCTProcedure. But shouldn't it be PCProcedureDecl?
 	env.beginProcedure(@name)
 	super
 	env.endProcedure()
 
-PCStartExpression::collectAgents = (env) -> env.processProcedureAsAgent(@children[0].getProcedure(env))
+PC.StartExpression::collectAgents = (env) -> env.processProcedureAsAgent(@children[0].getProcedure(env))
 
 
 

@@ -24,16 +24,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	You start the compilation process by creating a new PCCCompiler object with the node of your PseuCo tree and call compile() on it. You'll get a CCS tree on success
 ###
 
+debugger
+PC = require "PseuCo"
+CCS = require "CCS"
+
+PCCFlags = 
+	trackGlobalVariables: 1
+	trackClassVariables: 2
+	trackLocalVariables: 4
+	trackVariables: 7
+	trackProcedureCalls: 8
+	trackAgents: 16
+
 
 class PCCCompiler
-	constructor: (@program) ->
+	constructor: (@program, @flags=0) ->
 		@controller = null
 		@stack = null	
 		@groupElements = []	
 		@controller = new PCCProgramController(@program)
 		@systemProcesses = []
+		@compilingNodes = []	# stack
 	
-	compile: -> 
+	trackGlobalVars: -> (@flags & PCCFlags.trackGlobalVariables) == PCCFlags.trackGlobalVariables
+	trackClassVars: -> (@flags & PCCFlags.trackClassVariables) == PCCFlags.trackClassVariables
+	trackLocalVars: -> (@flags & PCCFlags.trackLocalVariables) == PCCFlags.trackLocalVariables
+	trackProcCalls: -> (@flags & PCCFlags.trackProcedureCalls) == PCCFlags.trackProcedureCalls
+	trackAgents: -> (@flags & PCCFlags.trackAgents) == PCCFlags.trackAgents
+	
+	compileProgram: -> 
 		@program.collectClasses(@controller)
 		@program.collectEnvironment(@controller)
 		@program.collectAgents(@controller)
@@ -55,7 +74,18 @@ class PCCCompiler
 			@endSystemProcess()
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@program.compile(@)
-		new CCS(@controller.root.collectPDefs(), @_getSystem())
+		new CCS.CCS(@controller.root.collectPDefs(), @_getSystem())
+	
+	compile: (node, args...) ->
+		@compilingNodes.push(node)
+		res = node.compile(@, args...)
+		@compilingNodes.pop()
+		res
+	
+	pushStackElement: (element) ->
+		element.pseucoNode = @compilingNodes[@compilingNodes.length-1]
+		@stack.pushElement(element)
+		
 	
 	_getSystem: ->
 		@beginSystemProcess()
@@ -63,8 +93,23 @@ class PCCCompiler
 		@endSystemProcess()
 		system = @systemProcesses[0]
 		for i in [1...@systemProcesses.length] by 1
-			system = new CCSParallel(system, @systemProcesses[i])
-		new CCSRestriction(system, ["*", "println"])
+			system = new CCS.Parallel(system, @systemProcesses[i])
+		new CCS.Restriction(system, @_getRestrictedChannels())
+	
+	_getRestrictedChannels: -> 
+		res = ["*", "println", "exception"]
+		res.push("sys_var") if @trackGlobalVars() or @trackClassVars() or @trackLocalVars()
+		if @trackProcCalls()
+			res.push("sys_call") 
+			res.push("sys_return") 
+		if @trackAgents()
+			res.push("sys_start")
+			res.push("sys_terminate")
+		res
+	
+	didChangeVariable: (variable, container) ->
+		
+		
 	
 	###
 		Delegates must implement the following methods:
@@ -96,7 +141,11 @@ class PCCCompiler
 	
 	getGlobal: -> @controller.getGlobal()
 	
-	getFreshContainer: (ccsType, wish) -> @getProcessFrame().createContainer(ccsType, wish)
+	getFreshContainer: (ccsType, wish) -> 
+		res = @getProcessFrame().createContainer(ccsType, wish)
+		res.pseucoNode = @compilingNodes[@compilingNodes.length-1] if @compilingNodes.length > 0
+		res.pseucoNode.addCalculusComponent(res.pseucoNode) if res.pseucoNode
+		res
 	
 	handleNewVariableWithDefaultValueCallback: (variable, callback, context) ->		# callback returns a container
 		@stack.compilerHandleNewVariableWithDefaultValueCallback(@, variable, callback, context)
@@ -112,7 +161,7 @@ class PCCCompiler
 	beginSystemProcess: ->
 		element = new PCCSystemProcessStackElement()
 		@groupElements.push(element)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 	
 	endSystemProcess: ->
 		element = @groupElements.pop()
@@ -129,7 +178,7 @@ class PCCCompiler
 		frame = new PCCProcessFrame(groupable, variables)
 		element = new PCCProcessFrameStackElement(frame)
 		@groupElements.push(element)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		frame.emitProcessDefinition(@)
 		
 	endProcessGroup: ->
@@ -141,7 +190,7 @@ class PCCCompiler
 	getProcessFrame: -> @stack.getCurrentProcessFrame()
 	
 	addProcessGroupFrame: (nextFrame) ->
-		@stack.pushElement(new PCCProcessFrameStackElement(nextFrame))
+		@pushStackElement(new PCCProcessFrameStackElement(nextFrame))
 		nextFrame.emitProcessDefinition(@)
 		null
 	
@@ -182,7 +231,7 @@ class PCCCompiler
 	
 	_silentlyAddProcessDefinition: (processName, argumentContainers) ->
 		element = new PCCProcessDefinitionStackElement(processName, argumentContainers)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		element
 		
 	beginProcessDefinition: (processName, argumentContainers) ->
@@ -205,7 +254,7 @@ class PCCCompiler
 		curClass = @controller.getClassWithName(className)
 		throw new Error("Tried to begin unknown class!") if not curClass
 		element = new PCCClassStackElement(curClass)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		@groupElements.push(element)
 		
 	endClass: ->
@@ -247,7 +296,7 @@ class PCCCompiler
 		throw new Error("Tried to begin unknown procedure!") if !procedure
 		frame = new PCCProcedureFrame(procedure)
 		element = new PCCProcedureStackElement(procedure)
-		@stack.pushElement(element)
+		@pushStackElement(element)
 		@groupElements.push(element)
 		@addProcessGroupFrame(frame)
 	
@@ -269,36 +318,36 @@ class PCCCompiler
 	_usingFrames: ->
 		@groupElements.length > 1 or (@groupElements.length > 0 and @groupElements[0] instanceof PCCProcessFrameStackElement)
 
-	emitStop: -> @stack.pushElement(new PCCStopStackElement())
-	emitExit: -> @stack.pushElement(new PCCExitStackElement())
+	emitStop: -> @pushStackElement(new PCCStopStackElement())
+	emitExit: -> @pushStackElement(new PCCExitStackElement())
 	emitProcessApplication: (processName, argumentContainers=[]) -> 
-		@stack.pushElement(new PCCApplicationStackElement(processName, argumentContainers))
+		@pushStackElement(new PCCApplicationStackElement(processName, argumentContainers))
 	emitOutput: (channel, specificChannel, valueContainer) ->
-		@stack.pushElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
+		@pushStackElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
 	emitInput: (channel, specificChannel, container) ->
-		@stack.pushElement(new PCCInputStackElement(channel, specificChannel, container))
-	emitCondition: (condition) -> @stack.pushElement(new PCCConditionStackElement(condition))
+		@pushStackElement(new PCCInputStackElement(channel, specificChannel, container))
+	emitCondition: (condition) -> @pushStackElement(new PCCConditionStackElement(condition))
 	emitChoice: -> 
 		res = new PCCChoiceStackElement()
-		@stack.pushElement(res)
+		@pushStackElement(res)
 		@emitNewScope() if @_usingFrames() 
 		res
 	emitParallel: -> 
 		res = new PCCParallelStackElement()
-		@stack.pushElement(res)
+		@pushStackElement(res)
 		@emitNewScope() if @_usingFrames()
 		res
 	emitSequence: -> 
 		#@emitNextProcessFrame()	# start new process to avoid loosing input variables in right side of sequence received on left side
 		res = new PCCSequenceStackElement()
-		@stack.pushElement(res)
+		@pushStackElement(res)
 		res
 	emitRestriction: (restrictedChannelNames) -> 
-		@stack.pushElement(new PCCRestrictionStackElement(restrictedChannelNames))
+		@pushStackElement(new PCCRestrictionStackElement(restrictedChannelNames))
 	
 	emitProcessApplicationPlaceholder: ->
 		ph = new PCCApplicationPlaceholderStackElement(@getProcessFrame())
-		@stack.pushElement(ph)
+		@pushStackElement(ph)
 		ph
 	
 	
@@ -376,6 +425,22 @@ class PCCCompiler
 		@endProcessDefinition()
 		@emitSystemProcessApplication("WaitRoom_cons", [new PCCConstantContainer(1)])
 		
+	throwException: (comps...) ->
+		containerFromComp = (comp) ->
+			if comp instanceof PCCContainer then comp else new PCCConstantContainer(comp)
+		
+		container = null
+		if comps.length == 0
+			container = new PCCConstantContainer("Exception")
+		else
+			container = containerFromComp(comps.shift())
+		
+		while comps.length > 0
+			container = new PCCBinaryContainer(container, containerFromComp(comps.shift()), "^")
+		@emitOutput("exception", null, container)
+		@emitStop()
+		null
+			
 	
 	compileArrayWithCapacity: (size) ->
 		i = new PCCVariableContainer("i", PCCType.INT)
@@ -393,11 +458,13 @@ class PCCCompiler
 			compiler.emitInput("array_set", i, args[j+1])
 			compiler.emitProcessApplication("Array#{size}", args)
 			inner.setBranchFinished()
-		for j in [0...size-1]
+		for j in [0...size]
 			control = @emitChoice()
 			emitAccessors(@, i, size, j, args)
 			control.setBranchFinished()
-		emitAccessors(@, i, size, size-1, args)
+		#emitAccessors(@, i, size, size-1, args)
+		@emitCondition(new PCCBinaryContainer(index, new PCCConstantContainer(size), ">="))
+		@throwException("Index ", index, " is out of array bounds ([0..#{size-1}])!")
 		@endProcessDefinition()
 		
 		i = new PCCVariableContainer("next_i", PCCType.INT)
@@ -544,16 +611,22 @@ class PCCCompiler
 
 
 
-PCEnvironmentNode::compilerPushPDef = (pdef) ->
+PC.EnvironmentNode::compilerPushPDef = (pdef) ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
 	@PCCCompilerPDefs.push(pdef)
-PCVariable::compilerPushPDef = PCEnvironmentNode::compilerPushPDef
-PCEnvironmentNode::collectPDefs = ->
+PC.Variable::compilerPushPDef = PC.EnvironmentNode::compilerPushPDef
+PC.EnvironmentNode::collectPDefs = ->
 	@PCCCompilerPDefs = [] if !@PCCCompilerPDefs
-	@PCCCompilerPDefs.concat((c.collectPDefs() for c in @children).concatChildren())
-PCVariable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
+	@PCCCompilerPDefs.concat(SBArrayConcatChildren(c.collectPDefs() for c in @children))
+PC.Variable::collectPDefs = -> if @PCCCompilerPDefs then @PCCCompilerPDefs else []
 
 
+PC.Node::addCalculusComponent = (component) ->
+	@calculusComponents = [] if not @calculusComponents
+	@calculusComponents.push(component)
+PC.Node::getCalculusComponents = ->
+	@calculusComponents = [] if not @calculusComponents
+	@calculusComponents
 
 
 
@@ -595,5 +668,21 @@ class PCCConstructor
 			control.setBranchFinished()
 		@compiler.endProcessGroup()
 PCCConstructor.emitConstructor = (compiler, delegate, context) -> (new PCCConstructor(compiler, delegate, context)).emit()
+
+
+
+
+
+
+
+
+
+SBArrayConcatChildren = (array) ->
+	return [] if array.length == 0
+	target = array[..]
+	result = target.shift()[..]	# Result should always be a copy
+	while target.length > 0
+		result = result.concat(target.shift())
+	result
 	
 

@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 
+CCS = require "CCS"
+PC = require "PseuCo"
+PCC = require "CCSCompiler"
 
 
 UIEditorState = 
@@ -71,7 +74,7 @@ UILoad = ->
 	UI.toolTabBar = new UITabBar($$("tabBar"), $$("tabContent"))
 	UI.history = new UICCSHistory($$("history"))
 	UI.executor = new UIExecutor($$("runButton"))
-	UI.pseuCoEditor = new UIPseuCoHack($$("pseucoField"), $$("pseucoJSField"))
+	UI.pseuCoEditor = new UIPseuCoEditor($$("pseucoField"))#, $$("pseucoJSField"))
 	UI.ccsEditor = new UICCSEditor($$("ccsField"))
 	UI.app = new UIAppController(UI.pseuCoEditor, UI.ccsEditor, UI.executor, UI.console, UI.history)
 
@@ -82,3 +85,5 @@ UIError = (msg) -> UI.console.error(msg)
 
 
 registerLoadCallback UILoad
+
+window.UI = UI if window

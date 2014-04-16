@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 start = C:CCS { return C; }
 
 CCS
-  = PDefs:(Process)* _ System:Restriction _
+  = PDefs:(Process)* _ System:Restriction _ !.
 		                                { 
 		                                	var defs = [];
 		                                  	for (var i = 0; i < PDefs.length; i++) {
@@ -32,18 +32,20 @@ CCS
                                 
 
 Process
-  = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ "\n"
+  = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
-		                                  return new CCSProcessDefinition(n.name, P, params == "" ? null : params);
+		                                  return new CCSProcessDefinition(n.name, P, params ? params : null, line());
 		                                }
 
 
 
 
-Restriction	// ToDo: Fix: Star in combination with following actions is possible!
+Restriction
   = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  as; })?
   										{
-  											return res == "" ? P : new CCSRestriction(P, res);
+  											res = res ? new CCSRestriction(P, res) : P;
+  											res.line = line();
+  											return res;
   										}
 
 
@@ -112,7 +114,7 @@ Condition
 /*Match
   = a:Action _ "?" _ "=" _ e:expression
 									{ 
-										return new CCSMatch(a, (e == "") ? null : e); 
+										return new CCSMatch(a, e ? e : null); 
 									}*/
   								
 
@@ -126,7 +128,7 @@ Input
 Output
   = a:Action _ "!" e:(_ t:expression { return t; })?
 	  								{ 
-	  									return new CCSOutput(a, (e == "") ? null : e); 
+	  									return new CCSOutput(a, e ? e : null); 
 	  								}
 
 
@@ -141,7 +143,7 @@ SimpleAction
 Action
   = c:channel e:( "(" e:expression? ")" { return e; } )?
   									{
-  										if (e == "") e = null;
+  										if (!e) e = null;
   										return new CCSChannel(c, e);
   									}
 	                                
@@ -164,7 +166,7 @@ Trivial
   / _ n:name 
   		args:(_ "[" _ e:expression es:(_ "," _ e1:expression { return e1; })* _ "]" { es.unshift(e); return es; } )?
   			                     	{ 
-                                  		return new CCSProcessApplication(n.name, (typeof args == "string" ? null : args));
+                                  		return new CCSProcessApplication(n.name, args);
                                 	}
 
 name "name"
@@ -191,16 +193,43 @@ channel "channel"
 
 _ "whitespace"
   = [' '\n\r\t] _               {}
-  / '#' [^\n]* '\n' _           {}
+  / '#' inlineComment           {}
+  / '//' inlineComment			{}
+  / '(*' commentA _		{}
   / __             				{}   
 
 
 __ "inline whitespace"
   = [' '\t] __               {}
-  / '#' [^\n]* '\n' __           {}
-  / '#' [^\n]* ![^]             {}
-  / 
+  / '#' inlineCommentWhitespace           {}
+  / '//' inlineCommentWhitespace             {}
+  / '(*' commentA __		{}
+  / 			{}
+ 
 
+/*
+inlineComment
+  = [^\n\r]* [\n\r]+ _			{}
+
+inlineCommentWhitespace
+  = [^\n\r]* [\n\r]+ __			{}
+  / [^\n\r]* ![^]				{}
+*/
+
+inlineComment
+  = [^\n\r]* _			{}
+
+inlineCommentWhitespace
+  = [^\n\r]* __			{}
+  / [^\n\r]* !.				{}
+
+
+commentA
+	= "*)"		{ }
+	/ "*" !")" commentA		{}
+	/ "(*" commentA commentA		{}
+	/ "(" !"*" commentA		{}
+	/ f:[^*(] commentA		{}
 
 
 
@@ -229,11 +258,11 @@ expression
  	relationalExpression
  		= left:concatenatingExpression 
  			relational:( ___ op:( '<''=' / '>''=' / '<' / '>' ) ___ right:concatenatingExpression
- 				{ return [op, right]; } )*
+ 				{ if (op instanceof Array) {op = op.join("");} return [op, right]; } )*
  		{ 
  			while (relational.length > 0) {
  				t = relational.shift();
- 				left = new CCSEqualityExpression(left, t[1], t[0]);
+ 				left = new CCSRelationalExpression(left, t[1], t[0]);
  			}
  			return left;
  		}
@@ -294,7 +323,7 @@ expression
  		/ 'false' { return new CCSConstantExpression(false); }
  	
  	exp_integer "integer literal"
- 		= minus:('-')? digits:[0-9]+ { return new CCSConstantExpression(parseInt(minus + digits.join(""))); }
+ 		= minus:('-')? digits:[0-9]+ { return new CCSConstantExpression(parseInt((minus ? minus : "") + digits.join(""))); }
  		
  	
  	exp_string "string literal"
