@@ -43,18 +43,18 @@ class PCTEnvironmentController
 
 	getEnvironment: (node, id) ->
 		node = @_envStack.getBlockWithId(id)
-		throw new Error("Block not found!") if not node
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "BlockNotFound", "message" : "Block not found!"}) if not node
 		@_envStack = node
 		node
 
 	closeEnvironment: ->
-		throw new Error("No open environment!") if not @_envStack instanceof PCTEnvironmentNode
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "MissingEnvironment", "message" : "No open environment!"}) if not @_envStack instanceof PCTEnvironmentNode
 		@_envStack.node.isReturnExhaustive = @_envStack.isReturnExhaustive()
 		@_envStack = @_envStack.parent
 	
 	getClassWithName: (name) ->
 		result = @classes[name]
-		throw new Error("Unknown class '#{name}'") if result == undefined
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "UnknownClass", "message" : "Unknown class '#{name}'"}) if result == undefined
 		result
 	
 	getAllClasses: -> @root.getAllClasses()
@@ -80,18 +80,18 @@ class PCTEnvironmentController
 		@_processNewClass tnode
 	
 	_processNewClass: (node) ->
-		throw new Error("Class already registered!") if @classes[node.getName()]
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ClassError", "message" : "Class already registered!"}) if @classes[node.getName()]
 		@_envStack.addChild(node)
 		@classes[node.getName()] = node
 	
 	beginClass: (className) ->
 		node = @getClassWithName(className)
-		throw new Error("Node must not be null!") if not node
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "Error", "message" : "Node must not be null!"}) if not node
 		@_envStack = node
 		node
 		
 	endClass: ->
-		throw new Error("No class did begin!") if not @_envStack instanceof PCTClass
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ClassError", "message" : "No class did begin!"}) if not @_envStack instanceof PCTClass
 		@_envStack.node.isReturnExhaustive = @_envStack.isReturnExhaustive()
 		@_envStack = @_envStack.parent
 	
@@ -111,10 +111,10 @@ class PCTEnvironmentController
 			@_envStack = node
 			node
 		catch
-			throw new Error("Node must not be null!") if not node
+			throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "Error", "message" : "Node must not be null!"}) if not node
 	
 	endProcedure: ->
-		throw new Error("No procedure did begin!") if not @_envStack instanceof PCTProcedure
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ProcedureError", "message" : "No procedure did begin!"}) if not @_envStack instanceof PCTProcedure
 		@_envStack.node.isReturnExhaustive = @_envStack.isReturnExhaustive()
 		@_envStack = @_envStack.parent
 	
@@ -132,7 +132,7 @@ class PCTEnvironmentController
 		catch
 			@beginNewProcedure(node, "#mainAgent", new PCTType(PCTType.VOID), [])
 			return
-		throw ({"line" : node.line, "column" : node.column, "message" : "Main agent can't be declared twice!"})
+		throw ({"line" : node.line, "column" : node.column, "wholeFile" : false, "name" : "DuplicateMainAgent", "message" : "Main agent can't be declared twice!"})
 	
 	endMainAgent: ->
 		@endProcedure()
@@ -174,13 +174,13 @@ class PCTEnvironmentNode
 		child
 	getVariableWithName: (name, line, column) ->
 		if not @variables[name]?
-			throw ({"line" : line, "column" : column, "message" : "Variable '#{name}' wasn't declared."}) if not @parent?
+			throw ({"line" : line, "column" : column, "wholeFile" : false, "name" : "UndefinedVariable", "message" : "Variable '#{name}' wasn't declared."}) if not @parent?
 			@parent.getVariableWithName(name, line, column)
 		else
 			@variables[name]
 	getProcedureWithName: (name, line, column) ->
 		if not @procedures[name]?
-			throw ({"line" : line, "column" : column, "message" : "Procedure '#{name}' wasn't declared."}) if not @parent?
+			throw ({"line" : line, "column" : column, "wholeFile" : false, "name" : "UndefinedProcedure", "message" : "Procedure '#{name}' wasn't declared."}) if not @parent?
 			@parent.getProcedureWithName(name, line, column)
 		else
 			@procedures[name]
@@ -198,7 +198,7 @@ class PCTEnvironmentNode
 			if @parent?
 				@parent.getExpectedReturnValue()
 			else
-				throw new Error("Return statements are only allowed inside procedures!")
+				throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidLocation", "message" : "Return statements are only allowed inside procedures!"})
 	isReturnExhaustive: -> @isRetExhaust
 	setReturnExhaustive: -> @isRetExhaust = true
 	unsetReturnExhaustive: -> @isRetExhaust = false
@@ -242,7 +242,7 @@ class PCTVariable
 # TODO comment
 class PCTCycleChecker
 	constructor: (classTypes) ->
-		throw new Error("List of class types must not be empty!") if not classTypes?
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "Error", "message" : "List of class types must not be empty!"}) if not classTypes?
 		@classTypes = {}
 		@classTypes[type.getName()] = type for type in classTypes
 	cycleTraceForTypes: ->

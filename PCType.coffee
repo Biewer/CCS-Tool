@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class PCTType
 	constructor: (@kind) ->
-		throw new Error("Unknown kind of type!") if @kind < 0 || @kind > 14
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown kind of type!"}) if @kind < 0 || @kind > 14
 	isEqual: (type) ->
 		type.kind == @kind
 	isAssignableTo: (type) ->
