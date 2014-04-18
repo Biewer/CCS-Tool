@@ -289,7 +289,7 @@ AssignmentOperator
 	/ "-=" { return "-="; }
 
 SendExpression
-	= callExp:CallExpression _ "<!" _ exp:Expression { return new PCSendExpression(line(), column(), callExp, exp); }
+	= callExp:CallExpression _ "<!" _ exp:Expression _ { return new PCSendExpression(line(), column(), callExp, exp); }
 
 ConditionalExpression
 	= exp:ConditionalOrExpression rest:(_ "?" _ Expression _ ":" _ ConditionalExpression)? { return rest != null ? new PCConditionalExpression(line(), column(), exp, rest[3], rest[7]) : exp; }
@@ -349,7 +349,7 @@ MultiplicativeExpression
 																			var res = exp;
 																			for (var i = 0; i < rest.length; ++i)
 																			{
-																				res = new PCMultiplicative(line(), column(), res, rest[i][1], rest[i][3]);
+																				res = new PCMultiplicativeExpression(line(), column(), res, rest[i][1], rest[i][3]);
 																			}
 																			return res;
 																		}
@@ -363,7 +363,7 @@ PostfixExpression
 	= dest:AssignDestination _ op:("++" / "--") { return new PCPostfixExpression(line(), column(), dest, op); }
 
 ReceiveExpression
-	= op:(_ "<?")* _  exp:CallExpression	{
+	= op:(_ "<?")* _  exp:CallExpression _	{
 												var res = exp;
 												for (var i = 0; i < op.length; i++)
 												{
@@ -387,7 +387,7 @@ Arguments
 	= "(" _ expList:(ExpressionList)? _ ")" { return expList != null ? expList : []; }
 
 MonCall
-	= exp:PrimaryExpression call:("." ProcCall)+	{
+	= exp:PrimaryExpression call:(_ "." _ ProcCall)+	{
 														var res = new PCClassCall(line(), column(), exp, call[0][1]);
 														for (var i = 1; i < call.length; ++i)
 														{
@@ -409,7 +409,7 @@ ArrayExpression
 PrimaryExpression
 	= exp:Literal { return new PCLiteralExpression(line(), column(), exp); }
 	/ exp:Identifier { return new PCIdentifierExpression(line(), column(), exp); }
-	/ "(" exp:Expression ")" { return exp; }
+	/ "(" _ exp:Expression _ ")" { return exp; }
 
 Literal
 	= literal:IntegerLiteral { return literal; }
@@ -448,7 +448,7 @@ Statement
 	/ "continue" _ ";" { return new PCStatement(new PCContinueStmt(line(), column())); }
 	/ stmt:ReturnStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:PrimitiveStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:StatementExpression ";" { return new PCStatement(line(), column(), stmt); }
+	/ stmt:StatementExpression _ ";" { return new PCStatement(line(), column(), stmt); }
 	/ _ ";" { return new PCStatement(line(), column()); }
 
 StatementExpression
@@ -471,7 +471,7 @@ StatementExpressionList
 																		}
 
 SelectStatement
-	= "select" __ "{" __ stmts:(CaseStatement)+ __ "}"	{
+	= "select" __ "{" __ stmts:(CaseStatement __ )+ __ "}"	{
 															var caseStmts = [line(), column()];
 															for (var i = 0; i < stmts.length; ++i)
 															{
