@@ -35,6 +35,17 @@ DP = (i) -> 		# remove?
 	ccs.performStep(DSteps[i])
 	DS()
 
+
+class Environment
+	constructor: -> @env = {}
+	getValue: (id) ->
+		res = @env[id]
+		throw new Error("Unbound identifier \"#{id}\"!") if ! res
+		res
+	setValue: (id, type) ->
+		@env[id] = type
+	hasValue: (id) -> if @env[id] then true else false
+
 CCSTypeUnknown = 3
 CCSTypeChannel = 1
 CCSTypeValue = 2
@@ -45,12 +56,9 @@ CCSGetMostGeneralType = (t1, t2) ->
 	return t1 if t1 == t2
 	throw new Error("Incopatible Types: #{t1} and #{t2}!");
 
-class CCSEnvironment
-	constructor: (@ccs) -> @env = {}
-	getType: (id) ->
-		res = @env[id]
-		throw new Error("Unbound identifier \"#{id}\"!") if ! res
-		res
+class CCSEnvironment extends Environment
+	constructor: (@ccs) -> super()
+	getType: (id) -> @getValue id
 	setType: (id, type) ->
 		now = @env[id]
 		if now
@@ -58,7 +66,7 @@ class CCSEnvironment
 			@env[id] = CCSGetMostGeneralType(now, type)
 		else
 			@env[id] = type
-	hasType: (id) -> if @env[id] then true else false
+	hasType: (id) -> @hasValue id
 
 
 # - CCS
@@ -162,9 +170,10 @@ class CCSProcess
 		false
 	
 	getApplicapleRules: -> []
-	getPossibleSteps: (copyOnPerform) -> 
+	_getPossibleSteps: (copyOnPerform) -> 
 		copyOnPerform = false if not copyOnPerform
-		SBArrayConcatChildren(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules())
+		res = SBArrayConcatChildren(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules())
+	getPossibleSteps: (copyOnPerform) -> CCSExpandInput(@_getPossibleSteps copyOnPerform)
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
@@ -465,6 +474,11 @@ class CCSValueSet
 				val >= @min and val <= @max
 			else
 				false
+	possibleValues: ->
+		if @type == "string"
+			return ["todo"]
+		else
+			return [@min..@max]
 	
 
 # - Input
@@ -488,7 +502,7 @@ class CCSInput extends CCSAction
 				throw new Error("Unbounded input variable \"#{@variable}\"") if not @range
 		super
 	
-	toString: (mini) -> "#{super}?#{ if @supportsValuePassing() then @variable else ""}"
+	toString: (mini, inputValue) -> "#{super}?#{ if @supportsValuePassing() then (if inputValue then inputValue else @variable) else ""}"
 	transferDescription: (inputValue) -> 
 		if @supportsValuePassing() and (inputValue == null or inputValue == undefined)
 			throw new Error("CCSInput.transferDescription needs an input value as argument if it supports value passing!") 

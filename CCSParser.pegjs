@@ -18,23 +18,32 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+{
+	var rangeDefinitions = new Environment();
+}
+
 start = C:CCS { return C; }
 
 CCS
-  = PDefs:(Process)* _ System:Restriction _ !.
+  = PDefs:(Process/RangeDefinition)* _ System:Restriction _ !.
 		                                { 
 		                                	var defs = [];
 		                                  	for (var i = 0; i < PDefs.length; i++) {
-		                                  		defs.push(PDefs[i]);
+		                                  		if (PDefs[i])
+		                                  			defs.push(PDefs[i]);
 		                                  	}
 		                                  	return new CCS(defs, System);
 		                                }
                                 
 
+RangeDefinition
+  = _ "range" _ id:name _ ":=" _ r:CoreRange _ { rangeDefinitions.setValue(id, r); return null; }
+
+
 Process
   = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
-		                                  return new CCSProcessDefinition(n.name, P, params ? params : null, line());
+		                                  return new CCSProcessDefinition(n, P, params ? params : null, line());
 		                                }
 
 
@@ -119,9 +128,10 @@ Condition
   								
 
 Input
-  = a:Action _ "?" v:(_ t:identifier { return t; })?
+  = a:Action _ "?" v:(_ t:ValueIdentifier { return t; })?
 	  								{ 
-	  									return new CCSInput(a, v); 
+	  									if (!v) v = [null, null];
+	  									return new CCSInput(a, v[0], v[1]); 
 	  								}
 
 
@@ -166,20 +176,32 @@ Trivial
   / _ n:name 
   		args:(_ "[" _ e:expression es:(_ "," _ e1:expression { return e1; })* _ "]" { es.unshift(e); return es; } )?
   			                     	{ 
-                                  		return new CCSProcessApplication(n.name, args);
+                                  		return new CCSProcessApplication(n, args);
                                 	}
 
 name "name"
-  = first:[A-Z] rest:[A-Za-z0-9_]* { return {name: first + rest.join(''), line: line, column: column}; }
+  = first:[A-Z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
 
 // The following rules are the same, but they have different names which makes error messages better understandable!
 identifier "identifier"
   = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
 
+ValueIdentifier
+  = id:identifier __ r:(InlineRange)?	{ return [id, r]; }
+ 
+InlineRange
+  = _ ":" _ r:CoreRange		{ return r; }
+
+CoreRange
+  = a:int ".." b:int	{ return new CCSValueSet("number", a, b); }
+  / a:("$"*) ".." b:("$"+) { return new CCSValueSet("string", a.length, b.length); }
+  / id:name { return rangeDefinitions.getValue(id); }
+
+
 channel "channel"
   = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
   
- int "integer"
+int "integer"
   = "0" { return 0; }
   	/ first:[1-9] rest:[0-9]* { return parseInt(first + rest.join('')); }
  
