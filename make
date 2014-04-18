@@ -11,12 +11,15 @@ ccsmain:
 ccsparser:
 						pegjs -e CCSParser CCSParser.pegjs node_modules/CCS/_parser.js
 
+pcparser:
+						pegjs -e PseuCoParser PseuCoParser.pegjs node_modules/PseuCo/_parser.js
+
 
 PCC:
 						coffee -c -b -j node_modules/CCSCompiler/CCSCompiler.js PCCCompiler.coffee PCCProcessFrame.coffee PCCProgramController.coffee PCCContainer.coffee PCCCompilerStack.coffee PseuCo+Compiler.coffee PCCExecutor.coffee PCCExport.coffee
 
 
-PC:		pctree
+PC:		pctree pcparser
 						cat node_modules/PseuCo/_parser.js node_modules/PseuCo/_tree.js > node_modules/PseuCo/PseuCo.js
 
 
