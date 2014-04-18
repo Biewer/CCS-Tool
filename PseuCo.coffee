@@ -43,7 +43,7 @@ class PCNode
 			@_type = true if not @_type		# remember that we already checked type
 		if @_type == true then null else @_type
 	_collectEnvironment: (env) -> null
-	_getType: -> throw new Error("Not implemented")
+	_getType: -> throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "Error", "message" : "Not implemented"})
 	insideMonitor: ->
 		if @parent
 			@parent.insideMonitor()
@@ -78,10 +78,10 @@ class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDec
 		try
 			env.getProcedureWithName("#mainAgent")
 		catch
-			throw new Error("You must define a main agent!")
+			throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "UndefinedMainAgent", "message" : "You must define a main agent!"})
 		cycleChecker = new PCTCycleChecker(env.getAllClasses())
 		trace = cycleChecker.cycleTraceForTypes()
-		throw new Error("Monitor/structure cycle detected: #{trace}!") if trace
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ClassStructureCycle", "message" : "Monitor/structure cycle detected: #{trace}!"}) if trace
 		null
 
 # - MainAgent Decl
@@ -141,7 +141,7 @@ class PCProcedureDecl extends PCNode	# Children: PCFormalParameter objects
 		child.getType(env) for child in @children
 		env.setReturnExhaustive() if @getBody().isReturnExhaustive
 		if not (@getResultType().type is PCSimpleType.VOID)
-			throw ({"line" : @line, "column" : @column, "message" : "In your procedure it might be possible that for some conditions no value gets returned."}) if not env.isReturnExhaustive()
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "ReturnNotExhaustive", "message" : "In your procedure it might be possible that for some conditions no value gets returned."}) if not env.isReturnExhaustive()
 		env.endProcedure()
 		proc
 
@@ -232,8 +232,8 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 	# Type checking
 	_getType: (env) ->
 		type = @children[0].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Conditions can only be declared inside monitors!"}) if not @insideMonitor()
-		throw ({"line" : @line, "column" : @column, "message" : "Expressions assigned to condition must be boolean, not #{type}"}) if not type.isEqual(new PCTType(PCTType.BOOL))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidLocation", "message" : "Conditions can only be declared inside monitors!"}) if not @insideMonitor()
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expressions assigned to condition must be boolean, not #{type}"}) if not type.isEqual(new PCTType(PCTType.BOOL))
 		env._processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
 		null
 
@@ -262,7 +262,7 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 		for child in @children[1..]
 			type = child._getType(env, @type)
 			if type? and not @type.isEqual(type)
-				throw ({"line" : @line, "column" : @column, "message" : "You can't initialize variable of type #{@type} with value of type #{type}"})
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "You can't initialize variable of type #{@type} with value of type #{type}"})
 		null
 
 # PCDeclStmt is temporary available for convenience reasons!
@@ -303,14 +303,14 @@ class PCVariableInitializer extends PCNode	# array initialization >= 1 child ini
 	# Type checking
 	_getType: (env, targetType) ->
 		if @children.length is 0
-			throw ({"line" : @line, "column" : @column, "message" : "Empty array initializations aren't allowed!"})
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "EmptyInitialization", "message" : "Empty array initializations aren't allowed!"})
 			type = targetType
 		else
 			if @isArray()
 				type = @children[0]._getType(env, targetType.elementsType)
 				for child in @children[1..]
 					childType = child._getType(env, targetType.elementsType)
-					throw ({"line" : @line, "column" : @column, "message" : "Types of elements of an array must be equal! Found #{type} and #{childType}"}) if not type.isEqual(childType)
+					throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Types of elements of an array must be equal! Found #{type} and #{childType}"}) if not type.isEqual(childType)
 				if @isUncompletedArray
 					type = new PCTArrayType(type, targetType.capacity)
 				else
@@ -341,7 +341,7 @@ class PCBaseType extends PCNode	# abstract (?)
 
 class PCSimpleType extends PCBaseType
 	constructor: (line, column, @type) ->
-		throw "Unknown type" if @type < 0 or @type > 5
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type"}) if @type < 0 or @type > 5
 		super line, column, []...
 	
 	_getType: -> new PCTTypeType(new PCTType(PCSimpleType.typeToTypeKind(@type)))
@@ -362,7 +362,7 @@ PCSimpleType.typeToString = (type) ->
 		when PCSimpleType.STRING then "string"
 		when PCSimpleType.MUTEX then "mutex"
 		when PCSimpleType.AGENT then "agent"
-		else throw new Error("Unknown type!")
+		else throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type!"})
 PCSimpleType.typeToTypeKind = (type) ->
 	switch type
 		when PCSimpleType.MUTEX then PCTType.MUTEX
@@ -371,7 +371,7 @@ PCSimpleType.typeToTypeKind = (type) ->
 		when PCSimpleType.BOOL then PCTType.BOOL
 		when PCSimpleType.INT then PCTType.INT
 		when PCSimpleType.STRING then PCTType.STRING
-		else throw new Error("Unknown type!")
+		else throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type!"})
 
 
 # - Channel Type
@@ -405,7 +405,7 @@ class PCStartExpression extends PCExpression	# One child: procedure or monitor c
 
 	# Type checking
 	_getType: (env) ->
-		throw ({"line" : @line, "column" : @column, "message" : "Start primitives are only allowed in procedures!"}) if not @insideProcedure()
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidLocation", "message" : "Start primitives are only allowed in procedures!"}) if not @insideProcedure()
 		@children[0].getType(env)
 		new PCTType(PCTType.AGENT)
 
@@ -422,17 +422,17 @@ class PCAssignExpression extends PCExpression
 	_getType: (env) ->
 		dest = @children[0].getType(env)
 		exp = @children[1].getType(env)
-		err = ({"line" : @line, "column" : @column, "message" : "You tried to assign #{exp} to #{dest}"})
+		err = ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "You tried to assign #{exp} to #{dest}"})
 		if @operator is "+="
 			if exp.isEqual(new PCTType(PCTType.STRING))
 				throw err if not dest.isEqual(new PCTType(PCTType.STRING))
 			else if exp.isEqaul(new PCTType(PCTType.INT))
 				throw err if not dest.isEqual(new PCTType(PCTType.INT)) and not dest.isEqual(new PCTType(PCTType.STRING))
 			else
-				throw ({"line" : @line, "column" : @column, "message" : "Operator '+=' is only allowed with integers and strings, but not #{exp}"})
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Operator '+=' is only allowed with integers and strings, but not #{exp}"})
 			return dest
 		else if @operator is not "="
-			throw ({"line" : @line, "column" : @column, "message" : "Operator '#{op}' is only allowed with integers, but not #{dest}"}) if not dest.isEqual(new PCTType(PCTType.INT))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Operator '#{op}' is only allowed with integers, but not #{dest}"}) if not dest.isEqual(new PCTType(PCTType.INT))
 		throw err if not exp.isAssignableTo(dest)
 		return dest
 
@@ -447,8 +447,8 @@ class PCAssignDestination extends PCNode	# Variable or array element
 		type = env.getVariableWithName(@identifier, @line, @column).type
 		for child in @children
 			childType = child.getType(env)
-			throw ({"line" : @line, "column" : @column, "message" : "You use array access on a non-array: #{type}"}) if not (type instanceof PCTArrayType)
-			throw ({"line" : @line, "column" : @column, "message" : "Array index must be an integer value, not #{childType}"}) if not childType.isEqual(new PCTType(PCTType.INT))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "You use array access on a non-array: #{type}"}) if not (type instanceof PCTArrayType)
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Array index must be an integer value, not #{childType}"}) if not childType.isEqual(new PCTType(PCTType.INT))
 			type = type.elementsType
 		type
 
@@ -461,8 +461,8 @@ class PCSendExpression extends PCExpression	# Children: First: The expression th
 	_getType: (env) ->
 		left = @children[0].getType(env)
 		right = @children[1].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Channel expected but found #{left}"}) if not left instanceof PCTChannelType
-		throw ({"line" : @line, "column" : @column, "message" : "Values of type #{right} can't be sent over channels for #{left.channeledType}"}) if not left.channeledType.isEqual(right)
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Channel expected but found #{left}"}) if not left instanceof PCTChannelType
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Values of type #{right} can't be sent over channels for #{left.channeledType}"}) if not left.channeledType.isEqual(right)
 		right
 	
 	usesSendOrReceiveOperator: -> true
@@ -474,8 +474,8 @@ class PCConditionalExpression extends PCExpression	# Three children
 
 	# Type checking
 	_getType: (env) ->
-		throw ({"line" : @line, "column" : @column, "message" : "Value of type bool expected instead of #{@children[0].getType(env)} in conditional expression!"}) if not @children[0].getType(env).isEqual(new PCTType(PCTType.BOOL))
-		throw ({"line" : @line, "column" : @column, "message" : "Type of consequence and alternative must be the same! You have #{@children[1].getType(env)} and #{@children[2].getType(env)} instead."}) if not @children[1].getType(env).isEqual(@children[2].getType(env))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Value of type bool expected instead of #{@children[0].getType(env)} in conditional expression!"}) if not @children[0].getType(env).isEqual(new PCTType(PCTType.BOOL))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of consequence and alternative must be the same! You have #{@children[1].getType(env)} and #{@children[2].getType(env)} instead."}) if not @children[1].getType(env).isEqual(@children[2].getType(env))
 		@children[1].getType(env)
 
 # - Or Expression
@@ -486,7 +486,7 @@ class PCOrExpression extends PCExpression # 2 children
 	# Type checking
 	_getType: (env) ->
 		for child in @children
-			throw ({"line" : @line, "column" : @column, "message" : "Value of type bool expected instead of #{child.getType(env)} in 'or' expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.BOOL))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Value of type bool expected instead of #{child.getType(env)} in 'or' expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.BOOL))
 		new PCTType(PCTType.BOOL)
 
 # - And Expression
@@ -497,7 +497,7 @@ class PCAndExpression extends PCExpression # 2 children
 	# Type checking
 	_getType: (env) ->
 		for child in @children
-			throw ({"line" : @line, "column" : @column, "message" : "Value of type bool expected instead of #{child.getType(env)} in 'and' expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.BOOL))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Value of type bool expected instead of #{child.getType(env)} in 'and' expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.BOOL))
 		new PCTType(PCTType.BOOL)
 
 # - Equality Expression
@@ -508,7 +508,7 @@ class PCEqualityExpression extends PCExpression
 
 	# Type checking
 	_getType: (env) ->
-		throw ({"line" : @line, "column" : @column, "message" : "Types in equality expression must be the same! You have #{@children[0].getType(env)} and #{@children[1].getType(env)} instead."}) if not @children[0].getType(env).isEqual(@children[1].getType(env))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Types in equality expression must be the same! You have #{@children[0].getType(env)} and #{@children[1].getType(env)} instead."}) if not @children[0].getType(env).isEqual(@children[1].getType(env))
 		new PCTType(PCTType.BOOL)
 
 # - Relational Expression
@@ -520,7 +520,7 @@ class PCRelationalExpression extends PCExpression
 	# Type checking
 	_getType: (env) ->
 		for child in @children
-			throw ({"line" : @line, "column" : @column, "message" : "Value of type int expected instead of #{child.getType(env)} in relational expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.INT))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Value of type int expected instead of #{child.getType(env)} in relational expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.INT))
 		new PCTType(PCTType.BOOL)
 
 # - Additive Expression
@@ -537,7 +537,7 @@ class PCAdditiveExpression extends PCExpression
 				if child.getType(env).isEqual(new PCTType(PCTType.STRING))
 					isString = true
 				else
-					throw ({"line" : @line, "column" : @column, "message" : "Illegal type in additive expression #{child.getType(env)}!"})
+					throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Illegal type in additive expression #{child.getType(env)}!"})
 		if isString
 			new PCTType(PCTType.STRING)
 		else
@@ -552,7 +552,7 @@ class PCMultiplicativeExpression extends PCExpression
 	# Type checking
 	_getType: (env) ->
 		for child in @children
-			throw ({"line" : @line, "column" : @column, "message" : "Value of type int expected instead of #{child.getType(env)} in multiplicative expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.INT))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Value of type int expected instead of #{child.getType(env)} in multiplicative expression!"}) if not child.getType(env).isEqual(new PCTType(PCTType.INT))
 		new PCTType(PCTType.INT)
 
 # - Unary Expression
@@ -565,9 +565,9 @@ class PCUnaryExpression extends PCExpression
 	_getType: (env) ->
 		type = @children[0].getType(env)
 		if @operator is "+" or @operator is "-"
-			throw ({"line" : @line, "column" : @column, "message" : "Operators '+' and '-' can only be used with integers, not with #{type}!"}) if not type.isEqual(new PCTType(PCTType.INT))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Operators '+' and '-' can only be used with integers, not with #{type}!"}) if not type.isEqual(new PCTType(PCTType.INT))
 		else if @operator is "!"
-			throw ({"line" : @line, "column" : @column, "message" : "Operator '!' can only be used with booleans, not with #{type}!"}) if not type.isEqual(new PCTType(PCTType.BOOL))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Operator '!' can only be used with booleans, not with #{type}!"}) if not type.isEqual(new PCTType(PCTType.BOOL))
 		type
 
 # - Postfix Expression
@@ -578,7 +578,7 @@ class PCPostfixExpression extends PCExpression
 
 	# Type checking
 	_getType: (env) ->
-		throw ({"line" : @line, "column" : @column, "message" : "Increment and decrement can only be used with integers, not with #{@children[0].getType(env)}!"}) if not @children[0].getType(env).isEqual(new PCTType(PCTType.INT))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Increment and decrement can only be used with integers, not with #{@children[0].getType(env)}!"}) if not @children[0].getType(env).isEqual(new PCTType(PCTType.INT))
 		new PCTType(PCTType.INT)
 
 # - Receive Expression
@@ -604,13 +604,13 @@ class PCProcedureCall extends PCExpression
 	# Type checking
 	_getType: (env, className) ->
 		proc = @getProcedure(env, className)
-		throw ({"line" : @line, "column" : @column, "message" : "No arguments for procedure that requires arguments!"}) if @children.length == 0 and proc.arguments.length > 0
-		throw ({"line" : @line, "column" : @column, "message" : "Arguments were passed to procedure without arguments!"}) if @children.length > 0 and proc.arguments.length == 0
-		throw ({"line" : @line, "column" : @column, "message" : "More arguments than requiered were passed to procedure!"}) if @children.length > proc.arguments.length
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "No arguments for procedure that requires arguments!"}) if @children.length == 0 and proc.arguments.length > 0
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Arguments were passed to procedure without arguments!"}) if @children.length > 0 and proc.arguments.length == 0
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "More arguments than requiered were passed to procedure!"}) if @children.length > proc.arguments.length
 		for arg, i in proc.arguments
 			type = arg.type
-			throw ({"line" : @line, "column" : @column, "message" : "Procedure expected argument of type #{type}, but got none!"}) if i >= @children.length
-			throw ({"line" : @line, "column" : @column, "message" : "Argument number #{i + 1} should have type #{type}, but is #{@children[i].getType(env)}"}) if not @children[i].getType(env).isAssignableTo(type)
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Procedure expected argument of type #{type}, but got none!"}) if i >= @children.length
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Argument number #{i + 1} should have type #{type}, but is #{@children[i].getType(env)}"}) if not @children[i].getType(env).isAssignableTo(type)
 		proc.returnType
 
 # - Class Call
@@ -622,7 +622,7 @@ class PCClassCall extends PCExpression	# 2 children: expression that returns cla
 	# Type checking
 	_getType: (env) ->
 		type = @children[0].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Incorrect type left to '.' (point). Expected a monitor or struct object, but found #{type}"}) if not (type instanceof PCTClassType)
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Incorrect type left to '.' (point). Expected a monitor or struct object, but found #{type}"}) if not (type instanceof PCTClassType)
 		@children[1].getType(env, @children[0].getType(env).identifier)
 
 # - Array Expression
@@ -641,9 +641,9 @@ class PCArrayExpression extends PCExpression	# 2 children
 	# Type checking
 	_getType: (env) ->
 		type = @children[0].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "You use array access on a non-array: #{type}"}) if not (type instanceof PCTArrayType)
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "You use array access on a non-array: #{type}"}) if not (type instanceof PCTArrayType)
 		childType = @children[1].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Array index must be an integer value, not #{childType}"}) if not childType.isEqual(new PCTType(PCTType.INT))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Array index must be an integer value, not #{childType}"}) if not childType.isEqual(new PCTType(PCTType.INT))
 		type = type.elementsType
 		type
 
@@ -804,7 +804,7 @@ class PCCase extends PCNode
 	# Type checking
 	_getType: (env) ->
 		child.getType(env) for child in @children
-		throw ({"line" : @line, "column" : @column, "message" : "case condition requires at least one send or receive operation."}) if @children.length > 1 and not @children[0].usesSendOrReceiveOperator()
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "case condition requires at least one send or receive operation."}) if @children.length > 1 and not @children[0].usesSendOrReceiveOperator()
 		if @children[0] instanceof PCStatement and @children[0].children[0]? and @children[0].children[0] instanceof PCStmtBlock
 			@isReturnExhaustive = @children[0].children[0].isReturnExhaustive
 		new PCTType(PCTType.VOID)
@@ -824,7 +824,7 @@ class PCIfStmt extends PCNode
 	# Type checking
 	_getType: (env) ->
 		expType = @children[0].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
 		env.getEnvironment(@, @.__id)
 		@children[1].getType(env)
 		@children[2].getType(env) if @children.length > 2
@@ -853,7 +853,7 @@ class PCWhileStmt extends PCNode
 	# Type checking
 	_getType: (env) ->
 		expType = @children[0].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
 		env.getEnvironment(@, @.__id)
 		@children[1].getType(env)
 		env.closeEnvironment()
@@ -877,7 +877,7 @@ class PCDoStmt extends PCNode
 		@children[0].getType(env)
 		env.closeEnvironment()
 		expType = @children[1].getType(env)
-		throw ({"line" : @line, "column" : @column, "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
 		new PCTType(PCTType.VOID)
 
 # - For Statement
@@ -903,7 +903,7 @@ class PCForStmt extends PCNode		# Add PCForUpdate class?
 		env.getEnvironment(@, @__id)
 		@init.getType(env) if @init
 		expType = @expression.getType(env) if @expression?
-		throw ({"line" : @line, "column" : @column, "message" : "Type of condition must be bool not #{expType}"}) if expType? and not expType.isEqual(new PCTType(PCTType.BOOL))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of condition must be bool not #{expType}"}) if expType? and not expType.isEqual(new PCTType(PCTType.BOOL))
 		update.getType(env) for update in @update
 		@body.getType(env)
 		env.closeEnvironment()
@@ -936,7 +936,7 @@ class PCReturnStmt extends PCNode
 		type = @children[0].getType(env) if @children.length > 0
 		type = new PCTType(PCTType.VOID) if not type?
 		expectedType = env.getExpectedReturnValue()
-		throw ({"line" : @line, "column" : @column, "message" : "Expression of type #{type} doesn't match expected return type #{expectedType} for procedure."}) if not type.isEqual(expectedType)
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expression of type #{type} doesn't match expected return type #{expectedType} for procedure."}) if not type.isEqual(expectedType)
 		env.setReturnExhaustive()
 
 # - Primitive Statements
@@ -954,15 +954,15 @@ class PCPrimitiveStmt extends PCNode
 		@_type = @children[0].getType(env) if @children.length > 0
 		switch @kind
 			when PCPrimitiveStmt.JOIN
-				throw ({"line" : @line, "column" : @column, "message" : "join must be applied on agents, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.AGENT))
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "join must be applied on agents, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.AGENT))
 			when PCPrimitiveStmt.LOCK, PCPrimitiveStmt.UNLOCK
-				throw ({"line" : @line, "column" : @column, "message" : "lock and unlock must be applied on mutex objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.MUTEX))
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "lock and unlock must be applied on mutex objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.MUTEX))
 			when PCPrimitiveStmt.WAIT
-				throw ({"line" : @line, "column" : @column, "message" : "waitForCondition can only be used in monitors!"}) if not @insideMonitor()
-				throw ({"line" : @line, "column" : @column, "message" : "waitForCondition must be applied on condition or boolean objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.Bool)) and not @_type.isEqual(new PCTType(PCTType.CONDITION))
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "waitForCondition can only be used in monitors!"}) if not @insideMonitor()
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "waitForCondition must be applied on condition or boolean objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.Bool)) and not @_type.isEqual(new PCTType(PCTType.CONDITION))
 			when PCPrimitiveStmt.SIGNAL, PCPrimitiveStmt.SIGNAL_ALL
-				throw ({"line" : @line, "column" : @column, "message" : "signal and signalAll can only be used in monitors!"}) if not @insideMonitor()
-				throw ({"line" : @line, "column" : @column, "message" : "signal and signalAll must be applied on condition objects, not #{@_type}!"}) if @children.length > 0 and not @_type.isEqual(new PCTType(PCTType.CONDITION))
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "signal and signalAll can only be used in monitors!"}) if not @insideMonitor()
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "signal and signalAll must be applied on condition objects, not #{@_type}!"}) if @children.length > 0 and not @_type.isEqual(new PCTType(PCTType.CONDITION))
 		new PCTType(PCTType.VOID)
 
 PCPrimitiveStmt.JOIN = 0
@@ -994,6 +994,6 @@ class PCPrintStmt extends PCNode
 	_getType: (env) ->
 		for child in @children
 			type = child.getType(env)
-			throw ({"line" : @line, "column" : @column, "message" : "println can only process strings and integers, but no #{type}!"}) if not type.isEqual(new PCTType(PCTType.STRING)) and not type.isEqual(new PCTType(PCTType.INT))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "println can only process strings and integers, but no #{type}!"}) if not type.isEqual(new PCTType(PCTType.STRING)) and not type.isEqual(new PCTType(PCTType.INT))
 		new PCTType(PCTType.VOID)
 
