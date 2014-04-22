@@ -105,7 +105,7 @@ class CCS
 
 # - ProcessDefinition
 class CCSProcessDefinition
-	constructor: (@name, @process, @params, @line=0) ->					# string x Process x string*
+	constructor: (@name, @process, @params, @line=0) ->					# string x Process x CCSVariable*
 	
 	getArgCount: -> if @params then @params.length else 0
 	setCCS: (@ccs) -> 
@@ -113,7 +113,7 @@ class CCSProcessDefinition
 		@env = new CCSEnvironment(@ccs)
 		if @params
 			for x in @params
-				@env.setType(x, CCSTypeUnknown)
+				@env.setType(x.name, CCSTypeUnknown)
 	computeTypes: (penv) -> 
 		if not @ccs.allowUnguardedRecursion and @process.isUnguardedRecursion()
 			e = new Error("Unguarded recursion") 
@@ -215,10 +215,13 @@ class CCSProcessApplication extends CCSProcess
 		@process = pd.process.copy()
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
-				id = pd.params[i]
-				if pd.env.getType(pd.params[i]) == CCSTypeChannel
+				id = pd.params[i].name
+				if pd.env.getType(id) == CCSTypeChannel
 					@process.replaceChannelName(id, @valuesToPass[i].variableName)
 				else
+					if !(pd.params[i].allowsValue(@valuesToPass[i].evaluate()))
+						@process = null
+						return null
 					@process.replaceVariable(id, @valuesToPass[i])	
 		@process
 	getPrecedence: -> 12
@@ -235,7 +238,7 @@ class CCSProcessApplication extends CCSProcess
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
 				type = @valuesToPass[i].computeTypes(env, true)
-				pd.env.setType(pd.params[i], type)
+				pd.env.setType(pd.params[i].name, type)
 		super
 	isUnguardedRecursion: -> true
 	
@@ -460,6 +463,16 @@ CCSInternalActionCreate = (name) ->
 	new CCSSimpleAction(new CCSChannel(name, null))
 
 
+
+class CCSVariable
+	constructor: (@name, @set) -> throw new Error("Illegal variable name") if typeof @name != "string" or @name.length == 0
+	allowsValue: (value) -> if @set then @set.allowsValue value else true
+	possibleValues: ->
+		throw new Error("Cannot generate infinite values for unrestricted variables!") if not @set
+		@set.possibleValues()
+	toString: -> "#{@name}#{if @set then ":"+@set.toString() else ""}"
+
+
 class CCSValueSet
 	constructor: (@type, @min, @max) ->
 		throw new Error("Unknown Type") if @type != "string" and @type != "number"
@@ -476,33 +489,69 @@ class CCSValueSet
 				false
 	possibleValues: ->
 		if @type == "string"
-			return ["todo"]
+			res = [""]
+			t = []
+			for i in [0...@min] by 1
+				for s in res
+					for c in CCSValueSet.allowedChars
+						t.push(s+c)
+				res = t
+				t = []
+			for i in [@min...@max] by 1
+				for s in res
+					for c in CCSValueSet.allowedChars
+						t.push(s+c)
+				res = res.concat(t)
+			res
 		else
-			return [@min..@max]
+			[@min..@max]
+	toString: ->
+		if @type == "string"
+			res = ""
+			for i in [0...@min] by 1
+				res += "$"
+			res += ".."
+			for i in [0...@max] by 1
+				res += "$"
+			res
+		else
+			"#{@min}..#{@max}"
+
+
+CCSValueSet.allowedChars = (->
+	res = []
+	for i in [65..90] by 1
+		res.push(String.fromCharCode(i))
+	for i in [97..122] by 1
+		res.push(String.fromCharCode(i))
+	res.push("-")
+	res
+)()
 	
 
 # - Input
 class CCSInput extends CCSAction
-	constructor: (channel, @variable, @range) -> 		# CCSChannel x string x CCSValueSet
+	constructor: (channel, @variable) -> 		# CCSChannel x CCSVariable
 		super channel
 	
 	isInputAction: -> true
-	supportsValuePassing: -> typeof @variable == "string" and @variable.length > 0
-	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and action.supportsValuePassing() == this.supportsValuePassing()
+	supportsValuePassing: -> if @variable then true else false
+	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and (if action.supportsValuePassing() then @supportsValuePassing() and @variable.allowsValue(action.expression.evaluate()) else not @supportsValuePassing())
 	replaceVariable: (varName, exp) -> 
 		super varName, exp
-		@variable != varName	# stop replacing if identifier is equal to its own variable name
-	allowsValueAsInput: (value) ->
-		if @range then @range.allowsValue(value) else true
+		@variable.name != varName	# stop replacing if identifier is equal to its own variable name
+	allowsValueAsInput: (value) -> @variable.allowsValue(value)
 	
 	computeTypes: (env) ->
 		if @supportsValuePassing()
-			env.setType(@variable, CCSTypeValue) 
+			env.setType(@variable.name, CCSTypeValue) 
 			if env.hasType(@channel.name) or not env.ccs.allowsUnboundedInputOnChannelName(@channel.name)
-				throw new Error("Unbounded input variable \"#{@variable}\"") if not @range
+				throw new Error("Unbounded input variable \"#{@variable}\"") if not @variable.set
 		super
 	
-	toString: (mini, inputValue) -> "#{super}?#{ if @supportsValuePassing() then (if inputValue then inputValue else @variable) else ""}"
+	toString: (mini, inputValue) -> 
+		inputValue = null if inputValue == undefined
+		"#{super}?#{ if @supportsValuePassing() then (if inputValue != null then CCSBestStringForValue inputValue else @variable.toString()) else ""}"
 	transferDescription: (inputValue) -> 
 		if @supportsValuePassing() and (inputValue == null or inputValue == undefined)
 			throw new Error("CCSInput.transferDescription needs an input value as argument if it supports value passing!") 

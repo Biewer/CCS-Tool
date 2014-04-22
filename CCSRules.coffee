@@ -55,8 +55,7 @@ CCSExpandInput = (stepList) ->
 	res = []
 	for step in stepList
 		if step.action.isInputAction() and step.action.supportsValuePassing() and not (step instanceof CCSInputStep)
-			throw new Error("Unrestricted input action!") if not step.action.range
-			for v in step.action.range.possibleValues()
+			for v in step.action.variable.possibleValues()
 				res.push(new CCSInputStep(step, v))
 		else
 			res.push(step)
@@ -101,7 +100,7 @@ CCSInputRule =
 		if not info["inputValue"] #step.process.action.incommingValue == undefined
 			throw new Error("Input value was not set!")
 		result = step._getMutableProcess().getProcess()
-		result.replaceVariableWithValue(step.process.action.variable, info["inputValue"])
+		result.replaceVariableWithValue(step.process.action.variable.name, info["inputValue"])
 		result
 
 # - MatchRule
@@ -284,7 +283,9 @@ CCSSeq2Rule =
 # - RecRule
 CCSRecRule = 
 	getPossibleSteps: (application, copyOnPerform) ->
-		steps = application.getProcess()._getPossibleSteps(copyOnPerform)
+		process = application.getProcess()
+		return [] if not process	# This can happen because of variable restrictions
+		steps = process._getPossibleSteps(copyOnPerform)
 		c = 0 
 		new CCSStep(c++, application, step.action, @, copyOnPerform, null, step) for step in steps
 	performStep: (step, info) -> 

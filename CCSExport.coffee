@@ -47,6 +47,8 @@ exports["Channel"] = CCSChannel
 exports["Action"] = CCSAction
 exports["SimpleAction"] = CCSSimpleAction
 # Private: CCSInternalActionCreate
+exports["ValueSet"] = CCSValueSet
+exports["Variable"] = CCSVariable
 exports["Input"] = CCSInput
 exports["Output"] = CCSOutput
 exports["CCSExpression"] = CCSExpression

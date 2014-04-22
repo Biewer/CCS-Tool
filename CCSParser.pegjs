@@ -41,7 +41,7 @@ RangeDefinition
 
 
 Process
-  = _ n:name _ params:("[" _ v:identifier vs:(_ "," _ v2:identifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
+  = _ n:name _ params:("[" _ v:ValueIdentifier vs:(_ "," _ v2:ValueIdentifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
 		                                  return new CCSProcessDefinition(n, P, params ? params : null, line());
 		                                }
@@ -130,8 +130,7 @@ Condition
 Input
   = a:Action _ "?" v:(_ t:ValueIdentifier { return t; })?
 	  								{ 
-	  									if (!v) v = [null, null];
-	  									return new CCSInput(a, v[0], v[1]); 
+	  									return new CCSInput(a, v); 
 	  								}
 
 
@@ -187,14 +186,14 @@ identifier "identifier"
   = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
 
 ValueIdentifier
-  = id:identifier __ r:(InlineRange)?	{ return [id, r]; }
+  = id:identifier __ r:(InlineRange)?	{ return new CCSVariable(id, r); }
  
 InlineRange
   = _ ":" _ r:CoreRange		{ return r; }
 
 CoreRange
   = a:int ".." b:int	{ return new CCSValueSet("number", a, b); }
-  / a:("$"*) ".." b:("$"+) { return new CCSValueSet("string", a.length, b.length); }
+  / a:("$"*) ".." b:("$"*) { return new CCSValueSet("string", a.length, b.length); }
   / id:name { return rangeDefinitions.getValue(id); }
 
 
