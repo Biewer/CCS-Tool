@@ -97,7 +97,7 @@ CCSInputRule =
 		then [new CCSBaseStep(prefix, @, copyOnPerform)]
 		else []
 	performStep: (step, info) ->
-		if not info["inputValue"] #step.process.action.incommingValue == undefined
+		if info["inputValue"] == undefined or info["inputValue"] == null #step.process.action.incommingValue == undefined
 			throw new Error("Input value was not set!")
 		result = step._getMutableProcess().getProcess()
 		result.replaceVariableWithValue(step.process.action.variable.name, info["inputValue"])
