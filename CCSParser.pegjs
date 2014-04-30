@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {
 	var rangeDefinitions = new Environment();
+	var autoProcessComplete = CCSStop;
 }
 
 start = C:CCS { return C; }
@@ -106,7 +107,7 @@ Prefix
   	/ _ A:(/*Match
 		*/ Input
 		/ Output
-		/ SimpleAction ) _ "." P:Prefix
+		/ SimpleAction ) _ P:PostPrefix
 									{ 
 										return new CCSPrefix(A, P); 
 									}
@@ -119,6 +120,11 @@ Condition
 	  								{
 	  									return new CCSCondition(e, P);
 	  								}
+	  								
+PostPrefix
+  //= &";"		{ return new CCSExit(); }
+  // (&";"/&"+"/&"|"/&"\\"/!.) { return new autoProcessComplete(); }
+  = "." P:Prefix	{ return P; }
 
 /*Match
   = a:Action _ "?" _ "=" _ e:expression
