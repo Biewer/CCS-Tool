@@ -150,7 +150,9 @@ class PCCPrefixStackElement extends PCCUnaryStackElement
 
 class PCCInputStackElement extends PCCPrefixStackElement
 	constructor: (channel, specificChannel, @container) -> super channel, specificChannel	# string x PCCContainer x string
-	_getAction: -> @createCalculusNode(CCS.Input, @_getChannel(), if @container then @container.identifier else null)
+	_getAction: -> 
+		variable = if @container then @createCalculusNode(CCS.Variable, @container.identifier) else null
+		@createCalculusNode(CCS.Input, @_getChannel(), variable)
 
 class PCCOutputStackElement extends PCCPrefixStackElement
 	constructor: (channel, sepcificChannel, @container) -> super channel, sepcificChannel	# string x PCCContainer x PCCContainer
@@ -246,7 +248,7 @@ class PCCProcessDefinitionStackElement extends PCCUnaryStackElement
 		container = @next.getResults()
 		pRes = container.getResult()
 		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
-		argNames = (c.identifier for c in @argContainers)
+		argNames = ((@createCalculusNode(CCS.Variable, c.identifier)) for c in @argContainers)
 		def = @createCalculusNode(CCS.ProcessDefinition, @processName, pRes.data, argNames)
 		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS_DEFINITION, def)
 		container

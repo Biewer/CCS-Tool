@@ -241,7 +241,7 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 	constructor: (@isStatement, children...) -> super children...
 	
-	# getType: -> @children[0] TODO ups, name is already taken
+	getTypeNode: -> @children[0]
 	getDeclarators: -> @children[1..]
 	
 	collectClasses: (env) -> null
@@ -274,7 +274,7 @@ class PCDeclStmt extends PCDecl
 class PCVariableDeclarator extends PCNode	# Identifier and optional initializer
 	constructor: (line, column, @name, initializer) -> (if initializer then super line, column, initializer else super line, column, []...)
 	getInitializer: -> if @children.length > 0 then @children[0] else null
-	getTypeNode: -> @parent.getType()
+	getTypeNode: -> @parent.getTypeNode()
 	
 	collectEnvironment: (env, type) -> env.processNewVariable(new PCTVariable(@, @name, type))
 
