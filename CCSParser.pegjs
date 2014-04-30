@@ -50,7 +50,7 @@ Process
 
 
 Restriction
-  = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  as; })?
+  = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  (as) ? as : []; })?
   										{
   											res = res ? new CCSRestriction(P, res) : P;
   											res.line = line();
