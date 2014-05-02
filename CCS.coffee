@@ -539,7 +539,7 @@ class CCSInput extends CCSAction
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and (if action.supportsValuePassing() then @supportsValuePassing() and @variable.allowsValue(action.expression.evaluate()) else not @supportsValuePassing())
 	replaceVariable: (varName, exp) -> 
 		super varName, exp
-		@variable and @variable.name != varName	# stop replacing if identifier is equal to its own variable name
+		not @variable or @variable.name != varName	# stop replacing if identifier is equal to its own variable name
 	allowsValueAsInput: (value) -> @variable.allowsValue(value)
 	
 	computeTypes: (env) ->
