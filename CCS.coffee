@@ -57,7 +57,7 @@ CCSGetMostGeneralType = (t1, t2) ->
 	throw new Error("Incopatible Types: #{t1} and #{t2}!");
 
 class CCSEnvironment extends Environment
-	constructor: (@ccs) -> super()
+	constructor: (@ccs, @pd) -> super()
 	getType: (id) -> @getValue id
 	setType: (id, type) ->
 		now = @env[id]
@@ -67,11 +67,18 @@ class CCSEnvironment extends Environment
 		else
 			@env[id] = type
 	hasType: (id) -> @hasValue id
+	allowsUnboundedInputOnChannelName: (name) ->
+		if @pd and @pd.usesParameterName(name)
+			false
+		else
+			@ccs.allowsUnboundedInputOnChannelName(name)
+			
 
 
 # - CCS
 class CCS
 	constructor: (@processDefinitions, @system, @allowUnguardedRecursion=true) ->
+		@warnings = []
 		if @system instanceof CCSRestriction
 			@rootRestriction = @system
 		else
@@ -108,20 +115,27 @@ class CCSProcessDefinition
 	constructor: (@name, @process, @params, @line=0) ->					# string x Process x CCSVariable*
 	
 	getArgCount: -> if @params then @params.length else 0
+	usesParameterName: (name) ->
+		return false if not @params
+		(return true if name == p.name) for p in @params
+		false
 	setCCS: (@ccs) -> 
 		@process.setCCS @ccs
-		@env = new CCSEnvironment(@ccs)
+		@env = new CCSEnvironment(@ccs, @)
 		if @params
 			for x in @params
 				@env.setType(x.name, CCSTypeUnknown)
 	computeTypes: (penv) -> 
-		if not @ccs.allowUnguardedRecursion and @process.isUnguardedRecursion()
-			e = new Error("Unguarded recursion") 
+		if @process.isUnguardedRecursion()
+			e = new Error("You are using unguarded recursion") 
 			e.line = @line
 			e.column = 1
 			e.name = "TypeError"
 			e.code = @ccs.toString()
-			throw e	
+			if @ccs.allowUnguardedRecursion
+				@ccs.warnings.push(e)
+			else
+				throw e	
 		try
 			penv.setType(@name, CCSTypeProcess)
 			@process.computeTypes(@env)
@@ -170,10 +184,10 @@ class CCSProcess
 		false
 	
 	getApplicapleRules: -> []
-	_getPossibleSteps: (copyOnPerform) -> 
+	_getPossibleSteps: (info, copyOnPerform) -> 
 		copyOnPerform = false if not copyOnPerform
-		res = SBArrayConcatChildren(rule.getPossibleSteps(this, copyOnPerform) for rule in @getApplicapleRules())
-	getPossibleSteps: (copyOnPerform) -> CCSExpandInput(@_getPossibleSteps copyOnPerform)
+		res = SBArrayConcatChildren(rule.getPossibleSteps(this, info, copyOnPerform) for rule in @getApplicapleRules())
+	getPossibleSteps: (copyOnPerform) -> CCSExpandInput(@_getPossibleSteps(copyOnPerform, {}))
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
@@ -209,9 +223,10 @@ class CCSProcessApplication extends CCSProcess
 	constructor: (@processName, @valuesToPass=[]) -> super()		# string x Expression list
 	
 	getArgCount: -> @valuesToPass.length
+	getProcessDefinition: -> @ccs.getProcessDefinition(@processName, @getArgCount())
 	getProcess: -> 
 		return @process if @process
-		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
+		pd = @getProcessDefinition()
 		@process = pd.process.copy()
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
@@ -545,7 +560,7 @@ class CCSInput extends CCSAction
 	computeTypes: (env) ->
 		if @supportsValuePassing()
 			env.setType(@variable.name, CCSTypeValue) 
-			if env.hasType(@channel.name) or not env.ccs.allowsUnboundedInputOnChannelName(@channel.name)
+			if not env.allowsUnboundedInputOnChannelName(@channel.name)
 				throw new Error("Unbounded input variable \"#{@variable}\"") if not @variable.set
 		super
 	

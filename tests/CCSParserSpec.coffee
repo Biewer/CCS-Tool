@@ -141,12 +141,12 @@ programs =
 	"Unguarded recursion":
 		code:
 			"""
-			A := a.b
+			A := a.B
 			B := A
 			
 			A
 			"""
-		throws: true
+		throws: false	# We do not throw anymore
 	
 	"Unbounded input 1":
 		code:
@@ -171,7 +171,7 @@ programs =
 			
 			P
 			"""
-		throws: true
+		throws: false
 	"Unbounded input 4":
 		code:
 			"""
@@ -184,6 +184,14 @@ programs =
 		code:
 			"""
 			P[b] := a?x. b!x. 0
+			
+			P[c] \\ {a}
+			"""
+		throws: false
+	"Unbounded input 6":
+		code:
+			"""
+			P[b] := a?x. a?x. 0
 			
 			P[c] \\ {a}
 			"""
@@ -281,7 +289,7 @@ describe "CCS parser", ->
 	testExceptions = (i) ->
 		return if not programs[i].throws
 		it "should throw an exception for program \"#{i}\":\n", ->
-			expect((i) -> CCS.parser.parse(programs[i].code)).toThrow()
+			expect(-> CCS.parser.parse(programs[i].code)).toThrow()
 		
 
 	for i of programs
