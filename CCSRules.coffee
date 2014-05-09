@@ -40,7 +40,7 @@ class CCSStep
 
 # - CCSBaseStep  -> Der Ur-Schritt :D, also das was prefix, input, output oder match liefert
 class CCSBaseStep extends CCSStep		
-	constructor: (prefix, rule, info, copyOnPerform) -> super 0, prefix, prefix.action, rule, copyOnPerform
+	constructor: (prefix, rule, copyOnPerform) -> super 0, prefix, prefix.action, rule, copyOnPerform
 
 class CCSInputStep extends CCSStep
 	constructor: (inputStep, @value) -> super 0, null, inputStep.action, null, inputStep.copyOnPerform, null, inputStep

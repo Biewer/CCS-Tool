@@ -54,7 +54,17 @@ CCSGetMostGeneralType = (t1, t2) ->
 	return t1 if t2 == CCSTypeUnknown
 	return t2 if t1 == CCSTypeUnknown
 	return t1 if t1 == t2
-	throw new Error("Incopatible Types: #{t1} and #{t2}!");
+	throw new Error("Incompatible Types: #{CCSTypeToString t1} and #{CCSTypeToString t2}!");
+
+CCSTypeToString = (t) ->
+	if t == CCSTypeChannel
+		"Channel"
+	else if t == CCSTypeValue
+		"Value"
+	else if t == CCSTypeProcess
+		"Process"
+	else
+		"Unknown"
 
 class CCSEnvironment extends Environment
 	constructor: (@ccs, @pd) -> super()
@@ -187,7 +197,7 @@ class CCSProcess
 	_getPossibleSteps: (info, copyOnPerform) -> 
 		copyOnPerform = false if not copyOnPerform
 		res = SBArrayConcatChildren(rule.getPossibleSteps(this, info, copyOnPerform) for rule in @getApplicapleRules())
-	getPossibleSteps: (copyOnPerform) -> CCSExpandInput(@_getPossibleSteps(copyOnPerform, {}))
+	getPossibleSteps: (copyOnPerform) -> CCSExpandInput(@_getPossibleSteps({}, copyOnPerform))
 		
 	needsBracketsForSubprocess: (process) -> 
 		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
@@ -282,7 +292,7 @@ class CCSPrefix extends CCSProcess
 	constructor: (@action, process) -> super process		# Action x Process
 	
 	getPrecedence: -> 12
-	getApplicapleRules: -> [CCSPrefixRule, CCSOutputRule, CCSInputRule]
+	getApplicapleRules: -> [CCSPrefixRule, CCSOutputRule, CCSInputRule, CCSMatchRule]
 	getProcess: -> @subprocesses[0]
 	
 	replaceVariable: (varName, exp) ->
@@ -574,7 +584,7 @@ class CCSInput extends CCSAction
 	copy: -> new CCSInput(@channel.copy(), @variable, @range)
 
 
-###
+
 # - Match
 class CCSMatch extends CCSAction
 	constructor: (channel, @expression) -> super channel	# CCSChannel x Expression
@@ -586,14 +596,18 @@ class CCSMatch extends CCSAction
 		super varName, exp
 		@expression = @expression.replaceVariable(varName, exp)
 		true
-	getTypeOfIdentifier: (identifier, type) -> 
+	###getTypeOfIdentifier: (identifier, type) -> 
 		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
-		super identifier, type
+		super identifier, type###
+	computeTypes: (env) ->
+		type = @expression.computeTypes(env, false)
+		throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
+		super
 	
-	toString: -> "#{super}?=#{if @expression then @expression.toString() else ""}"
-	transferDescription: -> throw new Error("Currently unsupported action")
-	copy: -> new CCSMatch(@channel.copy(), @expression?.copy())
-###
+	toString: (mini) -> "#{super}?(#{if @expression then @expression.toString(mini) else ""})"
+	transferDescription: -> "#{super}:#{@expression.evaluate()}"
+	copy: -> new CCSMatch(@channel.copy(), @expression.copy())
+
 	
 
 # - Output

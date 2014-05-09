@@ -206,6 +206,35 @@ programs =
 			"""
 		throws: true
 	
+	"Variable input":
+		code:
+			"""
+			range R:=0..1
+
+			Bitbuffer:= put?x:R.pass!x.0
+
+			Bitbuffer
+			"""
+		traces: ["put?0.pass!0", "put?1.pass!1"]
+	"Match":
+		code:
+			"""
+			b?(3).0 | a?x:2..4. b!x. 0 \\ {b}
+			"""
+		traces: ["a?2", "a?4", "a?3.\u03c4"]
+		
+	"Match 2":
+		code:
+			"""
+			P[x] := a?(x).0
+
+			P[5]
+			"""
+		traces: ["a?(5)"]
+		
+		
+		
+	
 	
 	
 

@@ -104,8 +104,8 @@ Choice
 
 Prefix
   = Condition
-  	/ _ A:(/*Match
-		*/ Input
+  	/ _ A:(Match
+		/ Input
 		/ Output
 		/ SimpleAction ) _ P:PostPrefix
 									{ 
@@ -126,11 +126,11 @@ PostPrefix
   // (&";"/&"+"/&"|"/&"\\"/!.) { return new autoProcessComplete(); }
   = "." P:Prefix	{ return P; }
 
-/*Match
-  = a:Action _ "?" _ "=" _ e:expression
+Match
+  = a:Action _ "?" _ "(" _ e:expression _ ")"
 									{ 
-										return new CCSMatch(a, e ? e : null); 
-									}*/
+										return new CCSMatch(a, e); 
+									}
   								
 
 Input

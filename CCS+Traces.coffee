@@ -12,7 +12,7 @@ CCSProcess::_getTraces = (prefix, set, weak) ->
 			prefix2 = prefix
 			if not weak or not s.action.isInternalAction() 
 				prefix2 = prefix2 + "." if prefix2.length > 0
-				prefix2 = prefix2 + s.action.toString(true)
+				prefix2 = prefix2 + s.toString()
 			p._getTraces(prefix2, set, weak)
 	else
 		set[prefix] = true
@@ -25,3 +25,10 @@ CCSProcess::getTraces = (weak) ->
 		res.push(trace) if b == true
 	res
 
+
+
+CCSProcess::getFinalProcesses = ->
+	steps = @getPossibleSteps(true)
+	if steps and steps.length > 0
+		for s in steps
+			p = s.perform()
