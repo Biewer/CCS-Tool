@@ -391,7 +391,7 @@ MonCall
 														var res = new PCClassCall(line(), column(), exp, call[0][1]);
 														for (var i = 1; i < call.length; ++i)
 														{
-															res = new PCClassCall(line(), column(), res, call[i][1]);
+															res = new PCClassCall(line(), column(), res, call[i][3]);
 														}
 														return res;
 													}
@@ -475,7 +475,7 @@ SelectStatement
 															var caseStmts = [line(), column()];
 															for (var i = 0; i < stmts.length; ++i)
 															{
-																caseStmts.push(stmts[i]);
+																caseStmts.push(stmts[i][0]);
 															}
 															return construct(PCSelectStmt, caseStmts);
 														}
