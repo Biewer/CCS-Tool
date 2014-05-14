@@ -67,25 +67,25 @@ exports["Executor"] = PCCExecutor
 
 
 
-exports["PCCProcessFrame"] = PCCProcessFrame
-exports["PCCProcedureFrame"] = PCCProcedureFrame
-exports["PCCGroupable"] = PCCGroupable
+exports["ProcessFrame"] = PCCProcessFrame
+exports["ProcedureFrame"] = PCCProcedureFrame
+exports["Groupable"] = PCCGroupable
 
 
 
 
-exports["PCCGlobal"] = PCCGlobal
-exports["PCCClass"] = PCCClass
-exports["PCCProcedure"] = PCCProcedure
-exports["PCCType"] = PCCType
-exports["PCCVariableInfo"] = PCCVariableInfo
-exports["PCCVariable"] = PCCVariable
-exports["PCCGlobalVariable"] = PCCGlobalVariable
-exports["PCCField"] = PCCField
-exports["PCCInternalReadOnlyField"] = PCCInternalReadOnlyField
-exports["PCCCondition"] = PCCCondition
-exports["PCCLocalVariable"] = PCCLocalVariable
-exports["PCCProgramController"] = PCCProgramController
+exports["Global"] = PCCGlobal
+exports["Class"] = PCCClass
+exports["Procedure"] = PCCProcedure
+exports["Type"] = PCCType
+exports["VariableInfo"] = PCCVariableInfo
+exports["Variable"] = PCCVariable
+exports["GlobalVariable"] = PCCGlobalVariable
+exports["Field"] = PCCField
+exports["InternalReadOnlyField"] = PCCInternalReadOnlyField
+exports["Condition"] = PCCCondition
+exports["LocalVariable"] = PCCLocalVariable
+exports["ProgramController"] = PCCProgramController
 
 
 
