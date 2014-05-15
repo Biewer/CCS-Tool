@@ -701,6 +701,8 @@ CCSValueIsInt = (value) -> ("" + value).match(/^-?[0-9]+$/)
 
 CCSBestStringForValue = (value) ->
 	if CCSValueIsInt(value) then "" + value else if value == true then "1" else if value == false then "0" else "\"#{value}\""
+
+CCSBooleanForString = (string) -> if string == "0" then false else if string == "1" then true else throw new Error("Value #{CCSBestStringForValue string} is not a boolean value!")
 	
 
 # - VariableExpression
@@ -833,7 +835,41 @@ class CCSEqualityExpression extends CCSExpression
 	copy: -> new CCSEqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
 
 
-# Felix? ToDo: Operatoren && und ||
+# - CCSAndExpression
+class CCSAndExpression extends CCSExpression
+	constructor: (left, right) -> super left, right
+	
+	getPrecedence: -> 0
+	evaluate: -> 
+		res = CCSBooleanForString(@getLeft().evaluate()) && CCSBooleanForString(@getRight().evaluate())
+		CCSStringDataForValue res
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "boolean"
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + "&&" + @stringForSubExp(@getRight())
+	
+	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
+
+# - CCSOrExpression
+class CCSOrExpression extends CCSExpression
+	constructor: (left, right) -> super left, right
+	
+	getPrecedence: -> -3
+	evaluate: -> 
+		res = CCSBooleanForString(@getLeft().evaluate()) || CCSBooleanForString(@getRight().evaluate())
+		CCSStringDataForValue res
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+	typeOfEvaluation: -> "boolean"
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			@stringForSubExp(@getLeft()) + "||" + @stringForSubExp(@getRight())
+	
+	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
 	
 
 	

@@ -1,0 +1,2 @@
+tests:
+				coffee -c -b -j create.js  create.coffee

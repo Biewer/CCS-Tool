@@ -49,9 +49,9 @@ PC.MainAgent::compile = (compiler) ->
 
 PC.ProcedureDecl::compile = (compiler) ->
 	compiler.beginProcedure(@name)
-	proc = compiler.getProcedureWithName(@name)
+	proc = compiler.getProcedureWithNameOfClass(@name)
 	if proc.isMonitorProcedure()
-		guard = compiler.getVariableWithName("guard", null, true)
+		guard = compiler.getVariableWithNameOfClass("guard", null, true)
 		compiler.emitOutput("lock", guard.getContainer(compiler))
 	compiler.compile(@getBody())		
 	proc.emitExit(compiler)
@@ -159,7 +159,7 @@ PC.AssignExpression::compile = (compiler) ->
 
 PC.AssignDestination::compile = (compiler) ->	# Returns the same value as array expression would do (used for +=, *=,  ...)
 	arrayIndexCount = @children.length
-	v = compiler.getVariableWithName(@identifier, null)
+	v = compiler.getVariableWithNameOfClass(@identifier, null)
 	res = v.getContainer(compiler)
 	(res = @getValueForArrayAtIndex(compiler, ai, compiler.compile(@children[i]))) for i in [0...arrayIndexCount] by 1
 	res
@@ -169,7 +169,7 @@ PC.AssignDestination::setValueForArrayAtIndex = (compiler, instanceContainer, in
 	valueContainer
 PC.AssignDestination::assignContainer = (compiler, c) ->
 	arrayIndexCount = @children.length
-	v = compiler.getVariableWithName(@identifier, null)
+	v = compiler.getVariableWithNameOfClass(@identifier, null)
 	if arrayIndexCount == 0
 		v.setContainer(compiler, c)
 	else
@@ -295,7 +295,7 @@ PC.ReceiveExpression::compile = (compiler) ->
 
 
 PC.ProcedureCall::compile = (compiler, instanceContainer, className) ->
-	proc = compiler.getProcedureWithName(@procedureName, className)
+	proc = compiler.getProcedureWithNameOfClass(@procedureName, className)
 	compiler.protectContainer(instanceContainer) if instanceContainer
 	compiler.protectContainer(compiler.compile(c)) for c in @children
 	control = compiler.emitSequence()
@@ -307,13 +307,13 @@ PC.ProcedureCall::compile = (compiler, instanceContainer, className) ->
 	control.setBranchFinished()	# left is finished
 	if proc.returnType.kind != PC.Type.VOID
 		res = compiler.getFreshContainer(proc.returnType.getCCSType())
-		#compiler.emitInput("receive", compiler.getVariableWithName("r", null, true).getContainer(compiler), res)
+		#compiler.emitInput("receive", compiler.getVariableWithNameOfClass("r", null, true).getContainer(compiler), res)
 		compiler.emitInput("rreturn", null, res)
 		res
 	else
 		null
 PC.ProcedureCall::compileSend = (compiler, instanceContainer, className) ->
-	proc = compiler.getProcedureWithName(@procedureName, className)
+	proc = compiler.getProcedureWithNameOfClass(@procedureName, className)
 	compiler.protectContainer(instanceContainer) if instanceContainer
 	compiler.protectContainer(compiler.compile(c)) for c in @children
 	args = []
@@ -340,7 +340,7 @@ PC.ArrayExpression::compile = (compiler) ->
 	t = compiler.compile(@children[1])
 	a = compiler.unprotectContainer()
 	compiler.emitOutput("array_access", a, t)
-	res = compiler.getFreshContainer(@children[0].getType(compiler).type)
+	res = compiler.getFreshContainer(@children[0].getType(compiler).getCCSType())
 	compiler.emitInput("array_get", a, res)
 	res
 	
@@ -352,7 +352,7 @@ PC.LiteralExpression::compile = (compiler) ->
 	
 
 PC.IdentifierExpression::compile = (compiler) ->
-	v = compiler.getVariableWithName(@identifier, null)
+	v = compiler.getVariableWithNameOfClass(@identifier, null)
 	v.getContainer(compiler)
 	
 	
@@ -518,15 +518,15 @@ PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("unlock", c, null)
 		when PC.PrimitiveStmt.WAIT
-			throw new Error("Unexpected expression!") if !(@children[0] instanceof PCIdentifierExpression)
-			cond = compiler.getVariableWithName(@children[0].identifier)
+			throw new Error("Unexpected expression!") if !(@children[0] instanceof PC.IdentifierExpression)
+			cond = compiler.getVariableWithNameOfClass(@children[0].identifier)
 			entry = compiler.emitNextProcessFrame()
 			b = compiler.compile(cond.node.getExpression())
 			control = compiler.emitChoice()
 			compiler.emitCondition(new PCCUnaryContainer("!", b))
 			c = cond.getContainer(compiler)
 			compiler.emitOutput("add", c, null)
-			g = compiler.getVariableWithName("guard", null, true).getContainer(compiler)
+			g = compiler.getVariableWithNameOfClass("guard", null, true).getContainer(compiler)
 			compiler.emitOutput("unlock", g, null)
 			compiler.emitOutput("wait", c, null)
 			compiler.emitOutput("lock", g, null)
@@ -542,7 +542,7 @@ PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 			vars = []
 			if c
 				throw new Error("Unexpected expression!") if !(@children[0] instanceof PC.IdentifierExpression)
-				vars = [compiler.getVariableWithName(@children[0].identifier)]
+				vars = [compiler.getVariableWithNameOfClass(@children[0].identifier)]
 			else
 				vars = compiler.getCurrentClass().getAllConditions()
 			for v in vars

@@ -1,0 +1,21 @@
+
+
+void countDutch(){ 
+   println(" Een"); 
+   println(" Twee"); 
+   println(" Drie"); 
+}
+
+void countFrench(){ 
+   println("Un"); 
+   println("Deux"); 
+   println("Trois"); 
+}
+
+mainAgent{
+      
+   agent a1 = start countDutch();        // Ich lass einen Agenten los!
+   agent a2 = start countFrench();       // Und noch einen!
+
+   println("  Beide zaehlen!");       // Das sollen alle wissen. 
+}

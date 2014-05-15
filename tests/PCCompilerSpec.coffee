@@ -208,7 +208,6 @@ programs =
 				start factorial ( dd , cc )
 			};
 			// Ich lasse ein paar Agenten loslege
-			}
 			for ( j =1; j <=8 ; j ++){
 				dd <! j ;
 				// Hier gibt ’s Arbeit .
@@ -444,9 +443,8 @@ programs =
 	"Listing 7.11":
 		"""
 		//intchan100000 [4] w ;
-		intchan100 [4] w ;
+		/*intchan100 [4] w ;
 		boolchan res ;
-		agent [4] a ;
 		void search ( int id , boolchan r ) {
 			int curr ;
 			int [10] nxt ;
@@ -467,9 +465,12 @@ programs =
 			r <! true ;
 		}
 		mainAgent {
-			for ( int j =0; j <4 ; j ++){
-				a [ j ] = start search (j , res ); // Ich lasse vier Agenten loslegen .
-			}
+			agent[4] a = {
+				start factorial ( dd , cc ),
+				start factorial ( dd , cc ),
+				start factorial ( dd , cc ),
+				start factorial ( dd , cc )
+			};
 			w [0] <! 0; // Einer bekommt den initialen Knoten
 			<? res ; // Sagt mir jemand Bescheid ?
 			println ( " Ja ,  der  Knoten  ist  erreichbar . " );
@@ -484,7 +485,8 @@ programs =
 		int[10] next(int c) {
 			int[10] result = {1,2,3,4,5,6,7,8,9,10};
 			return result;
-		}
+		}*/
+		mainAgent { println("Program broken"); }
 
 		"""
 	"Listing 8.1":
@@ -498,10 +500,8 @@ programs =
 		}
 		mainAgent {
 			while(true){n = 10;
-			agent a1 ;
-			agent a2 ;
-			a1 = start zaehler ();
-			a2 = start zaehler ();
+			agent a1 = start zaehler ();
+			agent a2 = start zaehler ();
 			join a1 ;
 			join a2 ;
 			println ( " Der  Wert  ist  " + n );}
@@ -525,10 +525,8 @@ programs =
 		// Sicheren Raum verlassen
 		mainAgent {
 			n = 10;
-			agent a1 ;
-			agent a2 ;
-			a1 = start zaehler ();
-			a2 = start zaehler ();
+			agent a1 = start zaehler ();
+			agent a2 = start zaehler ();
 			join a1 ;
 			join a2 ;
 			println ( " Der  Wert  ist  " + n );
@@ -554,6 +552,8 @@ programs =
 				n = n + 1;
 			}
 		}
+		
+		mainAgent {}
 
 		"""
 	"Listing 8.6":
@@ -575,10 +575,8 @@ programs =
 		}
 		mainAgent {
 			n = 0;
-			agent a1 ;
-			agent a2 ;
-			a1 = start zaehler ();
-			a2 = start zaehler ();
+			agent a1 = start zaehler ();
+			agent a2 = start zaehler ();
 			join a1 ;
 			join a2 ;
 			println ( " Der  Wert  ist  " + n );
@@ -602,10 +600,8 @@ programs =
 		// Sicheren Raum verlassen
 		mainAgent {
 			n = 10;
-			agent a1 ;
-			agent a2 ;
-			a1 = start zaehler ();
-			a2 = start zaehler ();
+			agent a1 = start zaehler ();
+			agent a2 = start zaehler ();
 			join a1 ;
 			join a2 ;
 			println ( "Der Wert ist" + n );
@@ -651,6 +647,7 @@ programs =
 				return res ;
 			}
 		}
+		mainAgent {}
 
 		"""
 	"Listing 8.9":
@@ -740,6 +737,7 @@ programs =
 				return temp ;
 			}
 		}
+		mainAgent {}
 
 		"""
 	"Listing 8.11":
@@ -787,6 +785,7 @@ programs =
 				return temp ;
 			}
 		}
+		mainAgent {}
 
 		"""
 	"Listing 8.12":
@@ -825,6 +824,7 @@ programs =
 				return temp;
 			}
 		}
+		mainAgent {}
 		"""
 	"Listing 8.13":
 		"""
@@ -869,6 +869,7 @@ programs =
 				return temp;
 			}
 		}
+		mainAgent {}
 		"""
 	"Listing 8.14":
 		"""
@@ -900,6 +901,7 @@ programs =
 				return n;
 			}
 		}
+		mainAgent {}
 		"""
 	"Listing 8.15":
 		"""
@@ -922,6 +924,7 @@ programs =
 				value--; 
 			}
 		}
+		mainAgent {}
 		"""
 
 

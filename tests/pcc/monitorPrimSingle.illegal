@@ -1,0 +1,29 @@
+monitor PrimNurEiner { 
+
+    bool prim;        
+
+    bool allein = true ; //Zeigt an, ob schon einer wach ist
+    condition istPrimUndAllein with prim && allein;
+
+    int n;  
+   
+   void set(int x){
+      n = x;
+      prim = prime(n); // Ein beliebiger Primzahltest
+      if (prim){
+       signalAll istPrimUndAllein; 
+      }
+   }
+   
+   int get(){
+      return n;
+   }
+   int getPrimeExklusive(){
+      waitForCondition istPrimUndAllein;
+      allein = false;
+      return n;   
+   }   
+   int stopExklusivePhase(){
+     allein = true;
+     signalAll istPrimUndAllein;
+}

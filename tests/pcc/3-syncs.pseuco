@@ -1,0 +1,24 @@
+intchan ch0,ch1,ch2;
+boolchan done;
+
+void who(intchan left, intchan right, boolchan dne, int id) {
+	int v;
+	select {
+	case v = <? right:
+		println("Agent" + id + "is receiving from his right neighbour the value " + v);
+	case left <! id:
+		println("Agent" + id + "is sending to his left neighbour his id " + id);
+	}
+	dne <! true;
+}
+
+mainAgent {
+	start who(ch0, ch1, done, 1);
+	start who(ch1, ch2, done, 2);
+	start who(ch2, ch0, done, 3);
+	<? done;
+	<? done;
+	println("....... now");
+	println("....... terminating");
+}
+

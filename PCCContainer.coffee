@@ -72,9 +72,11 @@ class PCCBinaryContainer extends PCCComposedContainer
 			@exp = new CCS.EqualityExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree(), @operator)
 			super PCCType.BOOL
 		else if @operator == "&&"
-			throw new Error("Not available in CCS")
+			@exp = new CCS.AndExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree())
+			super PCCType.BOOL
 		else if @operator == "||"
-			throw new Error("Not available in CCS")
+			@exp = new CCS.OrExpression(@leftContainer.ccsTree(), @rightContainer.ccsTree())
+			super PCCType.BOOL
 		else
 			throw new Error("Unknown operator")
 	isReadonly: -> true

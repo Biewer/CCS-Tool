@@ -1,0 +1,25 @@
+intchan100[5] conn;
+
+void prime(int v, intchan in, intchan out){ 
+   int p;
+   while (true) {
+       p = <? in;
+       if (p % v != 0 || p == v) {out <! p;} 
+   }
+}
+
+mainAgent{
+   start prime(7, conn[0], conn[1]); // Prueft Teilbarkeit durch 7.
+   start prime(5, conn[1], conn[2]); // Prueft Teilbarkeit durch 5.
+   start prime(3, conn[2], conn[3]); // Prueft Teilbarkeit durch 3.
+   start prime(2, conn[3], conn[4]); // Prueft Teilbarkeit durch 2.
+
+   for (int j=2; j<=100 ; j++){
+       conn[0] <! j; 
+   } 
+
+   while (true) { // Alles, was aus conn[4] raus kommt, ist prim.
+        println( (<? conn[4]) + " ist eine Primzahl."); 
+   }
+}
+

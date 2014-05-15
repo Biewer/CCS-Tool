@@ -60,7 +60,7 @@ class PCTEnvironmentController
 	getAllClasses: -> @root.getAllClasses()
 	
 	getVariableWithName: (name, line, column) ->
-		@_envStack.getVariableWithName(name, line, column)
+		@_envStack.getVariableWithName(name, line, column)	
 	
 	getProcedureWithName: (name, line, column) ->
 		@_envStack.getProcedureWithName(name, line, column)

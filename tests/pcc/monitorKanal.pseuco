@@ -1,0 +1,15 @@
+monitor Kanal { 
+
+   int n;  // nicht direkt zugreifbar, dies ist die gemeinsame Ressource  
+
+   void put(int x){
+       n = x;
+      }
+   
+
+   int get(){
+           return n; 
+}
+}
+
+mainAgent {}

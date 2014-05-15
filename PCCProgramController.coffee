@@ -115,7 +115,7 @@ class PCCProcedure extends PC.Procedure
 		if @isClassProcedure()
 			#argumentContainers.unshift(compiler.getVariable("i_g").getContainer(compiler)) if @isMonitorProcedure()
 			if not instanceContainer
-				instanceContainer = compiler.getVariableWithName("i", null, true).getContainer(compiler) 
+				instanceContainer = compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler) 
 			argumentContainers.unshift(instanceContainer)
 		else
 			throw new Error("Illegal instance value") if instanceContainer
@@ -153,7 +153,7 @@ class PCCProcedure extends PC.Procedure
 		compiler.endProcessDefinition()
 	emitExit : (compiler) ->
 		if @isMonitorProcedure()
-			guard = compiler.getVariableWithName("guard", null, true)
+			guard = compiler.getVariableWithNameOfClass("guard", null, true)
 			compiler.emitOutput("unlock", guard.getContainer(compiler))
 		compiler.emitExit()
 			
@@ -253,7 +253,7 @@ PC.Type::createContainer = (compiler, container) ->
 PC.ChannelType::createContainer = (compiler, container) ->
 	return container if container
 	res = compiler.getFreshContainer(@getCCSType())
-	buffered = @capacity != PCChannelType.CAPACITY_UNKNOWN and @capacity != 0
+	buffered = @capacity != PC.ChannelTypeNode.CAPACITY_UNKNOWN and @capacity != 0
 	channel = "channel#{if buffered then @capacity else ""}_create"
 	compiler.emitInput(channel, null, res)
 	#if buffered
@@ -338,13 +338,13 @@ class PCCField extends PCCGlobalVariable
 	getContainer: (compiler) ->
 		if @getIdentifier() == "#guard"
 			result = compiler.getFreshContainer(PCCType.INT)
-			compiler.emitInput("env_class_get_guard", compiler.getVariableWithName("i", null, true).getContainer(compiler), result)
+			compiler.emitInput("env_class_get_guard", compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
 		else
 			result = compiler.getFreshContainer(@type.getCCSType())
-			compiler.emitInput(@accessorChannel(false), compiler.getVariableWithName("i", null, true).getContainer(compiler), result)
+			compiler.emitInput(@accessorChannel(false), compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
 		result
 	setContainer: (compiler, container) ->
-		compiler.emitOutput(@accessorChannel(true), compiler.getVariableWithName("i", null, true).getContainer(compiler), container)
+		compiler.emitOutput(@accessorChannel(true), compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), container)
 		null
 	getEnvProcessName: -> "Env_class_#{@parent.getName()}"
 
@@ -357,7 +357,7 @@ class PCCInternalReadOnlyField extends PCCField
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 	getContainer: (compiler) -> 
 		result = compiler.getFreshContainer(PCCType.INT)
-		compiler.emitInput("env_class_guard", compiler.getVariableWithName("i", null, true).getContainer(compiler), result)
+		compiler.emitInput("env_class_guard", compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
 		result
 	setContainer: -> throw new Error("Setting container for read only variable!")
 	

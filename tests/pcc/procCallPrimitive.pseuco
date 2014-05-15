@@ -1,0 +1,10 @@
+    void replace(int i, int x){
+      i = x;
+    }
+
+    mainAgent{
+      int var=0;
+      int val=1;
+      replace(var, val);
+      println ("var ist ",var," und val ist ", val);
+    }

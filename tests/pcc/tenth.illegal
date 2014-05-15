@@ -1,0 +1,25 @@
+intchan100000 w;
+  
+int[10] post(int x){ ... }     // Jeweils zehn Nachfolger. 
+
+mainAgent{
+   int curr;
+   int[10] nxt;
+   bool found = false;
+ 
+   w <! 0;                     // Puffere den initialen Knoten in meinem Kanal.
+   
+   while (!(found)){ 
+      curr = <? w;             // Noch ein Knoten zu bearbeiten.
+      found = (curr == 13);    // Vielleicht ists ja der gesuchte Knoten.
+      println("Ich bearbeite Knoten " + curr);
+      if (!alreadySeen(curr)){ // Kenn ich noch nicht.
+         remember(curr);       // Der soll mich kennenlernen.
+         nxt = post(curr);     // Und der hat Nachfolger.
+         for (int j=0 ; j < 10; j++){
+            w <! nxt[j];       // Die Nachfolger puffere ich in meinem Kanal.
+         }
+      }
+   } 
+   println("Ja, der Knoten 13 ist erreichbar.");
+}

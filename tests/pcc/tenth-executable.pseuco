@@ -1,0 +1,46 @@
+int nextPseudoRand (int y) {
+   y = (y+1) * 11173 %  11939;
+   return (y>0?y:-y);
+}
+
+void remember(int x){
+}
+
+bool alreadySeen(int x){
+return false;
+}
+
+int[10] post(int x){
+   int[10] res;
+   for (int j = 0 ; j <10; j++){
+      x = nextPseudoRand(x); 
+      res[j] = x % 10000 ;
+   }
+   return res;
+}
+
+intchan100 w;
+
+mainAgent{
+   int curr;
+   int[10] nxt;
+   bool found = false;
+  int i =0;
+ 
+   w <! 0;                    // Hier der initiale Knoten, den puffere ich in meinem Kanal.
+   
+   while (!(found)){ 
+      curr = <? w;              // Noch ein Knoten zu bearbeiten.
+      found = (curr == 13); // Vielleicht ists ja der gesuchte Knoten.
+      i++;
+      println( i + ". Ich bearbeite Knoten " + curr);
+      if (!alreadySeen(curr)){  // Kenn ich noch nicht.
+         remember(curr);      // Der soll mich kennenlernen.
+         nxt = post(curr);    // Und der hat Nachfolger.
+         for (int j=0 ; j < 10; j++){
+            w <! nxt[j];       // Die Nachfolger puffere ich in meinem Kanal.
+         }
+      }
+   } 
+   println("Ja, der 13 Knoten ist erreichbar.");
+}

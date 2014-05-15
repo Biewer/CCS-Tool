@@ -1,0 +1,32 @@
+intchan read;
+intchan write;
+boolchan jn;
+
+void cell ( intchan rd , intchan wt , int init ) {
+   int v = init ; 
+   while ( true ) {
+      select {
+         case rd <! v: 
+             println ("... Aktueller Wert: ", v);
+         case v = <? wt: 
+             println ("... Neuer Wert: ", v);
+      }
+   }
+}
+
+void zaehler (){
+   int loop ;
+   for ( loop = 0; loop < 5; loop ++){
+       write  <! ( (<? read) - 1);
+   }
+   jn <! true;
+}
+
+mainAgent{
+   start cell (read, write, 10); 
+   agent a1 = start zaehler ();
+   agent a2 = start zaehler (); 
+   <? jn;
+   <? jn;
+   println ("Der Wert ist " + (<?read));
+}

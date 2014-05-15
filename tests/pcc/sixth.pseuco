@@ -1,0 +1,25 @@
+intchan[8] result;
+ 
+void factorial(int z, intchan res){ 
+   int j, n; 
+   n=1;
+   for (j = z; j > 0 ; j--){
+      n = n*j;
+   }     
+   res <! n; // Ich terminiere, nachdem ich zurueck sende, was rauskommt.
+}
+
+mainAgent{
+   int j;
+   for (j=0; j<8 ; j++){
+       start factorial(j+1,result[j]);  // Ich lasse ein paar (namenlose) Agenten loslegen.
+   } 
+   // 
+   // Vielleicht hier noch eben eine nagelneue Primzahl berechnen.
+   // Oder sonst irgendetwas erledigen.
+   //
+   for (j=0; j<8 ; j++){       // Hier frage ich die hoffentlich fertigen Ergebnisse ab. 
+       println("Die Fakultaet von " + (j+1) + " ist " + (<? result[j]) + "."); 
+   }  
+}
+

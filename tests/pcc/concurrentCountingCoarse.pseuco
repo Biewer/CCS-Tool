@@ -1,0 +1,21 @@
+int n;
+mutex guard_n;                        // Sicherer Raum
+
+void zaehler(){
+   int loop;
+   lock guard_n;                    // Sicheren Raum betreten
+   for (loop = 0; loop < 5; loop++){
+      n = n - 1;
+   }
+   unlock guard_n;                    // Sicheren Raum verlassen
+}
+
+mainAgent{
+   n = 10;
+
+   agent a1 = start zaehler();
+   agent a2 = start zaehler();
+   join(a1);
+   join(a2);
+   println("Der Wert ist " + n); 
+}

@@ -1,0 +1,24 @@
+monitor Kanal { 
+
+   int n;  
+   bool wert_da = false; //Initial ist der Kanal leer
+
+   condition datumIstDa with ( wert_da );
+   condition platzIstFrei with ( !wert_da );
+
+   void put(int x){
+       waitForCondition platzIstFrei;
+       n = x;
+       wert_da = true;
+       signal datumIstDa;
+    }
+
+   int get(){
+       waitForCondition datumIstDa;
+       wert_da = false;
+       signal platzIstFrei;
+       return n;
+   }
+}
+
+mainAgent {}

@@ -1,0 +1,23 @@
+int mid, fin;
+intchan dd;
+intchan cc;
+ 
+void factorial(intchan c){ 
+   int j, n=1;         
+   int z = <? dd; // Womit soll ich rechnen?
+   for (j = z; j > 0 ; j--){
+      n= n*j; 
+   }       // Hier ist die Arbeit erledigt.
+   c <! n; // Ich sende, was rauskommt.
+}
+
+mainAgent{
+   agent a1 = start factorial(cc);        // Ich lasse einen Agenten loslegen.
+   agent a2 = start factorial(cc);        // Und noch einen.
+   dd <! 3;                         // Werfen wir mal was zu rechnen aus.
+   mid = <? cc;                     // Mal sehen was einer ausrechnet.
+   dd <! mid;                       // Das reichen ich weiter.
+   fin = <? cc;                     // Mal sehen, was der andere draus macht.
+   println("Die Fakultaet von der Fakultaet von 3 ist " + fin + "."); 
+}
+

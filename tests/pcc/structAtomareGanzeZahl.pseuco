@@ -1,0 +1,23 @@
+struct AtomareGanzeZahl { 
+
+mutex guard; // nicht direkt zugreifbar
+
+int n;  // nicht direkt zugreifbar, dies ist das gemeinsame Datum  
+
+void set(int x){
+   lock guard;
+   n = x;
+   unlock guard;
+}
+
+int get(){
+   lock guard;
+   int temp = n; // nur lokal sichtbar
+   unlock guard;
+   return temp; 
+}
+
+
+}
+
+mainAgent {}

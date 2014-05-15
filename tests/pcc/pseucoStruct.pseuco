@@ -1,0 +1,20 @@
+struct GanzeZahl { 
+
+int n;  
+
+void set(int x){
+   n = x;
+}
+
+int get(){
+   return n; 
+}
+
+void decrement (){
+n = n - 1;
+}
+
+
+}
+
+mainAgent {}

@@ -1,0 +1,31 @@
+monitor Kanal20P_pseudo_lock_free { 
+
+int[20] n;  // nicht direkt zugreifbar, dies ist die gemeinsame Ressource  
+int used = 0; // nicht direkt zugreifbar, zaehlt die belegten Kanalplaetze 
+
+condition platzIstFrei with used<20; // nicht direkt zugreifbar, entspricht der Bedingung "used < 20"
+condition datumIstDa with used>0;   // nicht direkt zugreifbar, entspricht der Bedingung "used > 0"
+
+
+void put(int x){
+   waitForCondition platzIstFrei;    // Entspannt warten, bis Platz frei.
+   n[used] = x;                // Verwende die Monitor-Operation von PrimOderNicht
+   used++;
+   signal datumIstDa;      // Uebrigens, jetzt ist ein Datum da.
+}
+
+int get(){
+   int temp; 
+   waitForCondition datumIstDa; // Entspannt warten, bis Datum da.
+   temp = n[0];      
+   for (int j=1; j < used; j++){
+         n[j-1]=n[j];
+   }
+   used--;
+   signal platzIstFrei;  // Uebrigens, jetzt ist ein Plaetzchen frei.
+   return temp; // TODO: 
+}
+
+}
+
+mainAgent {}

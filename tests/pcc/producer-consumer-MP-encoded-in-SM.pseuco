@@ -1,0 +1,56 @@
+monitor Kanal3{
+
+   int[3] n;
+   int used = 0; 
+
+   condition platzIstFrei with (used < 3);
+   condition datumIstDa with (used > 0);
+
+   void put (int x){
+      waitForCondition platzIstFrei;
+      n[used] = x;
+      used++;
+      signal datumIstDa;
+   }
+
+   int get(){
+      waitForCondition datumIstDa;
+      int temp = n[0];
+      used--;
+      for (int j=1; j <= used;j++){
+         n[j-1]=n[j];
+      }
+      signal platzIstFrei;
+      return temp;
+   }
+}
+
+Kanal3 k;
+
+void produce(int id){ 
+   while (true) {
+       k.put(id);
+       println("Erzeuger " + id + " hat " + id + " produziert.");
+   }
+}
+  
+void consume(string name){ 
+   while (true) {
+       int c = k.get();
+       println(" Verbraucher " + name + " hat " + c + " konsumiert.");
+   }
+}
+
+mainAgent{
+   start produce(1); // Ein Erzeuger. 
+   start produce(2); // Zwei Erzeuger. 
+   start produce(3); // Drei Erzeuger. 
+   start produce(4); // Vier Erzeuger. 
+   start produce(5); // Fuenf Erzeuger. 
+   
+   start consume("A"); // Ein Verbraucher. 
+   start consume("B"); // Zwei Verbraucher. 
+   start consume("C"); // Drei Verbraucher. 
+   start consume("D"); // Vier Verbraucher. 
+}
+

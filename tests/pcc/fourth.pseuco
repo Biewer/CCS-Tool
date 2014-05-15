@@ -1,0 +1,15 @@
+
+void factorial(int z){ 
+   int j, n = 1;         
+   for (j = z ;  j > 0 ; j--){
+      n= n*j; 
+   }  
+   println("Die Fakultaet von "+ z +" ist " + n + "."); 
+}
+
+mainAgent{
+   agent a1 = start factorial(3);       
+   agent a2 = start factorial(5);        
+}
+
+

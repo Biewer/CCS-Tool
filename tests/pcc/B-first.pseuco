@@ -1,0 +1,22 @@
+int mid, fin;
+intchan cc;
+ 
+void factorial(int z, intchan c){ 
+   int j, n;         
+   n= 1;
+   for ( j = z; j > 0 ; j-- ){
+      n= n*j; 
+   }      
+   c <! n; // Ich sende, was rauskommt.
+}
+
+mainAgent{
+   agent a1 = start factorial(3, cc);         // Ich lasse  einen Agenten von der Leine.
+   println("Der erste Agent arbeitet fuer mich."); 
+   mid = <? cc;                         // Mal sehen was der ausrechnet.
+   agent a2 = start factorial(mid, cc);       // Und noch einen.
+   println("Der zweite Agent arbeitet fuer mich."); 
+   fin = <? cc;                         // Mal sehen was der draus macht.
+   println("Die Fakultaet von der Fakultaet von 3 ist " + fin + ".");
+}
+

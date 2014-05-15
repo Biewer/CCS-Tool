@@ -1,0 +1,10 @@
+    void replace(AtomareGanzeZahl i, AtomareGanzeZahl x){
+      i.set(x.get());
+    }
+
+    mainAgent{
+      AtomareGanzeZahl var;
+      AtomareGanzeZahl val;
+      replace(var, val);
+      println ("var ist ",var," und val ist auch", val);
+    }

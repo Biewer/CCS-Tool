@@ -1,0 +1,7 @@
+monitor mon{
+	void countDutch(){
+		println("Een");
+		println("Twee");
+		println("Drie");
+	}
+}

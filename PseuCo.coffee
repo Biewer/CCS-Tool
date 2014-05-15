@@ -464,7 +464,7 @@ class PCSendExpression extends PCExpression	# Children: First: The expression th
 		left = @children[0].getType(env)
 		right = @children[1].getType(env)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Channel expected but found #{left}"}) if not left instanceof PCTChannelType
-		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Values of type #{right} can't be sent over channels for #{left.channeledType}"}) if not left.channeledType.isEqual(right)
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Values of type #{right} can't be sent over channels for #{left.channeledType}"}) if not left.channelledType.isEqual(right)
 		right
 	
 	usesSendOrReceiveOperator: -> true

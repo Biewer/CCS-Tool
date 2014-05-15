@@ -1,0 +1,30 @@
+intchan100 buff;
+  
+void produce(intchan out, string id){ 
+   while (true) {
+		int p = 1;
+       // ...  Nehme mir Zeit um zu produzieren.
+       println("Erzeuger " + id + " hat " + p + " produziert.");
+       out <! p;
+   }
+}
+  
+void consume(intchan in, string id){ 
+   while (true) {
+		int c = 2;
+       c = <? in;
+       // ...  Brauche Zeit um zu konsumieren.
+       println(" Verbraucher " + id + " hat " + c + " konsumiert.");
+   }
+}
+ 
+mainAgent{
+   start produce(buff, "1"); // Ein Erzeuger. 
+   start produce(buff, "2"); // Zwei Erzeuger. 
+   start produce(buff, "3"); // Drei Erzeuger. 
+   
+   start consume(buff, "A"); // Ein Verbraucher. 
+   start consume(buff, "B"); // Zwei Verbraucher. 
+   start consume(buff, "C"); // Drei Verbraucher. 
+   start consume(buff, "D"); // Vier Verbraucher. 
+}

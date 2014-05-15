@@ -1,0 +1,24 @@
+struct GanzeZahl {
+ /*....*/ //genau wie in Listing TODO
+}
+
+GanzeZahl z;
+
+void do_a1()
+{ int tmp;
+	
+	z.set(3);
+	tmp = z.get();
+	println("Der Wert ist ",tmp);
+	
+}
+
+void do_a2()
+{
+	z.decrement();
+}
+
+mainAgent {
+agent a1 = start do_a1();
+agent a2 = start do_a2();
+}

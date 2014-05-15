@@ -89,8 +89,6 @@ exports["ProgramController"] = PCCProgramController
 
 
 
-@window.PCC = exports if @window
-
 
 
 

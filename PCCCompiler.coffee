@@ -59,21 +59,37 @@ class PCCCompiler
 		@stack = new PCCCompilerStack(global)
 		usedTypes = @controller.getUsedTypes()
 		@compileReturn()
+		@__assertEmptyGroupStack()
 		@compileMutex()
+		@__assertEmptyGroupStack()
 		@compileWaitRoom()
+		@__assertEmptyGroupStack()
 		@compileArrayManager()
+		@__assertEmptyGroupStack()
 		@compileArrayWithCapacity(n) for n of usedTypes.arrays
+		@__assertEmptyGroupStack()
 		@compileChannelManager()
+		@__assertEmptyGroupStack()
 		@compileChannelWithCapacity(n) for n of usedTypes.channels
+		@__assertEmptyGroupStack()
 		@compileAgentTools()
+		@__assertEmptyGroupStack()
 		for p in @controller.getAgents()
 			p.emitAgentConstructor(@)
 			@beginSystemProcess()
 			@emitProcessApplication(p.getAgentProcessName(), [])
 			@endSystemProcess()
+		@__assertEmptyGroupStack()
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
+		@__assertEmptyGroupStack()
 		@program.compile(@)
+		@__assertEmptyGroupStack()
 		new CCS.CCS(@controller.root.collectPDefs(), @_getSystem())
+	
+	__assertEmptyGroupStack: -> 
+		if @groupElements.length > 0 
+			throw new Error("Assertion violation: @groupElements must be empty!")
+		null
 	
 	compile: (node, args...) ->
 		@compilingNodes.push(node)
@@ -118,14 +134,17 @@ class PCCCompiler
 		When these methods are called, the receiver may modify the compiler state by emitting CCS processes, pushing processes, ...
 	###
 	
+	getVariableWithName: (name) -> @getVariableWithNameOfClass(name, null, false)
 	
-	getVariableWithName: (name, className, isInternal) ->
+	getVariableWithNameOfClass: (name, className, isInternal) ->
 		name = PCCVariableInfo.getNameForInternalVariableWithName(name) if isInternal
 		if className
 			return @controller.getClassWithName(className).compilerGetVariable(@, name)
 		@stack.compilerGetVariable(@, name)
 	
-	getProcedureWithName: (name, className) ->
+	getProcedureWithName: (name) -> @getProcedureWithNameOfClass(name, null, false)
+	
+	getProcedureWithNameOfClass: (name, className) ->
 		if className
 			return @controller.getClassWithName(className).compilerGetProcedure(@, name)
 		@stack.compilerGetProcedure(@, name)
@@ -652,7 +671,7 @@ class PCCConstructor
 		variables = @delegate.constructorGetArguments(@, @compiler, @context)
 		@compiler.beginProcessGroup(new PCCGroupable(envName+"_cons"), variables)
 		entry = @compiler.getProcessFrame()
-		variables = (@compiler.getVariableWithName(v.getName(), null, v.isInternal) for v in variables)	# local variables
+		variables = (@compiler.getVariableWithNameOfClass(v.getName(), null, v.isInternal) for v in variables)	# local variables
 		envArgCount = @delegate.constructorProtectEnvironmentArguments(@, @compiler, variables, @context)
 		vars = []
 		vars.unshift(@compiler.unprotectContainer()) for i in [0...envArgCount]

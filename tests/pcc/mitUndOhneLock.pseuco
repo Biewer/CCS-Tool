@@ -1,0 +1,18 @@
+mutex guard_n; 
+int n;
+ 
+ void zaehlerMitLock(){
+  for (int loop = 0; loop < 10; loop++){
+    lock guard_n;                    // Sicheren Raum betreten
+    n = n + 1;
+    lock guard_n;                    // Sicheren Raum verlassen
+  }
+}
+
+void zaehlerOhneLock(){
+  for (int loop = 0; loop < 10; loop++){
+    n = n + 1;
+  }
+}
+
+mainAgent {}

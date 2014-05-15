@@ -1,0 +1,26 @@
+int n;
+mutex guard_n;                        // Sicherer Raum
+
+void zaehler(){
+   int loop;
+   int temp;
+   for (loop = 0; loop < 5; loop++){
+      lock guard_n;                    // Sicheren Raum betreten
+      temp = n;                                            // Gemeinsame Variable geschuetzt lesen.
+      unlock guard_n;                    // Sicheren Raum verlassen
+      temp = temp - 1;
+      lock guard_n;                    // Sicheren Raum betreten
+      n = temp;                                            // Gemeinsame Variable geschuetzt schreiben.
+      unlock guard_n;                    // Sicheren Raum verlassen
+  }
+}
+
+mainAgent{
+   n = 0;
+
+   agent a1 = start zaehler();
+   agent a2 = start zaehler();
+   join(a1);
+   join(a2);
+   println("Der Wert ist " + n); 
+}

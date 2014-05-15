@@ -24,6 +24,12 @@ PC = require "PseuCo"
 PCC = require "CCSCompiler"
 
 
+if window
+	window.CCS = CCS
+	window.PC = PC
+	window.PCC = PCC
+
+
 UIEditorState = 
 	possible: 0
 	invalid: 1

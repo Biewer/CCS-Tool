@@ -1,0 +1,18 @@
+import "example2.pseuco";
+
+agent a1, a2;
+int fin;
+intchan cc;
+mon m;
+
+void countFrench (){
+	println ( " Un " );
+	println ( " Deux " );
+	println ( " Trois " );
+}
+ 
+mainAgent{
+	a1 = start m.countDutch (); // Ich lass einen Agenten los !
+	a2 = start countFrench (); // Und noch einen !
+	println ( " Beide  zaehlen ! " ); // Das sollen alle wissen .
+}

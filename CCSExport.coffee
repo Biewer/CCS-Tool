@@ -59,6 +59,8 @@ exports["MultiplicativeExpression"] = CCSMultiplicativeExpression
 exports["ConcatenatingExpression"] = CCSConcatenatingExpression
 exports["RelationalExpression"] = CCSRelationalExpression
 exports["EqualityExpression"] = CCSEqualityExpression
+exports["AndExpression"] = CCSAndExpression
+exports["OrExpression"] = CCSOrExpression
 
 exports["actionSets"] = ActionSets
 
@@ -90,7 +92,6 @@ exports["RecRule"] = CCSRecRule
 # Private: CCSExecutorDefaultStepPicker
 exports["Executor"] = CCSExecutor
 
-@window.CCS = exports if @window
 
 
 
