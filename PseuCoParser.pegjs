@@ -439,6 +439,7 @@ BlockStatement
 Statement
 	= stmt:StatementBlock { return new PCStatement(line(), column(), stmt); }
 	/ stmt:Println { return new PCStatement(line(), column(), stmt); }
+	/ stmt:StatementExpression _ ";" { return new PCStatement(line(), column(), stmt); }
 	/ stmt:SelectStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:IfStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:WhileStatement { return new PCStatement(line(), column(), stmt); }
@@ -448,7 +449,6 @@ Statement
 	/ "continue" _ ";" { return new PCStatement(new PCContinueStmt(line(), column())); }
 	/ stmt:ReturnStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:PrimitiveStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:StatementExpression _ ";" { return new PCStatement(line(), column(), stmt); }
 	/ _ ";" { return new PCStatement(line(), column()); }
 
 StatementExpression
