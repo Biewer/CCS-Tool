@@ -34,6 +34,7 @@ class PCTType
 	isAssignableTo: (type) ->
 		return false if @kind is PCTType.WILDCARD
 		(@isEqual(type) or type.kind is PCTType.WILDCARD)
+	getBaseType: -> @
 	toString: ->
 		switch @kind
 			when PCTType.INT then "int"
@@ -81,6 +82,7 @@ class PCTArrayType extends PCTType
 	isEqual: (type) ->
 		capacityFulfilled = type.capacity == @capacity || @capacity == 0 || type.capacity == 0
 		type.kind == @kind and capacityFulfilled and @elementsType.isEqual(type.elementsType)
+	getBaseType: -> @elementsType.getBaseType()
 	toString: -> "#{@elementsType.toString()}[#{@capacity}]"
 
 
@@ -92,6 +94,7 @@ class PCTChannelType extends PCTType
 	isAssignableTo: (type) ->	# is this assignable to type?
 		@kind == type.kind and (@capacity == type.capacity or type.capacity == 0) and @channelledType.isEqual(type.channelledType) # TODO type.capacity == 1?
 	getApplicableCapacity: -> if @capacity == PCChannelType.CAPACITY_UNKNOWN then 0 else @capacity
+	getBaseType: -> @channelledType.getBaseType()
 	toString: ->
 		if @capacity == PCChannelType.CAPACITY_UNKNOWN
 			"handshake #{@channelledType.toString()} #{super}"
@@ -105,6 +108,7 @@ class PCTClassType extends PCTType
 	isMonitor: -> @kind == PCTType.MONITOR
 	isEqual: (type) ->
 		@kind == type.kind and @identifier == type.identifier
+	getBaseType: -> @
 	toString: -> "#{super} #{@identifier}"
 
 class PCTProcedureType extends PCTType
@@ -114,6 +118,7 @@ class PCTProcedureType extends PCTType
 		return false if type.argumentTypes.length != @argumentTypes
 		(return false if not type.argumentTypes[i].isEqual(@argumentTypes[i])) for i in [0...@argumentTypes.length] by 1
 		type.returnType.isEqual(@returnType)
+	getBaseType: -> @returnType.getBaseType()
 	toString: ->
 		args = (t.toString() for t in @argumentTypes).join(" x ")
 		"#{@returnType.toString()} -> (#{args})"
@@ -122,6 +127,7 @@ class PCTProcedureType extends PCTType
 class PCTTypeType extends PCTType
 	constructor: (@type) ->
 		super PCTType.TYPE
+	getBaseType: -> @type.getBaseType()
 	isEqual: (type) ->	@kind == type.kind and @type.isEqual(type.type)
 		
 		
