@@ -73,7 +73,7 @@ class NJSMain
 			content = fs.readFileSync(p, {"encoding": "utf8"})
 			comps = p.split(".")
 			comps = comps[comps.length-2].split("/")
-			pseuco[comps[comps.length-1]] = content
+			pseuco[comps[comps.length-1]] = {"code": content}
 		pseucoString = JSON.stringify(pseuco)
 		console.log "collecting test code"
 		for c in files.coffee

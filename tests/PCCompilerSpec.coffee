@@ -700,10 +700,8 @@ programs =
 		}
 		mainAgent {
 			shared.set (10); // Hier ist noch eine Monitor - Operation .
-			agent a1 ;
-			agent a2 ;
-			a1 = start zaehler ();
-			a2 = start zaehler ();
+			agent a1 = start zaehler ();
+			agent a2 = start zaehler ();
 			join a1 ;
 			join a2 ;
 			println (" Der  Wert  ist  " + shared . get ()); // Hier die dritte Monitor - Operation .

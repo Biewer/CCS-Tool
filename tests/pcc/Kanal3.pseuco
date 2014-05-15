@@ -13,7 +13,7 @@ monitor Kanal3{
       signal datumIstDa;
    }
 
-   void get (){
+   int get (){
       waitForCondition datumIstDa;
       int temp = n[0];
       used--;
