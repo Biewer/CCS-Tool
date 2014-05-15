@@ -263,6 +263,8 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 			type = child._getType(env, @type)
 			if type? and not @type.isEqual(type)
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "You can't initialize variable of type #{@type} with value of type #{type}"})
+		if @type.getBaseType().isEqual(new PCTType(PCTType.AGENT))
+			null
 		null
 
 # PCDeclStmt is temporary available for convenience reasons!
@@ -588,7 +590,7 @@ class PCReceiveExpression extends PCExpression	# 1 child
 
 	# Type checking
 	_getType: (env) ->
-		@children[0].getType(env).chanelledType
+		@children[0].getType(env).channelledType
 
 	usesSendOrReceiveOperator: -> true
 
