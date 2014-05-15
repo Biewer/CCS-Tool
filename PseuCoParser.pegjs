@@ -369,7 +369,7 @@ ReceiveExpression
 												{
 													res = new PCReceiveExpression(line(), column(), res)
 												}
-												return exp;
+												return res;
 											}
 
 CallExpression
@@ -388,23 +388,23 @@ Arguments
 
 MonCall
 	= exp:PrimaryExpression call:(_ "." _ ProcCall)+	{
-														var res = new PCClassCall(line(), column(), exp, call[0][1]);
-														for (var i = 1; i < call.length; ++i)
-														{
-															res = new PCClassCall(line(), column(), res, call[i][3]);
-														}
-														return res;
-													}
-
-ArrayExpression
-	= exp:PrimaryExpression call:(_ "[" Expression "]")*	{
-															var res = exp;
-															for (var i = call.length - 1; i >= 0; --i)
+															var res = new PCClassCall(line(), column(), exp, call[0][3]);
+															for (var i = 1; i < call.length; ++i)
 															{
-																res = new PCArrayExpression(line(), column(), res, call[i][2]);
+																res = new PCClassCall(line(), column(), res, call[i][3]);
 															}
 															return res;
 														}
+
+ArrayExpression
+	= exp:PrimaryExpression call:(_ "[" Expression "]")*	{
+																var res = exp;
+																for (var i = call.length - 1; i >= 0; --i)
+																{
+																	res = new PCArrayExpression(line(), column(), res, call[i][2]);
+																}
+																return res;
+															}
 
 PrimaryExpression
 	= exp:Literal { return new PCLiteralExpression(line(), column(), exp); }
