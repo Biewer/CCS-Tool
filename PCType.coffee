@@ -92,7 +92,7 @@ class PCTChannelType extends PCTType
 	isEqual: (type) ->
 		@kind == type.kind and @capacity == type.capacity and @channelledType.isEqual(type.channelledType)
 	isAssignableTo: (type) ->	# is this assignable to type?
-		@kind == type.kind and (@capacity == type.capacity or type.capacity == 0) and @channelledType.isEqual(type.channelledType) # TODO type.capacity == 1?
+		@kind == type.kind and (@capacity == type.capacity or @capacity == PCChannelType.CAPACITY_UNKNOWN) and @channelledType.isEqual(type.channelledType)
 	getApplicableCapacity: -> if @capacity == PCChannelType.CAPACITY_UNKNOWN then 0 else @capacity
 	getBaseType: -> @channelledType.getBaseType()
 	toString: ->

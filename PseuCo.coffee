@@ -612,7 +612,7 @@ class PCProcedureCall extends PCExpression
 		for arg, i in proc.arguments
 			type = arg.type
 			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Procedure expected argument of type #{type}, but got none!"}) if i >= @children.length
-			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Argument number #{i + 1} should have type #{type}, but is #{@children[i].getType(env)}"}) if not @children[i].getType(env).isAssignableTo(type)
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Argument number #{i + 1} should have type #{type}, but is #{@children[i].getType(env)}"}) if not type.isAssignableTo(@children[i].getType(env))
 		proc.returnType
 
 # - Class Call
@@ -784,7 +784,7 @@ class PCSelectStmt extends PCNode	# children are cases
 		retExhaust = true
 		for child in @children
 			child.getType(env)
-			retExhaut &= child.isReturnExhaustive
+			retExhaust &= child.isReturnExhaustive
 		env.setReturnExhaustive() if retExhaust
 		env.closeEnvironment()
 		env.setReturnExhaustive() if retExhaust
@@ -806,7 +806,7 @@ class PCCase extends PCNode
 	# Type checking
 	_getType: (env) ->
 		child.getType(env) for child in @children
-		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "case condition requires at least one send or receive operation."}) if @children.length > 1 and not @children[0].usesSendOrReceiveOperator()
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "case condition requires at least one send or receive operation."}) if @children.length > 1 and not @children[1].usesSendOrReceiveOperator()
 		if @children[0] instanceof PCStatement and @children[0].children[0]? and @children[0].children[0] instanceof PCStmtBlock
 			@isReturnExhaustive = @children[0].children[0].isReturnExhaustive
 		new PCTType(PCTType.VOID)
