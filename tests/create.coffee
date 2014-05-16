@@ -36,16 +36,13 @@ class NJSMain
 	
 	
 	_filesForPath: (path) ->
-		console.log "files"
 		stats = fs.statSync(path)
 		if (stats.isDirectory())
 			res = []
 			files = fs.readdirSync(path)
-			console.log "expanding folder"
 			for f in files
 				f = "#{path}/#{f}"
 				res.push(f) if fs.statSync(f).isFile()
-			console.log "folder expanded"
 			res
 		else
 			[path]
@@ -53,9 +50,7 @@ class NJSMain
 	_getInputFiles: ->
 		res = {"pseuco": [], "coffee": []}
 		for path in @src
-			console.log "exploring path"
 			files = @_filesForPath path
-			console.log "exploring items"
 			for f in files
 				comps = f.split(".")
 				if comps[comps.length-1] == "coffee"
@@ -68,14 +63,12 @@ class NJSMain
 		return if not @valid
 		files = @_getInputFiles()
 		pseuco = {}
-		console.log "collecting pseuco"
 		for p in files.pseuco
 			content = fs.readFileSync(p, {"encoding": "utf8"})
 			comps = p.split(".")
 			comps = comps[comps.length-2].split("/")
 			pseuco[comps[comps.length-1]] = {"code": content}
 		pseucoString = JSON.stringify(pseuco)
-		console.log "collecting test code"
 		for c in files.coffee
 			content = fs.readFileSync(c, {"encoding": "utf8"})
 			content = coffee.compile(content)

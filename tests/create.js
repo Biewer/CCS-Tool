@@ -40,12 +40,10 @@ NJSMain = (function() {
 
   NJSMain.prototype._filesForPath = function(path) {
     var f, files, res, stats, _i, _len;
-    console.log("files");
     stats = fs.statSync(path);
     if (stats.isDirectory()) {
       res = [];
       files = fs.readdirSync(path);
-      console.log("expanding folder");
       for (_i = 0, _len = files.length; _i < _len; _i++) {
         f = files[_i];
         f = "" + path + "/" + f;
@@ -53,7 +51,6 @@ NJSMain = (function() {
           res.push(f);
         }
       }
-      console.log("folder expanded");
       return res;
     } else {
       return [path];
@@ -69,9 +66,7 @@ NJSMain = (function() {
     _ref = this.src;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
-      console.log("exploring path");
       files = this._filesForPath(path);
-      console.log("exploring items");
       for (_j = 0, _len1 = files.length; _j < _len1; _j++) {
         f = files[_j];
         comps = f.split(".");
@@ -92,7 +87,6 @@ NJSMain = (function() {
     }
     files = this._getInputFiles();
     pseuco = {};
-    console.log("collecting pseuco");
     _ref = files.pseuco;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       p = _ref[_i];
@@ -106,7 +100,6 @@ NJSMain = (function() {
       };
     }
     pseucoString = JSON.stringify(pseuco);
-    console.log("collecting test code");
     _ref1 = files.coffee;
     _results = [];
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
