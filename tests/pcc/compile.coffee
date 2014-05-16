@@ -22,7 +22,10 @@ describe "PseuCo parser", ->
 			
 		it "should compile \"#{i}\" to CCS", ->
 			compiler = new PCC.Compiler(programs[i].tree)
-			ccs = compiler.compileProgram()
+			programs[i].ccs = compiler.compileProgram()
+		
+		it "should be able to generate traces for #{i}", ->
+			programs[i].ccs.getTraces(false, 20)
 			
 
 	for i of programs
