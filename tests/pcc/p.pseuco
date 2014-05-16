@@ -1,10 +1,10 @@
 intchan[3] read;
 intchan[3] write;
 
-boolchan signalPlatzFrei; 
+boolchan _signalPlatzFrei; 
 boolchan waitPlatzFrei; 
 boolchan wantPlatzFrei; 
-boolchan signalDatumDa; 
+boolchan _signalDatumDa; 
 boolchan waitDatumDa; 
 boolchan wantDatumDa; 
 
@@ -25,8 +25,8 @@ void initialize(){
    start cell(read[1],write[1],0);
    start cell(read[2],write[2],0);
  
-   start chillDaemon(wantDatumDa,waitDatumDa,signalDatumDa,"Datum");
-   start chillDaemon(wantPlatzFrei,waitPlatzFrei,signalPlatzFrei,"Platz");
+   start chillDaemon(wantDatumDa,waitDatumDa,_signalDatumDa,"Datum");
+   start chillDaemon(wantPlatzFrei,waitPlatzFrei,_signalPlatzFrei,"Platz");
 }
 
 struct Kanal3{ 
@@ -50,7 +50,7 @@ struct Kanal3{
       } 
       write[used] <! x;
       used++;   
-      signalDatumDa <! true;
+      _signalDatumDa <! true;
       mpUnlock(guard);
    }
 
@@ -67,7 +67,7 @@ struct Kanal3{
       for (int j=1; j <= used;j++){
          write[j-1] <! (<? read[j]);
       }
-      signalPlatzFrei <! true;
+      _signalPlatzFrei <! true;
       mpUnlock(guard);
       return temp;
    }

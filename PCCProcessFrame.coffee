@@ -90,10 +90,10 @@ class PCCProcessFrame
 		false
 	
 	createContainer: (ccsType, wish) ->
-		if typeof wish is "string" and wish.length > 0 and wish.indexOf("f_") isnt 0 and not @_didAlreadyUseContainerWithIdentifier(wish)
+		if typeof wish is "string" and wish.length > 0 and not wish.match(/^\$[0-9]/) and not @_didAlreadyUseContainerWithIdentifier(wish)
 			id = wish
 		else
-			id = "f_#{@containerIndex++}"
+			id = "$#{@containerIndex++}"
 		container = new PCCVariableContainer(id, ccsType)
 		@usedContainers.push(container)
 		container
