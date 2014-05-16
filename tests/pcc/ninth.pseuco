@@ -4,7 +4,7 @@ boolchan100 k31;
   
 void assemblyB1(intchan in, intchan out, boolchan kan){ 
    int j; bool b; 
-   int f(int x){/*...*/ } // Das soll ich mit dem Ding anstellen.
+   int f(int x){/*...*/ return 1; } // Das soll ich mit dem Ding anstellen.
    while (true) {
        b = <? kan;    // Nehme mir ein Kanban.
        j = <? in;     // Nehme mir ein Ding vom Eingang.
@@ -16,7 +16,7 @@ void assemblyB1(intchan in, intchan out, boolchan kan){
 
 void assemblyB2(intchan in, intchan out){ 
    int j; 
-   int g(int x){/*...*/} // Das soll ich mit dem Ding anstellen.
+   int g(int x){/*...*/ return 1;} // Das soll ich mit dem Ding anstellen.
    while (true) {
        j = <? in;     // Nehme mir ein Ding vom Eingang.
        j = g(j);      // Dengel ein wenig daran rum.
@@ -27,7 +27,7 @@ void assemblyB2(intchan in, intchan out){
 
 void assemblyB3(intchan in, intchan out, boolchan kan){ 
    int j; 
-   int h(int x){/*...*/} // Das soll ich mit dem Ding anstellen.
+   int h(int x){/*...*/ return 1;} // Das soll ich mit dem Ding anstellen.
    while (true) {
        j = <? in;       // Nehme mir ein Ding vom Eingang.
        j = h(j);      // Dengel ein wenig daran rum.
