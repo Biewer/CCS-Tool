@@ -29,10 +29,13 @@ var testCases = {"3-syncs":{"code":"intchan ch0,ch1,ch2;\r\nboolchan done;\r\n\r
       it("should check types for \"" + i + "\"", function() {
         return programs[i].tree.getType();
       });
-      return it("should compile \"" + i + "\" to CCS", function() {
-        var ccs, compiler;
+      it("should compile \"" + i + "\" to CCS", function() {
+        var compiler;
         compiler = new PCC.Compiler(programs[i].tree);
-        return ccs = compiler.compileProgram();
+        return programs[i].ccs = compiler.compileProgram();
+      });
+      return it("should be able to generate traces for " + i, function() {
+        return programs[i].ccs.getTraces(false, 20);
       });
     };
     for (i in programs) {
