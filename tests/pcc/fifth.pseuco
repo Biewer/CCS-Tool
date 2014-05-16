@@ -7,7 +7,7 @@ void factorial(boolchan f, intchan d, intchan c){
    bool run = true;  
    while (run) { // Ewiges Leben?
       select {
-         case  _ = <? f:{ // Aha, Zeit aufzuhoeren.
+         case  <? f:{ // Aha, Zeit aufzuhoeren.
             run = false;
          } 
          case z = <? d:{ // Aha, Weitermachen.
@@ -25,10 +25,10 @@ void factorial(boolchan f, intchan d, intchan c){
 mainAgent{
    int j;
    agent[4] a = {
-   		start factorial(dd, cc),
-   		start factorial(dd, cc),
-   		start factorial(dd, cc),
-   		start factorial(dd, cc)
+   		start factorial(ff, dd, cc),
+   		start factorial(ff, dd, cc),
+   		start factorial(ff, dd, cc),
+   		start factorial(ff, dd, cc)
    };
    for (j=1; j<=8 ; j++){
        dd <! j;                           // Hier gibt's Arbeit.
