@@ -1,4 +1,4 @@
-intchan100[5] conn;
+intchan10[5] conn;
 
 void prime(int v, intchan in, intchan out){ 
    int p;

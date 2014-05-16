@@ -19,7 +19,7 @@ int[10] post(int x){
    return res;
 }
 
-intchan100 w;
+intchan10 w;
 
 mainAgent{
    int curr;

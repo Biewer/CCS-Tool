@@ -1,6 +1,6 @@
-intchan100  t12;
-intchan100  t23;
-boolchan100 k31;
+intchan10  t12;
+intchan10  t23;
+boolchan10 k31;
   
 void assemblyB1(intchan in, intchan out, boolchan kan){ 
    int j; bool b; 

@@ -1,4 +1,4 @@
-intchan100 buff;
+intchan10 buff;
   
 void produce(intchan out, string id){ 
    while (true) {

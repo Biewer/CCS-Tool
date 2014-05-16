@@ -1,6 +1,7 @@
 PC = require("PseuCo")
 PCC = require("CCSCompiler")
 
+timelogs = {}
 
 describe "PseuCo parser", ->
 	programs = testCases
@@ -30,10 +31,22 @@ describe "PseuCo parser", ->
 			compiler = new PCC.Compiler(programs[i].tree)
 			programs[i].ccs = compiler.compileProgram()
 		
-		#it "should be able to generate traces for #{i}", ->
-			#programs[i].ccs.getTraces(false, 20)
+		it "should be able to generate traces for #{i}", ->
+			start = new Date()
+			programs[i].ccs.getTraces(false, 20)
+			timelogs[i] = (new Date()).getTime() - start.getTime()
+	
+	
+	printTimeLogs = ->
+		console.log "\nTrace execution times:"
+		for p,t of timelogs
+			console.log "#{p}: #{t}ms"
 			
-
+	
 	for i of programs
 		testProgram(i)
+	
+	it "should print time logs", ->
+		printTimeLogs()
+	
 	null
