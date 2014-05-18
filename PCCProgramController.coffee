@@ -276,11 +276,16 @@ class PCCVariableInfo extends PC.Variable
 	constructor: (node, name, type, @isInternal=false) -> super node, name, type
 	getIdentifier: -> "#{if @isInternal then "#" else ""}#{@getName()}"	# default: x; internal: #x
 	#getSuggestedContainerName: -> @getName() + (if @isInternal then "H" else "L")
-	getSuggestedContainerName: -> (if @isInternal then "$" else "") + @getName()
+	getSuggestedContainerName: -> 
+		if @isInternal
+			PCCVarNameForInternalVar @getName()
+		else
+			PCCVarNameForPseucoVar @getName()
+	#(if @isInternal then "" else "$") + @getName()
 	 
 PCCVariableInfo.getNameForInternalVariableWithName = (name) -> "#"+name
 
-PC.Variable::getSuggestedContainerName = -> @getName() #+ "L"
+PC.Variable::getSuggestedContainerName = -> PCCVarNameForPseucoVar @getName()
 PC.Variable::getCCSType = -> @type.getCCSType()
 PC.Variable::compileDefaultValue = (compiler) -> 
 	if @node then @node.compileDefaultValue(compiler) else @type.createContainer(compiler)

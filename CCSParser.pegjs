@@ -189,7 +189,7 @@ name "name"
 
 // The following rules are the same, but they have different names which makes error messages better understandable!
 identifier "identifier"
-  = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
+  = first:[a-z_$] rest:[A-Za-z0-9_$]* { return first + rest.join(''); }
 
 ValueIdentifier
   = id:identifier __ r:(InlineRange)?	{ return new CCSVariable(id, r); }
@@ -342,7 +342,7 @@ expression
  			{ return equality; }
  	
  	exp_identifier "identifier"
- 	  = first:[a-z] rest:[A-Za-z0-9_]* 
+ 	  = first:[a-z_$] rest:[A-Za-z0-9_$]* 
  	  	{ return new CCSVariableExpression(first + rest.join('')); }
  	
  	exp_boolean "boolean literal"

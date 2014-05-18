@@ -36,6 +36,9 @@ PCCFlags =
 	trackAgents: 16
 
 
+PCCVarNameForPseucoVar = (name) -> "$#{name}"
+PCCVarNameForInternalVar = (name) -> name
+
 class PCCCompiler
 	constructor: (@program, @flags=0) ->
 		@controller = null
