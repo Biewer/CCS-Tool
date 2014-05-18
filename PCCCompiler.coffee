@@ -333,8 +333,8 @@ class PCCCompiler
 	endExpression: ->
 
 
-	_usingFrames: ->
-		@groupElements.length > 1 or (@groupElements.length > 0 and @groupElements[0] instanceof PCCProcessFrameStackElement)
+	_usingFrames: -> if @getProcessFrame() then true else false
+		#@groupElements.length > 1 or (@groupElements.length > 0 and @groupElements[0] instanceof PCCProcessFrameStackElement)
 
 	emitStop: -> @pushStackElement(new PCCStopStackElement())
 	emitExit: -> @pushStackElement(new PCCExitStackElement())
