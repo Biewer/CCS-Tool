@@ -264,7 +264,10 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 			if type? and not @type.isEqual(type)
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "You can't initialize variable of type #{@type} with value of type #{type}"})
 		if @type.getBaseType().isEqual(new PCTType(PCTType.AGENT))
-			null
+			for child in @children[1..]
+				init = child.getInitializer()
+				if not init? or init.isUncompletedArray is true
+					throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "UncompleteInitialization", "message" : "Agent declarations must be initialized (uncomplete initializations aren't allowed)."})
 		null
 
 # PCDeclStmt is temporary available for convenience reasons!
