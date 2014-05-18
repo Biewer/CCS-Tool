@@ -49,6 +49,9 @@ _
 __
 	= (WhiteSpace / LineTerminatorSequence / Comment)* {}
 
+___
+	= (WhiteSpace / MultiLineCommentNoLineTerminator / SingleLineComment)+ {}
+
 EOF
 	= !. {}
 
@@ -115,7 +118,7 @@ SourceElement
 	/ elem:DeclarationStatement { return elem; }
 
 Monitor
-	= "monitor" _ id:Identifier __ "{" __ code:MonitorCode __ "}"	{
+	= "monitor" ___ id:Identifier __ "{" __ code:MonitorCode __ "}"	{
 																		code.unshift(id, line(), column());
 																		return construct(PCMonitor, code);
 																	}
@@ -134,10 +137,10 @@ MainAgent
 	= "mainAgent" __ stmtBlock:StatementBlock { return new PCMainAgent(line(), column(), stmtBlock); }
 
 Procedure
-	= type:ResultType _ id:Identifier _ fp:FormalParameters __ stmtBlock:StatementBlock	{
-																							fp.unshift(line(), column(), type, id, stmtBlock);
-																							return construct(PCProcedureDecl, fp);
-																						}
+	= type:ResultType ___ id:Identifier _ fp:FormalParameters __ stmtBlock:StatementBlock	{
+																								fp.unshift(line(), column(), type, id, stmtBlock);
+																								return construct(PCProcedureDecl, fp);
+																							}
 
 FormalParameters
 	= "(" __ test:(FormalParameter (__ "," __ FormalParameter)*)? __ ")"	{
@@ -158,26 +161,26 @@ FormalParameters
 																			}
 
 FormalParameter
-	= type:Type _ id:Identifier	{ return new PCFormalParameter(line(), column(), type, id); }
+	= type:Type ___ id:Identifier	{ return new PCFormalParameter(line(), column(), type, id); }
 
 Struct
-	= "struct" _ id:Identifier __ "{" __ code:StructCode "}"	{
+	= "struct" ___ id:Identifier __ "{" __ code:StructCode "}"	{
 																	code.unshift(id, line(), column());
 																	return construct(PCStruct, code);
 																}
 
 StructCode
 	= decls:((Procedure / DeclarationStatement) __)*	{
-														var declarations = [];
-														for (var i = 0; i < decls.length; ++i)
-														{
-															declarations.push(decls[i][0]);
+															var declarations = [];
+															for (var i = 0; i < decls.length; ++i)
+															{
+																declarations.push(decls[i][0]);
+															}
+															return declarations;
 														}
-														return declarations;
-													}
 
 ConditionDeclarationStatement
-	= "condition" _ id:Identifier _ "with" _ exp:Expression _ ";" { return new PCConditionDecl(line, column, id, exp); }
+	= "condition" ___ id:Identifier _ "with" ___ exp:Expression _ ";" { return new PCConditionDecl(line, column, id, exp); }
 
 DeclarationStatement
 	= decl:Declaration _ ";"	{
@@ -186,15 +189,15 @@ DeclarationStatement
 								}
 
 Declaration
-	= type:Type _ head:VariableDeclarator tail:(__ "," __ VariableDeclarator)*	{
-																					var declarations = [];
-																					declarations.push(false, line(), column(), type, head);
-																					for (var i = 0; i < tail.length; ++i)
-																					{
-																						declarations.push(tail[i][3]);
+	= type:Type ___ head:VariableDeclarator tail:(__ "," __ VariableDeclarator)*	{
+																						var declarations = [];
+																						declarations.push(false, line(), column(), type, head);
+																						for (var i = 0; i < tail.length; ++i)
+																						{
+																							declarations.push(tail[i][3]);
+																						}
+																						return construct(PCDecl, declarations);
 																					}
-																					return construct(PCDecl, declarations);
-																				}
 
 VariableDeclarator
 	= id:Identifier varInit:(_ "=" _ VariableInitializer)? { return varInit != null ? new PCVariableDeclarator(line(), column(), id, varInit[3]) : new PCVariableDeclarator(line(), column(), id); }
@@ -254,7 +257,7 @@ Expression
 	/ exp:ConditionalExpression { return exp; }
 
 StartExpression
-	= "start" _ exp:(MonCall / ProcCall) { return new PCStartExpression(line(), column(), exp); }
+	= "start" ___ exp:(MonCall / ProcCall) { return new PCStartExpression(line(), column(), exp); }
 
 ExpressionList
 	= head:Expression tail:(__ "," __ Expression)*	{
@@ -472,16 +475,16 @@ StatementExpressionList
 
 SelectStatement
 	= "select" __ "{" __ stmts:(CaseStatement __ )+ __ "}"	{
-															var caseStmts = [line(), column()];
-															for (var i = 0; i < stmts.length; ++i)
-															{
-																caseStmts.push(stmts[i][0]);
+																var caseStmts = [line(), column()];
+																for (var i = 0; i < stmts.length; ++i)
+																{
+																	caseStmts.push(stmts[i][0]);
+																}
+																return construct(PCSelectStmt, caseStmts);
 															}
-															return construct(PCSelectStmt, caseStmts);
-														}
 
 CaseStatement
-	= "case" _ exp:StatementExpression _ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt, exp); }
+	= "case" ___ exp:StatementExpression _ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt, exp); }
 	/ "default" _ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt); }
 
 IfStatement
@@ -519,15 +522,15 @@ ForUpdate
 	= stmtList:StatementExpressionList { return stmtList; }
 
 ReturnStatement
-	= "return" _ exp:(Expression)? _ ";" { return exp != null ? new PCReturnStmt(line(), column(), exp) : new PCReturnStmt(line(), column()); }
+	= "return" ___ exp:(Expression)? _ ";" { return exp != null ? new PCReturnStmt(line(), column(), exp) : new PCReturnStmt(line(), column()); }
 
 PrimitiveStatement
-	= "join" _ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN, exp); }
-	/ "lock" _ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.LOCK, exp); }
-	/ "unlock" _ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.UNLOCK, exp); }
-	/ "waitForCondition" _ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT, exp); }
-	/ "signal" _ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL, exp); }
-	/ "signalAll" _ exp:(Expression)? _ ";" { return exp != null ? new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL, exp) : new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL); }
+	= "join" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN, exp); }
+	/ "lock" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.LOCK, exp); }
+	/ "unlock" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.UNLOCK, exp); }
+	/ "waitForCondition" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT, exp); }
+	/ "signal" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL, exp); }
+	/ "signalAll" ___ exp:(Expression)? _ ";" { return exp != null ? new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL, exp) : new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL); }
 
 Println
 	= "println" _ "(" _ expList:ExpressionList _ ")" _ ";"	{
