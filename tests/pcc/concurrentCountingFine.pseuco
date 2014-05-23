@@ -20,7 +20,7 @@ mainAgent{
 
    agent a1 = start zaehler();
    agent a2 = start zaehler();
-   join(a1);
-   join(a2);
+   join (a1);
+   join (a2);
    println("Der Wert ist " + n); 
 }
