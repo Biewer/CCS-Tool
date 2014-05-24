@@ -1,0 +1,58 @@
+intchan10[4] w;
+
+int nextPseudoRand (int y) {
+   y = (y+1) * 11173 % 11939;
+   return (y>0?y:-y);
+}
+
+void remember(int x){
+}
+
+bool alreadySeen(int x){
+return false;
+}
+
+int[10] post(int x){
+   int[10] res;
+   for (int j = 0 ; j <10; j++){
+      x = nextPseudoRand(x);
+      res[j] = x % 10000 ;
+   }
+   return res;
+}
+
+void search (int id, boolchan r) {
+   int curr;
+   int[10] nxt;
+   bool found = false;
+   int i = 0;
+   int v;
+   while (!(found)){
+      curr = <? w[id];
+      found = (curr == 13);
+      i++;
+      println(i + ". Agent " + id + " bearbeitet Knoten " + curr);
+      if (!alreadySeen(curr)){
+         remember(curr);
+         nxt = post(curr);
+         for (int j=0 ; j < 10; j++){
+            v = nxt[j];
+            w[v % 4] <! v;
+         }
+      }
+   }
+   r <! true;
+}
+ 
+mainAgent{
+   boolchan res;
+   for (int j=0; j<4 ; j++){
+       start search(j, res);  // Ich lasse vier Agenten loslegen.
+   }
+   w[0] <! 0; // Einer bekommt den initialen Knoten
+
+   <? res; // Sagt mir jemand Bescheid?
+   
+   println("Ja, der Knoten 13 ist erreichbar.");
+}
+
