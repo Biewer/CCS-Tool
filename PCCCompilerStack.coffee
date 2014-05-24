@@ -233,6 +233,7 @@ class PCCSequenceStackElement extends PCCBinaryCCSStackElement
 
 
 class PCCSystemProcessStackElement extends PCCUnaryStackElement
+	constructor: (@weight) -> super()
 	getResults: ->
 		container = @next.getResults()
 		pRes = container.getResult()

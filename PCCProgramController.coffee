@@ -75,7 +75,7 @@ class PCCClass extends PC.Class
 		return if not hasVariables
 		@emitEnvironment(compiler)
 		PCCConstructor.emitConstructor(compiler, @)
-		compiler.emitSystemProcessApplication(@getProcessName(), [new PCCConstantContainer(1)])
+		compiler.emitSystemProcessApplication(@getProcessName(), [new PCCConstantContainer(1)], PCCSysEnvironment)
 		
 	constructorGetName: -> @getEnvProcessName()
 	constructorGetArguments: -> [new PCCVariableInfo(null, "next_i", @type, true)]
@@ -333,7 +333,7 @@ class PCCGlobalVariable extends PCCVariable
 			compiler.emitOutput("sys_var", cid, container)
 		compiler.emitProcessApplication(@getEnvProcessName(), [container])
 		compiler.endProcessGroup()
-		compiler.emitSystemProcessApplication(@getProcessName(), [])
+		compiler.emitSystemProcessApplication(@getProcessName(), [], PCCSysEnvironment)
 		
 	getProcessName: -> "Env_global_#{@getName()}_cons"
 	getEnvProcessName: -> "Env_global_#{@getName()}"

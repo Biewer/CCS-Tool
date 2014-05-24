@@ -35,6 +35,15 @@ PCCFlags =
 	trackProcedureCalls: 8
 	trackAgents: 16
 
+PCCSysAgent = 50
+PCCSysEnvironment = 150
+PCCSysChannel = 250
+PCCSysArray = 450
+PCCSysMutexCons = 550
+PCCSysWaitRoom = 650
+PCCSysInstanceManager = 750
+PCCSysUnknownWeight = 5000
+
 
 PCCVarNameForPseucoVar = (name) -> "$#{name}"
 PCCVarNameForInternalVar = (name) -> name
@@ -45,7 +54,7 @@ class PCCCompiler
 		@stack = null	
 		@groupElements = []	
 		@controller = new PCCProgramController(@program)
-		@systemProcesses = []
+		@systemProcesses = {}
 		@compilingNodes = []	# stack
 	
 	trackGlobalVars: -> (@flags & PCCFlags.trackGlobalVariables) == PCCFlags.trackGlobalVariables
@@ -79,7 +88,7 @@ class PCCCompiler
 		@__assertEmptyGroupStack()
 		for p in @controller.getAgents()
 			p.emitAgentConstructor(@)
-			@beginSystemProcess()
+			@beginSystemProcess(PCCSysAgent)
 			@emitProcessApplication(p.getAgentProcessName(), [])
 			@endSystemProcess()
 		@__assertEmptyGroupStack()
@@ -106,12 +115,23 @@ class PCCCompiler
 		
 	
 	_getSystem: ->
-		@beginSystemProcess()
+		@beginSystemProcess(PCCSysAgent)
 		@emitProcessApplication("MainAgent", [])
 		@endSystemProcess()
-		system = @systemProcesses[0]
-		for i in [1...@systemProcesses.length] by 1
-			system = new CCS.Parallel(system, @systemProcesses[i])
+		weights = []
+		for w of @systemProcesses
+			i = parseInt w
+			weights.push i if not isNaN i
+		weights.sort((a,b) -> a-b)
+		system = null
+		debugger
+		for w in weights
+			mainProcesses = @systemProcesses[w]
+			for i in [0...mainProcesses.length] by 1
+				if system
+					system = new CCS.Parallel(system, mainProcesses[i])
+				else
+					system = mainProcesses[i]
 		new CCS.Restriction(system, @_getRestrictedChannels())
 	
 	_getRestrictedChannels: -> 
@@ -179,19 +199,22 @@ class PCCCompiler
 			controlElement.compilerPushPDef(result.data)
 		) for result in resultContainer.results
 	
-	beginSystemProcess: ->
-		element = new PCCSystemProcessStackElement()
+	beginSystemProcess: (weight) ->
+		weight = PCCSysUnknownWeight if not weight
+		element = new PCCSystemProcessStackElement(weight)
 		@groupElements.push(element)
 		@pushStackElement(element)
 	
 	endSystemProcess: ->
 		element = @groupElements.pop()
+		weight = element.weight
 		throw new Error("Unexpected stack element!") if not (element instanceof PCCSystemProcessStackElement)
 		res = element.removeFromStack()
-		@systemProcesses.push(res.data)
+		@systemProcesses[weight] = [] if not @systemProcesses[weight]
+		@systemProcesses[weight].push(res.data)
 	
-	emitSystemProcessApplication: (processName, argumentContainers) ->
-		@beginSystemProcess()
+	emitSystemProcessApplication: (processName, argumentContainers, weight) ->
+		@beginSystemProcess(weight)
 		@emitProcessApplication(processName, argumentContainers)
 		@endSystemProcess()
 	
@@ -391,7 +414,7 @@ class PCCCompiler
 		@emitProcessApplication("Mutex", [i])
 		control.setBranchFinished()
 		@endProcessDefinition()
-		@emitSystemProcessApplication("Mutex_cons", [new PCCConstantContainer(1)])
+		@emitSystemProcessApplication("Mutex_cons", [new PCCConstantContainer(1)], PCCSysMutexCons)
 	
 	compileWaitRoom: ->
 		i = new PCCVariableContainer("i", PCCType.INT)
@@ -444,7 +467,7 @@ class PCCCompiler
 		@emitProcessApplication("WaitRoom", [i, new PCCConstantContainer(0)])
 		control.setBranchFinished()
 		@endProcessDefinition()
-		@emitSystemProcessApplication("WaitRoom_cons", [new PCCConstantContainer(1)])
+		@emitSystemProcessApplication("WaitRoom_cons", [new PCCConstantContainer(1)], PCCSysWaitRoom)
 		
 	throwException: (comps...) ->
 		containerFromComp = (comp) ->
@@ -502,7 +525,7 @@ class PCCCompiler
 		@emitProcessApplication("Array#{size}", args)
 		control.setBranchFinished()
 		@endProcessDefinition()
-		@emitSystemProcessApplication("Array#{size}_cons", [])
+		@emitSystemProcessApplication("Array#{size}_cons", [], PCCSysArray)
 		
 	compileArrayManager: ->
 		i = new PCCVariableContainer("next_i", PCCType.INT)
@@ -510,7 +533,7 @@ class PCCCompiler
 		@emitOutput("array_new", null, i)
 		@emitProcessApplication("ArrayManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		@endProcessDefinition()
-		@emitSystemProcessApplication("ArrayManager", [new PCCConstantContainer(1)])
+		@emitSystemProcessApplication("ArrayManager", [new PCCConstantContainer(1)], PCCSysInstanceManager)
 	
 	
 	compileChannelWithCapacity: (capacity) ->
@@ -551,7 +574,7 @@ class PCCCompiler
 		@emitProcessApplication("Channel#{capacity}", args)
 		control.setBranchFinished()
 		@endProcessDefinition()
-		@emitSystemProcessApplication("Channel#{capacity}_cons", [])
+		@emitSystemProcessApplication("Channel#{capacity}_cons", [], PCCSysChannel)
 	
 	compileUnbufferedChannelCons: ->
 		i = new PCCVariableContainer("i", PCCType.INT)
@@ -559,7 +582,7 @@ class PCCCompiler
 		@emitOutput("channel_create", null, i)
 		@emitProcessApplication("Channel_cons", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "-")])
 		@endProcessDefinition()
-		@emitSystemProcessApplication("Channel_cons", [new PCCConstantContainer(-1)])
+		@emitSystemProcessApplication("Channel_cons", [new PCCConstantContainer(-1)], PCCSysChannel)
 		
 	
 
@@ -569,7 +592,7 @@ class PCCCompiler
 		@emitOutput("channel_new", null, i)
 		@emitProcessApplication("ChannelManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		@endProcessDefinition()
-		@emitSystemProcessApplication("ChannelManager", [new PCCConstantContainer(1)])
+		@emitSystemProcessApplication("ChannelManager", [new PCCConstantContainer(1)], PCCSysInstanceManager)
 			
 	
 	
@@ -579,7 +602,7 @@ class PCCCompiler
 		@emitOutput("agent_new", null, i)
 		@emitProcessApplication("AgentManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		@endProcessDefinition()
-		@emitSystemProcessApplication("AgentManager", [new PCCConstantContainer(1)])
+		@emitSystemProcessApplication("AgentManager", [new PCCConstantContainer(1)], PCCSysInstanceManager)
 		
 		a = new PCCVariableContainer("a", PCCType.INT)
 		c = new PCCVariableContainer("c", PCCType.INT)
