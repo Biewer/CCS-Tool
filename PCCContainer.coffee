@@ -86,7 +86,8 @@ class PCCBinaryContainer extends PCCComposedContainer
 class PCCUnaryContainer extends PCCComposedContainer
 	constructor: (@operator, @container) ->
 		if @operator == "!"
-			@exp = new CCS.EqualityExpression(@container.ccsTree(), new CCS.ConstantExpression(false), "==")
+			#@exp = new CCS.EqualityExpression(@container.ccsTree(), new CCS.ConstantExpression(false), "==")
+			@exp = new CCS.ComplementExpression(@container.ccsTree())
 			super PCCType.BOOL
 		else if @operator == "-"
 			@exp = new CCS.AdditiveExpression(new CCS.ConstantExpression(0), @container.ccsTree(), "-")

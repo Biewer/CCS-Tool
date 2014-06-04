@@ -54,6 +54,7 @@ exports["Output"] = CCSOutput
 exports["CCSExpression"] = CCSExpression
 exports["ConstantExpression"] = CCSConstantExpression
 exports["VariableExpression"] = CCSVariableExpression
+exports["ComplementExpression"] = CCSComplementExpression
 exports["AdditiveExpression"] = CCSAdditiveExpression
 exports["MultiplicativeExpression"] = CCSMultiplicativeExpression
 exports["ConcatenatingExpression"] = CCSConcatenatingExpression

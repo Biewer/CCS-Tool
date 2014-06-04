@@ -634,7 +634,7 @@ class CCSOutput extends CCSAction
 			throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
 		super
 			
-	toString: (mini) -> "#{super}!#{if @expression then @expression.toString(mini) else ""}"
+	toString: (mini) -> "#{super}!#{if @expression then "(#{@expression.toString(mini)})" else ""}"
 	transferDescription: -> "#{super}#{if @expression then ": " + @expression.evaluate() else ""}"
 	copy: -> new CCSOutput(@channel.copy(), (@expression?.copy()))
 	
@@ -732,6 +732,22 @@ class CCSVariableExpression extends CCSExpression
 	copy: -> new CCSVariableExpression(@variableName)
 
 
+# - ComplementExpression
+class CCSComplementExpression extends CCSExpression
+	getPrecedence: -> 17
+	evaluate: ->
+		res = not CCSBooleanForString(@subExps[0].evaluate())
+		CCSStringDataForValue res
+	isEvaluatable: -> @subExps[0].isEvaluatable()
+	typeOfEvaluation: -> "boolean"
+	toString: (mini) -> 
+		if mini and @isEvaluatable()
+			CCSBestStringForValue(@evaluate())
+		else
+			"!#{@stringForSubExp(@subExps[0], mini)}"
+	copy: -> new CCSComplementExpression(@subExps[0].copy())
+	
+
 # - AdditiveExpression
 class CCSAdditiveExpression extends CCSExpression
 	constructor: (left, right, @op) -> super left, right
@@ -747,7 +763,7 @@ class CCSAdditiveExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSAdditiveExpression(@getLeft().copy(), @getRight().copy(), @op)
 
@@ -768,7 +784,7 @@ class CCSMultiplicativeExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSMultiplicativeExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
@@ -785,7 +801,7 @@ class CCSConcatenatingExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + "^" + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + "^" + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
 
@@ -808,7 +824,7 @@ class CCSRelationalExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSRelationalExpression(@getLeft().copy(), @getRight().copy(), @op)
 	
@@ -830,7 +846,7 @@ class CCSEqualityExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + @op + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSEqualityExpression(@getLeft().copy(), @getRight().copy(), @op)
 
@@ -849,7 +865,7 @@ class CCSAndExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + "&&" + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + "&&" + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
 
@@ -867,7 +883,7 @@ class CCSOrExpression extends CCSExpression
 		if mini and @isEvaluatable()
 			CCSBestStringForValue(@evaluate())
 		else
-			@stringForSubExp(@getLeft()) + "||" + @stringForSubExp(@getRight())
+			@stringForSubExp(@getLeft(), mini) + "||" + @stringForSubExp(@getRight(), mini)
 	
 	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
 	

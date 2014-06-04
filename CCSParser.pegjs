@@ -321,8 +321,8 @@ expression
  	
  	
  	multiplicativeExpression
- 		= left:primaryExpression 
- 			multiplication:( ___ op:( '*' / '/' ) ___ right:primaryExpression 
+ 		= left:complementExpression 
+ 			multiplication:( ___ op:( '*' / '/' ) ___ right:complementExpression 
  				{ return [op, right]; } )*
  		{
  			while (multiplication.length > 0) {
@@ -331,6 +331,11 @@ expression
  			}
  			return left;
  		}
+ 	
+ 	
+ 	complementExpression
+ 		= "!" ___ e:complementExpression	{ return new CCSComplementExpression(e); }
+ 		/ e: primaryExpression 				{ return e; }
  	
  	
  	primaryExpression
