@@ -255,9 +255,14 @@ class PCTCycleChecker
 		trace.add(type)
 		return trace if alreadyReachable[type.getName()]?
 		alreadyReachable[type.getName()] = type
-		return null if not delete @classTypes[type.getName()]
+		if @classTypes[type.getName()]?
+			delete @classTypes[type.getName()]
+		else
+			return null
 		for t in type.getUsedClassTypes()
-			result = @cycleTraceForType(t, alreadyReachable, new PCTTrace(trace))
+			innerAlreadyReachable = {}
+			innerAlreadyReachable[name] = type for name, type of alreadyReachable
+			result = @cycleTraceForType(t, innerAlreadyReachable, new PCTTrace(trace))
 			return result if result?
 		null
 
