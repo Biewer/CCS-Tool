@@ -54,6 +54,11 @@ class PCNode
 			@parent.insideProcedure()
 		else
 			false
+	insideLoop: ->
+		if @parent
+			@parent.insideLoop()
+		else
+			false
 	usesSendOrReceiveOperator: ->
 		for child in @children
 			return true if child.usesSendOrReceiveOperator()
@@ -716,7 +721,7 @@ class PCBreakStmt extends PCNode
 
 	# Type checking
 	_getType: (env) ->
-		# TODO is within loop?
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "break-Statements are only allowed within loops."}) if not @insideLoop()
 		new PCTType(PCTType.VOID)
 
 # - Continue Statement
@@ -731,7 +736,7 @@ class PCContinueStmt extends PCNode
 
 	# Type checking
 	_getType: (env) ->
-		# TODO is within loop?
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "continue-Statements are only allowed within loops."}) if not @insideLoop()
 		new PCTType(PCTType.VOID)
 
 # - Statement Block
@@ -864,6 +869,8 @@ class PCWhileStmt extends PCNode
 		env.closeEnvironment()
 		new PCTType(PCTType.VOID)
 
+	insideLoop: -> true
+
 # - Do Statement
 class PCDoStmt extends PCNode
 	collectEnvironment: (env) -> null
@@ -884,6 +891,8 @@ class PCDoStmt extends PCNode
 		expType = @children[1].getType(env)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of condition must be bool not #{expType}"}) if not expType.isEqual(new PCTType(PCTType.BOOL))
 		new PCTType(PCTType.VOID)
+
+	insideLoop: -> true
 
 # - For Statement
 class PCForStmt extends PCNode		# Add PCForUpdate class?
@@ -913,6 +922,8 @@ class PCForStmt extends PCNode		# Add PCForUpdate class?
 		@body.getType(env)
 		env.closeEnvironment()
 		new PCTType(PCTType.VOID)
+
+	insideLoop: -> true
 
 # - For loop initialization
 class PCForInit extends PCNode

@@ -447,8 +447,8 @@ Statement
 	/ stmt:WhileStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:DoStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:ForStatement { return new PCStatement(line(), column(), stmt); }
-	/ "break" _ ";" { return new PCStatement(new PCBreakStmt(line(), column())); }
-	/ "continue" _ ";" { return new PCStatement(new PCContinueStmt(line(), column())); }
+	/ "break" _ ";" { return new PCStatement(line(), column(), new PCBreakStmt(line(), column())); }
+	/ "continue" _ ";" { return new PCStatement(line(), column(), new PCContinueStmt(line(), column())); }
 	/ stmt:ReturnStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:PrimitiveStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:StatementExpression _ ";" { return new PCStatement(line(), column(), stmt); }
