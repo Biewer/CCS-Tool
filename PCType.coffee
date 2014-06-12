@@ -82,6 +82,9 @@ class PCTArrayType extends PCTType
 	isEqual: (type) ->
 		capacityFulfilled = type.capacity == @capacity || @capacity == 0 || type.capacity == 0
 		type.kind == @kind and capacityFulfilled and @elementsType.isEqual(type.elementsType)
+	isAssignableTo: (type) ->
+		return false if @kind is PCTType.WILDCARD
+		(@elementsType.isAssignableTo(type.elementsType) or type.kind is PCTType.WILDCARD)
 	getBaseType: -> @elementsType.getBaseType()
 	toString: -> "#{@elementsType.toString()}[#{@capacity}]"
 

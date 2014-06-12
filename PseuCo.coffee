@@ -436,7 +436,7 @@ class PCAssignExpression extends PCExpression
 		if @operator is "+="
 			if exp.isEqual(new PCTType(PCTType.STRING))
 				throw err if not dest.isEqual(new PCTType(PCTType.STRING))
-			else if exp.isEqaul(new PCTType(PCTType.INT))
+			else if exp.isEqual(new PCTType(PCTType.INT))
 				throw err if not dest.isEqual(new PCTType(PCTType.INT)) and not dest.isEqual(new PCTType(PCTType.STRING))
 			else
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Operator '+=' is only allowed with integers and strings, but not #{exp}"})
