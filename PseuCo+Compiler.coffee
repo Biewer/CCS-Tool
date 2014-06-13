@@ -129,11 +129,6 @@ PC.VariableInitializer::compile = (compiler, type) ->
 
 PC.Expression::compile = (compiler) ->
 	throw new Error("Not implemented!")
-PC.Expression::getValueForArrayAtIndex = (compiler, instanceContainer, indexContainer) ->
-	compiler.emitOutput("array_access", instanceContainer, indexContainer)
-	result = compiler.getFreshContainer(instanceContainer.ccsType.getSubtype())
-	compiler.emitInput("array_get", instanceContainer, result)
-	result
 	
 	
 
@@ -161,7 +156,7 @@ PC.AssignDestination::compile = (compiler) ->	# Returns the same value as array 
 	arrayIndexCount = @children.length
 	v = compiler.getVariableWithNameOfClass(@identifier, null)
 	res = v.getContainer(compiler)
-	(res = @getValueForArrayAtIndex(compiler, ai, compiler.compile(@children[i]))) for i in [0...arrayIndexCount] by 1
+	(res = @getValueForArrayAtIndex(compiler, res, compiler.compile(@children[i]))) for i in [0...arrayIndexCount] by 1
 	res
 PC.AssignDestination::setValueForArrayAtIndex = (compiler, instanceContainer, indexContainer, valueContainer) ->
 	compiler.emitOutput("array_access", instanceContainer, indexContainer)
@@ -176,7 +171,12 @@ PC.AssignDestination::assignContainer = (compiler, c) ->
 		ai = v.getContainer(compiler)
 		(ai = @getValueForArrayAtIndex(compiler, ai, compiler.compile(@children[i]))) for i in [0..arrayIndexCount-2] by 1
 		@setValueForArrayAtIndex(compiler, ai, compiler.compile(@children[arrayIndexCount-1]), c)
-	
+PC.AssignDestination::getValueForArrayAtIndex = (compiler, instanceContainer, indexContainer) ->
+	compiler.emitOutput("array_access", instanceContainer, indexContainer)
+	debugger
+	result = compiler.getFreshContainer(instanceContainer.ccsType.getSubtype())
+	compiler.emitInput("array_get", instanceContainer, result)
+	result
 
 	
 
@@ -340,7 +340,7 @@ PC.ArrayExpression::compile = (compiler) ->
 	t = compiler.compile(@children[1])
 	a = compiler.unprotectContainer()
 	compiler.emitOutput("array_access", a, t)
-	res = compiler.getFreshContainer(@children[0].getType(compiler).getCCSType())
+	res = compiler.getFreshContainer(a.ccsType.getSubtype())
 	compiler.emitInput("array_get", a, res)
 	res
 	
@@ -358,7 +358,7 @@ PC.IdentifierExpression::compile = (compiler) ->
 	
 
 PC.Statement::compile = (compiler, loopEntry) ->
-	compiler.compile(@children[0], loopEntry)
+	if @children.length > 0 then compiler.compile(@children[0], loopEntry) else []
 	
 	
 

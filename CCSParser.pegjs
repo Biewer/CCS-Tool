@@ -322,7 +322,7 @@ expression
  	
  	multiplicativeExpression
  		= left:complementExpression 
- 			multiplication:( ___ op:( '*' / '/' ) ___ right:complementExpression 
+ 			multiplication:( ___ op:( '*' / '/' / '%' ) ___ right:complementExpression 
  				{ return [op, right]; } )*
  		{
  			while (multiplication.length > 0) {

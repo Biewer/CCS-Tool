@@ -181,7 +181,7 @@ class PCCType
 	isEqual: (type) -> if @isArray() then type.isArray() && @_type.isEqual(type._type) else @_type == type._type
 	getSubtype: ->
 		throw new Error("Cannot get subtype for non-array type!") if !@isArray()
-		@_type._type
+		@_type #._type
 	getDefaultContainer: -> 
 		return new PCCConstantContainer(0) if @isArray() or @isClass()
 		new PCCConstantContainer(switch @_type

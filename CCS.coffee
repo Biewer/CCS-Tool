@@ -776,8 +776,8 @@ class CCSMultiplicativeExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
-		if @op == "*" then l * r else if @op == "/" then Math.floor(l/r) else if @op == "%" then l % r 
-		else throw new Error("Invalid operator \"#{@op}\"!")
+		"" + (if @op == "*" then l * r else if @op == "/" then Math.floor(l/r) else if @op == "%" then l % r
+		else throw new Error("Invalid operator \"#{@op}\"!"))
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "number"
 	toString: (mini) -> 
