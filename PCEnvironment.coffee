@@ -54,13 +54,13 @@ class PCTEnvironmentController
 	
 	getClassWithName: (name) ->
 		result = @classes[name]
-		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "UnknownClass", "message" : "Unknown class '#{name}'"}) if result == undefined
+		throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "UnknownClass", "message" : "Unknown class '#{name}'"}) if result == undefined
 		result
 	
 	getAllClasses: -> @root.getAllClasses()
 	
 	getVariableWithName: (name, line, column) ->
-		@_envStack.getVariableWithName(name, line, column)	
+		@_envStack.getVariableWithName(name, line, column)
 	
 	getProcedureWithName: (name, line, column) ->
 		@_envStack.getProcedureWithName(name, line, column)
@@ -80,13 +80,18 @@ class PCTEnvironmentController
 		@_processNewClass tnode
 	
 	_processNewClass: (node) ->
-		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ClassError", "message" : "Class already registered!"}) if @classes[node.getName()]
+		throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "ClassError", "message" : "Class already registered!"}) if @classes[node.getName()]
 		@_envStack.addChild(node)
 		@classes[node.getName()] = node
 	
 	beginClass: (className) ->
-		node = @getClassWithName(className)
-		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "Error", "message" : "Node must not be null!"}) if not node
+		try
+			node = @getClassWithName(className)
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
+		# throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "Error", "message" : "Node must not be null!"}) if not node
 		@_envStack = node
 		node
 		
@@ -198,7 +203,7 @@ class PCTEnvironmentNode
 			if @parent?
 				@parent.getExpectedReturnValue()
 			else
-				throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidLocation", "message" : "Return statements are only allowed inside procedures!"})
+				throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "InvalidLocation", "message" : "Return statements are only allowed inside procedures!"})
 	isReturnExhaustive: -> @isRetExhaust
 	setReturnExhaustive: -> @isRetExhaust = true
 	unsetReturnExhaustive: -> @isRetExhaust = false

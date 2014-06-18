@@ -168,7 +168,13 @@ class PCFormalParameter extends PCNode
 class PCMonitor extends PCNode	# "monitor" <id> "{" (Procedure decl, condition decl or variable decl)+ "}"
 	constructor: (@name, declarations...) -> super declarations...
 	
-	collectClasses: (env) -> env.processNewClass(@, new PCTClassType(true, @name))
+	collectClasses: (env) ->
+		try
+			env.processNewClass(@, new PCTClassType(true, @name))
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 	collectEnvironment: (env) ->
 		env.beginClass(@name)
 		c.collectEnvironment(env) for c in @children
@@ -187,9 +193,20 @@ class PCMonitor extends PCNode	# "monitor" <id> "{" (Procedure decl, condition d
 		env.beginClass(@name)
 		child.getType(env) for child in @children
 		env.endClass()
-		monitor = env.getClassWithName(@name)
+		try
+			monitor = env.getClassWithName(@name)
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 		for variable in monitor.children
-			monitor.addUseOfClassType(env.getClassWithName(variable.type.identifier)) if variable.type instanceof PCTClassType
+			if variable.type instanceof PCTClassType
+				try
+					monitor.addUseOfClassType(env.getClassWithName(variable.type.identifier))
+				catch e
+					e.line = @line
+					e.column = @column
+					throw e
 		new PCTType(PCTType.VOID)
 	insideMonitor: -> true
 
@@ -197,7 +214,13 @@ class PCMonitor extends PCNode	# "monitor" <id> "{" (Procedure decl, condition d
 class PCStruct extends PCNode	# "struct" <id> "{" (Procedure decl or variable decl)+ "}"
 	constructor: (@name, declarations...) -> super declarations...
 	
-	collectClasses: (env) -> env.processNewClass(@, new PCTClassType(false, @name))
+	collectClasses: (env) ->
+		try
+			env.processNewClass(@, new PCTClassType(false, @name))
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 	collectEnvironment: (env) ->
 		env.beginClass(@name)
 		c.collectEnvironment(env) for c in @children
@@ -216,9 +239,20 @@ class PCStruct extends PCNode	# "struct" <id> "{" (Procedure decl or variable de
 		env.beginClass(@name)
 		child.getType(env) for child in @children
 		env.endClass()
-		struct = env.getClassWithName(@name)
+		try
+			struct = env.getClassWithName(@name)
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 		for variable in struct.children
-			struct.addUseOfClassType(env.getClassWithName(variable.type.identifier)) if variable.type instanceof PCTClassType
+			if variable.type instanceof PCTClassType
+				try
+					struct.addUseOfClassType(env.getClassWithName(variable.type.identifier))
+				catch e
+					e.line = @line
+					e.column = @column
+					throw e
 		new PCTType(PCTType.VOID)
 
 # - Condition Decl
@@ -397,7 +431,13 @@ PCChannelType.CAPACITY_UNKNOWN = -1
 class PCClassType extends PCBaseType
 	constructor: (line, column, @className) -> super line, column, []...
 	
-	_getType: (env) -> new PCTTypeType(env.getClassWithName(@className).type)
+	_getType: (env) ->
+		try
+			new PCTTypeType(env.getClassWithName(@className).type)
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 	toString: -> @className
 
 
@@ -608,7 +648,12 @@ class PCReceiveExpression extends PCExpression	# 1 child
 class PCProcedureCall extends PCExpression
 	constructor: (@procedureName, args...) -> super args...	# arguments are expressions
 	getProcedure: (env, className) ->
-		(if className then env.getClassWithName(className) else env).getProcedureWithName(@procedureName, @line, @column)
+		try
+			(if className then env.getClassWithName(className) else env).getProcedureWithName(@procedureName, @line, @column)
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 	getType: (env, className) -> if not className then super else @_getType(env, className)
 	getPrecedence: -> 75
 	toString: -> "#{@procedureName}(#{(o.toString() for o in @children).join(", ")})"
@@ -953,7 +998,12 @@ class PCReturnStmt extends PCNode
 	_getType: (env) ->
 		type = @children[0].getType(env) if @children.length > 0
 		type = new PCTType(PCTType.VOID) if not type?
-		expectedType = env.getExpectedReturnValue()
+		try
+			expectedType = env.getExpectedReturnValue()
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expression of type #{type} doesn't match expected return type #{expectedType} for procedure."}) if not type.isEqual(expectedType)
 		env.setReturnExhaustive()
 
