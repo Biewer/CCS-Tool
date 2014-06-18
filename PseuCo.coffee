@@ -598,7 +598,9 @@ class PCReceiveExpression extends PCExpression	# 1 child
 
 	# Type checking
 	_getType: (env) ->
-		@children[0].getType(env).channelledType
+		type = @children[0].getType(env)
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expression to receive from must have a channeled type, not #{type}"}) if not (type instanceof PCTChannelType)
+		type.channelledType
 
 	usesSendOrReceiveOperator: -> true
 
