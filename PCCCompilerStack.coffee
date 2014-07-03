@@ -156,7 +156,7 @@ class PCCInputStackElement extends PCCPrefixStackElement
 
 class PCCOutputStackElement extends PCCPrefixStackElement
 	constructor: (channel, sepcificChannel, @container) -> super channel, sepcificChannel	# string x PCCContainer x PCCContainer
-	_getAction: -> @createCalculusNode(CCS.Output, @_getChannel(), @container.ccsTree())
+	_getAction: -> @createCalculusNode(CCS.Output, @_getChannel(), if @container then @container.ccsTree() else null)
 
 class PCCMatchStackElement extends PCCPrefixStackElement
 	constructor: (channel, sepcificChannel, @container) -> super channel, sepcificChannel	# string x PCCContainer x PCCContainer
