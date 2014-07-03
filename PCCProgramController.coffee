@@ -120,9 +120,10 @@ class PCCProcedure extends PC.Procedure
 		else
 			throw new Error("Illegal instance value") if instanceContainer
 		#argumentContainers.unshift(compiler.getVariableWithName("r", null, true).getContainer(compiler))
+		argumentContainers.unshift(compiler.getVariableWithNameOfClass("a", null, true).getContainer(compiler))
 		argumentContainers
 	getImplicitAndExplicitArgumentCount: ->
-		res = @arguments.length #+ 1
+		res = @arguments.length + 1
 		res++ if @isClassProcedure()
 		res
 	emitAgentConstructor: (compiler) ->
@@ -131,8 +132,10 @@ class PCCProcedure extends PC.Procedure
 		i = new PCCVariableContainer("i", PCCType.INT)
 		compiler.emitInput("agent_new", null, i)
 		compiler.emitOutput(@getAgentStarterChannel(), null, i)
+		starter = new PCCVariableContainer("starter", PCCType.INT)
+		compiler.emitInput("start_set_arg", i, starter)	# We ignore the first argument, because we currently do not use the agent information of the agent which started the new agent
 		args = []
-		for j in [0...@getImplicitAndExplicitArgumentCount()]
+		for j in [1...@getImplicitAndExplicitArgumentCount()]
 			a = new PCCVariableContainer("a#{j}", PCCType.VOID)		# Type is unimportant here
 			compiler.emitInput("start_set_arg", i, a)
 			args.push(a)
@@ -141,6 +144,7 @@ class PCCProcedure extends PC.Procedure
 		control1.setBranchFinished()
 		control2 = compiler.emitParallel()
 		control3 = compiler.emitSequence()
+		args.unshift(i)		# Basically, here we replace 'starter' with the instance number of the new agent
 		compiler.emitProcessApplication(@getProcessName(), args)
 		control3.setBranchFinished()
 		compiler.emitOutput("agent_terminate", i, null)
@@ -401,6 +405,7 @@ class PCCProgramController extends PC.EnvironmentController
 	beginNewProcedure: (node, procedureName, returnType, args) ->
 		tnode = new PCCProcedure(node, procedureName, returnType, args)
 		@_beginNewProcedure(tnode)
+	
 	
 	processNewVariable: (variable) ->		
 		varClass = @_envStack.getVariableClass()

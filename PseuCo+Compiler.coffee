@@ -513,10 +513,18 @@ PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 			compiler.emitOutput("join", c, null)
 		when PC.PrimitiveStmt.LOCK  
 			c = compiler.compile(@children[0], loopEntry)
-			compiler.emitOutput("lock", c, null)
+			if compiler.useReentrantLocks
+				a = compiler.getVariableWithNameOfClass("a", null, true).getContainer(compiler)
+				compiler.emitOutput("lock", c, a)
+			else
+				compiler.emitOutput("lock", c, null)
 		when PC.PrimitiveStmt.UNLOCK  
 			c = compiler.compile(@children[0], loopEntry)
-			compiler.emitOutput("unlock", c, null)
+			if compiler.useReentrantLocks
+				a = compiler.getVariableWithNameOfClass("a", null, true).getContainer(compiler)
+				compiler.emitOutput("unlock", c, a)
+			else
+				compiler.emitOutput("unlock", c, null)
 		when PC.PrimitiveStmt.WAIT
 			throw new Error("Unexpected expression!") if !(@children[0] instanceof PC.IdentifierExpression)
 			cond = compiler.getVariableWithNameOfClass(@children[0].identifier)

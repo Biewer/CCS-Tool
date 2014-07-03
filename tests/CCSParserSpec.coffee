@@ -101,7 +101,7 @@ programs =
 			(rd!5.rd!4.rd!3.0 | Counter[4]) \\ {rd}
 			"""
 		traces:
-			["\u03c4.wr!11.\u03c4.wr!9.\u03c4.wr!7"]
+			["\u03c4.wr!(11).\u03c4.wr!(9).\u03c4.wr!(7)"]
 			
 	"Unbound process variable 1":
 		code:
@@ -215,7 +215,7 @@ programs =
 
 			Bitbuffer
 			"""
-		traces: ["put?0.pass!0", "put?1.pass!1"]
+		traces: ["put?0.pass!(0)", "put?1.pass!(1)"]
 	"Match":
 		code:
 			"""

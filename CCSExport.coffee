@@ -51,6 +51,7 @@ exports["ValueSet"] = CCSValueSet
 exports["Variable"] = CCSVariable
 exports["Input"] = CCSInput
 exports["Output"] = CCSOutput
+exports["Match"] = CCSMatch
 exports["CCSExpression"] = CCSExpression
 exports["ConstantExpression"] = CCSConstantExpression
 exports["VariableExpression"] = CCSVariableExpression

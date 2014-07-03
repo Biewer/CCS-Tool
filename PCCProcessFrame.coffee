@@ -213,6 +213,7 @@ class PCCProcedureFrame extends PCCProcessFrame
 			variables = procedure.arguments
 			if procedure.isClassProcedure()
 				variables.unshift(new PCCVariableInfo(null, "i", null, true)) 	#ToDo: add type
+			variables.unshift(new PCCVariableInfo(null, "a", null, true))
 			
 		super procedure, variables, tempTypes, autoInit
 		

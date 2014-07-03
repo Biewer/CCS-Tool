@@ -32,6 +32,7 @@ exports["ExitStackElement"] = PCCExitStackElement
 exports["PrefixStackElement"] = PCCPrefixStackElement
 exports["InputStackElement"] = PCCInputStackElement
 exports["OutputStackElement"] = PCCOutputStackElement
+exports["MatchStackElement"] = PCCMatchStackElement
 exports["ConditionStackElement"] = PCCConditionStackElement
 exports["RestrictionStackElement"] = PCCRestrictionStackElement
 exports["ApplicationStackElement"] = PCCApplicationStackElement

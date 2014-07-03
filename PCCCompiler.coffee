@@ -56,6 +56,7 @@ class PCCCompiler
 		@controller = new PCCProgramController(@program)
 		@systemProcesses = {}
 		@compilingNodes = []	# stack
+		@useReentrantLocks = true
 	
 	trackGlobalVars: -> (@flags & PCCFlags.trackGlobalVariables) == PCCFlags.trackGlobalVariables
 	trackClassVars: -> (@flags & PCCFlags.trackClassVariables) == PCCFlags.trackClassVariables
@@ -72,7 +73,10 @@ class PCCCompiler
 		usedTypes = @controller.getUsedTypes()
 		@compileReturn()
 		@__assertEmptyGroupStack()
-		@compileMutex()
+		if @useReentrantLocks
+			@compileReentrantMutex()
+		else
+			@compileSimpleMutex()
 		@__assertEmptyGroupStack()
 		@compileWaitRoom()
 		@__assertEmptyGroupStack()
@@ -116,7 +120,7 @@ class PCCCompiler
 	
 	_getSystem: ->
 		@beginSystemProcess(PCCSysAgent)
-		@emitProcessApplication("MainAgent", [])
+		@emitProcessApplication("MainAgent", [new PCCConstantContainer(1)])
 		@endSystemProcess()
 		weights = []
 		for w of @systemProcesses
@@ -124,7 +128,6 @@ class PCCCompiler
 			weights.push i if not isNaN i
 		weights.sort((a,b) -> a-b)
 		system = null
-		debugger
 		for w in weights
 			mainProcesses = @systemProcesses[w]
 			for i in [0...mainProcesses.length] by 1
@@ -328,7 +331,7 @@ class PCCCompiler
 	
 	beginMainAgent: ->
 		@controller.beginMainAgent()
-		@beginProcessGroup(new PCCGroupable("MainAgent"))
+		@beginProcessGroup(new PCCGroupable("MainAgent"), [new PCCVariableInfo(null, "a", null, true)])
 	
 	endMainAgent: ->
 		@controller.endMainAgent()
@@ -370,6 +373,8 @@ class PCCCompiler
 		@pushStackElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
 	emitInput: (channel, specificChannel, container) ->
 		@pushStackElement(new PCCInputStackElement(channel, specificChannel, container))
+	emitMatch: (channel, specificChannel, valueContainer) ->
+		@pushStackElement(new PCCMatchStackElement(channel, specificChannel, valueContainer))
 	emitCondition: (condition) -> @pushStackElement(new PCCConditionStackElement(condition))
 	emitChoice: -> 
 		res = new PCCChoiceStackElement()
@@ -397,21 +402,52 @@ class PCCCompiler
 	
 	
 	
-	compileMutex: ->
+	compileSimpleMutex: ->
 		i = new PCCVariableContainer("i", PCCType.INT)
 		@beginProcessDefinition("Mutex", [i])
 		@emitInput("lock", i, null)
 		@emitInput("unlock", i, null)
 		@emitProcessApplication("Mutex", [i])
 		@endProcessDefinition()
+		@compileMutexCons(false)
+	
+	compileReentrantMutex: ->
+		i = new PCCVariableContainer("i", PCCType.INT)
+		c = new PCCVariableContainer("c", PCCType.INT)
+		a = new PCCVariableContainer("a", PCCType.INT)
+		a2 = new PCCVariableContainer("a2", PCCType.INT)
+		@beginProcessDefinition("Mutex", [i,c,a])
+		control = @emitChoice()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), "=="))
+		@emitInput("lock", i, a)
+		@emitProcessApplication("Mutex", [i, new PCCConstantContainer(1), a])
+		control.setBranchFinished()
+		@emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">"))
+		control = @emitChoice()
+		@emitMatch("lock", i, a)
+		@emitProcessApplication("Mutex", [i, new PCCBinaryContainer(c, new PCCConstantContainer(1), "+"), a])
+		control.setBranchFinished()
+		@emitInput("unlock", i, a2)
+		control = @emitChoice()
+		@emitCondition(new PCCBinaryContainer(a, a2, "=="))
+		@emitProcessApplication("Mutex", [i, new PCCBinaryContainer(c, new PCCConstantContainer(1), "-"), a])
+		control.setBranchFinished()
+		@emitCondition(new PCCBinaryContainer(a, a2, "!="))
+		@throwException("Exception: Agent tried to unlock a mutex he did not lock!")
+		@endProcessDefinition()
+		@compileMutexCons()
 		
+	compileMutexCons: (reentrantMutex=true) ->
 		i = new PCCVariableContainer("next_i", PCCType.INT)
 		@beginProcessDefinition("Mutex_cons", [i])
 		@emitOutput("mutex_create", null, i)
 		control = @emitParallel()
 		@emitProcessApplication("Mutex_cons", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		control.setBranchFinished()
-		@emitProcessApplication("Mutex", [i])
+		if reentrantMutex
+			@emitProcessApplication("Mutex", [i, new PCCConstantContainer(0), new PCCConstantContainer(0)])
+		else
+			@emitProcessApplication("Mutex", [i])
 		control.setBranchFinished()
 		@endProcessDefinition()
 		@emitSystemProcessApplication("Mutex_cons", [new PCCConstantContainer(1)], PCCSysMutexCons)
@@ -602,7 +638,7 @@ class PCCCompiler
 		@emitOutput("agent_new", null, i)
 		@emitProcessApplication("AgentManager", [new PCCBinaryContainer(i, new PCCConstantContainer(1), "+")])
 		@endProcessDefinition()
-		@emitSystemProcessApplication("AgentManager", [new PCCConstantContainer(1)], PCCSysInstanceManager)
+		@emitSystemProcessApplication("AgentManager", [new PCCConstantContainer(2)], PCCSysInstanceManager)
 		
 		a = new PCCVariableContainer("a", PCCType.INT)
 		c = new PCCVariableContainer("c", PCCType.INT)

@@ -1,7 +1,7 @@
 
 
 CCS::getTraces = (weak, maxSteps) ->
-	maxSteps = 0 if not maxSteps
+	maxSteps = Number.MAX_VALUE if not maxSteps
 	@system.getTraces(weak, maxSteps)
 
 CCSProcess::_getTraces = (prefix, set, weak, maxSteps) ->
@@ -21,7 +21,7 @@ CCSProcess::_getTraces = (prefix, set, weak, maxSteps) ->
 		set[prefix] = true
 
 CCSProcess::getTraces = (weak, maxSteps) ->
-	maxSteps = 0 if not maxSteps
+	maxSteps = Number.MAX_VALUE if not maxSteps
 	set = {}
 	@_getTraces("", set, weak, {"i": maxSteps})
 	res = []
