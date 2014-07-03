@@ -139,7 +139,7 @@ class PCCExitStackElement extends PCCUnaryStackElement
 class PCCPrefixStackElement extends PCCUnaryStackElement
 	constructor: (@channel, @specificChannel) -> super
 	_getChannel: -> new CCS.Channel(@channel, if @specificChannel then @specificChannel.ccsTree() else null)
-	_getAction: -> throw new Error("Abstract and not implemented!")
+	_getAction: -> @createCalculusNode(CCS.SimpleAction, @_getChannel())
 	getResults: ->
 		container = @next.getResults()
 		pRes = container.getResult()
@@ -156,7 +156,7 @@ class PCCInputStackElement extends PCCPrefixStackElement
 
 class PCCOutputStackElement extends PCCPrefixStackElement
 	constructor: (channel, sepcificChannel, @container) -> super channel, sepcificChannel	# string x PCCContainer x PCCContainer
-	_getAction: -> @createCalculusNode(CCS.Output, @_getChannel(), if @container then @container.ccsTree() else null)
+	_getAction: -> @createCalculusNode(CCS.Output, @_getChannel(), @container.ccsTree())
 
 class PCCMatchStackElement extends PCCPrefixStackElement
 	constructor: (channel, sepcificChannel, @container) -> super channel, sepcificChannel	# string x PCCContainer x PCCContainer

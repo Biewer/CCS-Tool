@@ -369,6 +369,8 @@ class PCCCompiler
 	emitExit: -> @pushStackElement(new PCCExitStackElement())
 	emitProcessApplication: (processName, argumentContainers=[]) -> 
 		@pushStackElement(new PCCApplicationStackElement(processName, argumentContainers))
+	emitSimplePrefix: (channel, specificChannel) ->
+		@pushStackElement(new PCCPrefixStackElement(channel, specificChannel))
 	emitOutput: (channel, specificChannel, valueContainer) ->
 		@pushStackElement(new PCCOutputStackElement(channel, specificChannel, valueContainer))
 	emitInput: (channel, specificChannel, container) ->

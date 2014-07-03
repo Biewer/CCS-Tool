@@ -408,6 +408,8 @@ PC.Case::compile = (compiler, loopEntry) ->
 	cond = @getCondition()
 	if cond
 		compiler.compile(cond)
+	else
+		compiler.emitSimplePrefix(CCS.internalChannelName)
 	compiler.compile(@getExecution(), loopEntry)
 	
 	
