@@ -158,7 +158,8 @@ class PCCProcedure extends PC.Procedure
 	emitExit : (compiler) ->
 		if @isMonitorProcedure()
 			guard = compiler.getVariableWithNameOfClass("guard", null, true)
-			compiler.emitOutput("unlock", guard.getContainer(compiler))
+			agent = compiler.getVariableWithNameOfClass("a", null, true)
+			compiler.emitOutput("unlock", guard.getContainer(compiler), agent.getContainer(compiler))
 		compiler.emitExit()
 			
 		
