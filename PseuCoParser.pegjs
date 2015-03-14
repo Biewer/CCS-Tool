@@ -50,7 +50,7 @@ __
 	= (WhiteSpace / LineTerminatorSequence / Comment)* {}
 
 ___
-	= (WhiteSpace / MultiLineCommentNoLineTerminator / SingleLineComment)+ {}
+	= (WhiteSpace / LineTerminatorSequence / SingleLineComment)+ {}
 
 EOF
 	= !. {}
@@ -137,7 +137,7 @@ MainAgent
 	= "mainAgent" __ stmtBlock:StatementBlock { return new PCMainAgent(line(), column(), stmtBlock); }
 
 Procedure
-	= type:ResultType ___ id:Identifier _ fp:FormalParameters __ stmtBlock:StatementBlock	{
+	= type:ResultType ___ id:Identifier __ fp:FormalParameters __ stmtBlock:StatementBlock	{
 																								fp.unshift(line(), column(), type, id, stmtBlock);
 																								return construct(PCProcedureDecl, fp);
 																							}
@@ -180,10 +180,10 @@ StructCode
 														}
 
 ConditionDeclarationStatement
-	= "condition" ___ id:Identifier _ "with" ___ exp:Expression _ ";" { return new PCConditionDecl(line, column, id, exp); }
+	= "condition" ___ id:Identifier __ "with" ___ exp:Expression __ ";" { return new PCConditionDecl(line, column, id, exp); }
 
 DeclarationStatement
-	= decl:Declaration _ ";"	{
+	= decl:Declaration __ ";"	{
 									decl.isStatement = true;
 									return decl;
 								}
@@ -200,7 +200,7 @@ Declaration
 																					}
 
 VariableDeclarator
-	= id:Identifier varInit:(_ "=" _ VariableInitializer)? { return varInit != null ? new PCVariableDeclarator(line(), column(), id, varInit[3]) : new PCVariableDeclarator(line(), column(), id); }
+	= id:Identifier varInit:(__ "=" __ VariableInitializer)? { return varInit != null ? new PCVariableDeclarator(line(), column(), id, varInit[3]) : new PCVariableDeclarator(line(), column(), id); }
 
 VariableInitializer
 	= "{" __ test:(VariableInitializer (__ ","  __ VariableInitializer)*)? uncomplete:(__ "," __)? __ "}"	{
@@ -223,14 +223,14 @@ VariableInitializer
 	/ exp:Expression { return new PCVariableInitializer(line(), column(), false, exp); }
 
 Type
-	= type:PrimitiveType ranges:(_ "[" IntegerLiteral "]")*	{
-																var res = type;
-																for (var i = ranges.length - 1; i >= 0; --i)
-																{
-																	res = new PCArrayType(line(), column(), res, ranges[i][2]);
+	= type:PrimitiveType ranges:(__ "[" IntegerLiteral "]")*	{
+																	var res = type;
+																	for (var i = ranges.length - 1; i >= 0; --i)
+																	{
+																		res = new PCArrayType(line(), column(), res, ranges[i][2]);
+																	}
+																	return res;
 																}
-																return res;
-															}
 
 PrimitiveType
 	= ch:Chan { return ch; }
@@ -271,18 +271,18 @@ ExpressionList
 													}
 
 AssignmentExpression
-	= dest:AssignDestination _ op:AssignmentOperator _ exp:Expression { return new PCAssignExpression(line(), column(), dest, op, exp); }
+	= dest:AssignDestination __ op:AssignmentOperator __ exp:Expression { return new PCAssignExpression(line(), column(), dest, op, exp); }
 
 AssignDestination
-	= id:Identifier pos:(_ "[" Expression "]")*	{
-													var index = [];
-													for (var i = pos.length - 1; i >= 0; --i)
-													{
-														index.push(pos[i][2]);
+	= id:Identifier pos:(__ "[" Expression "]")*	{
+														var index = [];
+														for (var i = pos.length - 1; i >= 0; --i)
+														{
+															index.push(pos[i][2]);
+														}
+														index.unshift(id, line(), column());
+														return construct(PCAssignDestination, index);
 													}
-													index.unshift(id, line(), column());
-													return construct(PCAssignDestination, index);
-												}
 
 AssignmentOperator
 	= "=" { return "="; }
@@ -292,13 +292,13 @@ AssignmentOperator
 	/ "-=" { return "-="; }
 
 SendExpression
-	= callExp:CallExpression _ "<!" _ exp:Expression _ { return new PCSendExpression(line(), column(), callExp, exp); }
+	= callExp:CallExpression __ "<!" __ exp:Expression __ { return new PCSendExpression(line(), column(), callExp, exp); }
 
 ConditionalExpression
-	= exp:ConditionalOrExpression rest:(_ "?" _ Expression _ ":" _ ConditionalExpression)? { return rest != null ? new PCConditionalExpression(line(), column(), exp, rest[3], rest[7]) : exp; }
+	= exp:ConditionalOrExpression rest:(__ "?" __ Expression __ ":" __ ConditionalExpression)? { return rest != null ? new PCConditionalExpression(line(), column(), exp, rest[3], rest[7]) : exp; }
 
 ConditionalOrExpression
-	= exp:ConditionalAndExpression rest:(_ "||" _ ConditionalAndExpression)*	{
+	= exp:ConditionalAndExpression rest:(__ "||" __ ConditionalAndExpression)*	{
 																					var res = exp;
 																					for (var i = 0; i < rest.length; ++i)
 																					{
@@ -308,7 +308,7 @@ ConditionalOrExpression
 																				}
 
 ConditionalAndExpression
-	= exp:EqualityExpression rest:(_ "&&" _ EqualityExpression)*	{
+	= exp:EqualityExpression rest:(__ "&&" __ EqualityExpression)*	{
 																		var res = exp;
 																		for (var i = 0; i < rest.length; ++i)
 																		{
@@ -318,7 +318,7 @@ ConditionalAndExpression
 																	}
 
 EqualityExpression
-	= exp:RelationalExpression rest:(_ ("==" / "!=") _ RelationalExpression)*	{
+	= exp:RelationalExpression rest:(__ ("==" / "!=") __ RelationalExpression)*	{
 																					var res = exp;
 																					for (var i = 0; i < rest.length; ++i)
 																					{
@@ -328,7 +328,7 @@ EqualityExpression
 																				}
 
 RelationalExpression
-	= exp:AdditiveExpression rest:(_ ("<=" / "<" / ">=" / ">") _ AdditiveExpression)*	{
+	= exp:AdditiveExpression rest:(__ ("<=" / "<" / ">=" / ">") __ AdditiveExpression)*	{
 																							var res = exp;
 																							for (var i = 0; i < rest.length; ++i)
 																							{
@@ -338,27 +338,27 @@ RelationalExpression
 																						}
 
 AdditiveExpression
-	= exp:MultiplicativeExpression rest:(_ ("+" / "-") _ MultiplicativeExpression)*	{
-																						var res = exp;
-																						for (var i = 0; i < rest.length; ++i)
-																						{
-																							res = new PCAdditiveExpression(line(), column(), res, rest[i][1], rest[i][3]);
+	= exp:MultiplicativeExpression rest:(__ ("+" / "-") __ MultiplicativeExpression)*	{
+																							var res = exp;
+																							for (var i = 0; i < rest.length; ++i)
+																							{
+																								res = new PCAdditiveExpression(line(), column(), res, rest[i][1], rest[i][3]);
+																							}
+																							return res;
 																						}
-																						return res;
-																					}
 
 MultiplicativeExpression
-	= exp:UnaryExpression rest:(_ ("*" / "/" / "%") _ UnaryExpression)*	{
-																			var res = exp;
-																			for (var i = 0; i < rest.length; ++i)
-																			{
-																				res = new PCMultiplicativeExpression(line(), column(), res, rest[i][1], rest[i][3]);
+	= exp:UnaryExpression rest:(__ ("*" / "/" / "%") __ UnaryExpression)*	{
+																				var res = exp;
+																				for (var i = 0; i < rest.length; ++i)
+																				{
+																					res = new PCMultiplicativeExpression(line(), column(), res, rest[i][1], rest[i][3]);
+																				}
+																				return res;
 																			}
-																			return res;
-																		}
 
 UnaryExpression
-	= op:("+" / "-" / "!") _ exp:UnaryExpression { return new PCUnaryExpression(line(), column(), op, exp); }
+	= op:("+" / "-" / "!") __ exp:UnaryExpression { return new PCUnaryExpression(line(), column(), op, exp); }
 	/ exp:ReceiveExpression { return exp; }
 	/ exp:PostfixExpression { return exp; }
 
@@ -366,14 +366,14 @@ PostfixExpression
 	= dest:AssignDestination _ op:("++" / "--") { return new PCPostfixExpression(line(), column(), dest, op); }
 
 ReceiveExpression
-	= op:(_ "<?")* _  exp:CallExpression _	{
-												var res = exp;
-												for (var i = 0; i < op.length; i++)
-												{
-													res = new PCReceiveExpression(line(), column(), res)
+	= op:(__ "<?")* __  exp:CallExpression __	{
+													var res = exp;
+													for (var i = 0; i < op.length; i++)
+													{
+														res = new PCReceiveExpression(line(), column(), res)
+													}
+													return res;
 												}
-												return res;
-											}
 
 CallExpression
 	= call:MonCall { return call; }
@@ -381,16 +381,16 @@ CallExpression
 	/ call:ArrayExpression { return call; }
 
 ProcCall
-	= id:Identifier _ args:Arguments	{
+	= id:Identifier __ args:Arguments	{
 											args.unshift(id, line(), column());
 											return construct(PCProcedureCall, args);
 										}
 
 Arguments
-	= "(" _ expList:(ExpressionList)? _ ")" { return expList != null ? expList : []; }
+	= "(" __ expList:(ExpressionList)? __ ")" { return expList != null ? expList : []; }
 
 MonCall
-	= exp:PrimaryExpression call:(_ "." _ ProcCall)+	{
+	= exp:PrimaryExpression call:(_ "." __ ProcCall)+	{
 															var res = new PCClassCall(line(), column(), exp, call[0][3]);
 															for (var i = 1; i < call.length; ++i)
 															{
@@ -400,7 +400,7 @@ MonCall
 														}
 
 ArrayExpression
-	= exp:PrimaryExpression call:(_ "[" Expression "]")*	{
+	= exp:PrimaryExpression call:(__ "[" Expression "]")*	{
 																var res = exp;
 																for (var i = call.length - 1; i >= 0; --i)
 																{
@@ -412,7 +412,7 @@ ArrayExpression
 PrimaryExpression
 	= exp:Literal { return new PCLiteralExpression(line(), column(), exp); }
 	/ exp:Identifier { return new PCIdentifierExpression(line(), column(), exp); }
-	/ "(" _ exp:Expression _ ")" { return exp; }
+	/ "(" __ exp:Expression __ ")" { return exp; }
 
 Literal
 	= literal:IntegerLiteral { return literal; }
@@ -447,12 +447,12 @@ Statement
 	/ stmt:WhileStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:DoStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:ForStatement { return new PCStatement(line(), column(), stmt); }
-	/ "break" _ ";" { return new PCStatement(line(), column(), new PCBreakStmt(line(), column())); }
-	/ "continue" _ ";" { return new PCStatement(line(), column(), new PCContinueStmt(line(), column())); }
+	/ "break" __ ";" { return new PCStatement(line(), column(), new PCBreakStmt(line(), column())); }
+	/ "continue" __ ";" { return new PCStatement(line(), column(), new PCContinueStmt(line(), column())); }
 	/ stmt:ReturnStatement { return new PCStatement(line(), column(), stmt); }
 	/ stmt:PrimitiveStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:StatementExpression _ ";" { return new PCStatement(line(), column(), stmt); }
-	/ _ ";" { return new PCStatement(line(), column()); }
+	/ stmt:StatementExpression __ ";" { return new PCStatement(line(), column(), stmt); }
+	/ __ ";" { return new PCStatement(line(), column()); }
 
 StatementExpression
 	= stmtExp:StartExpression { return new PCStmtExpression(line(), column(), stmtExp); }
@@ -484,56 +484,56 @@ SelectStatement
 															}
 
 CaseStatement
-	= "case" ___ exp:StatementExpression _ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt, exp); }
-	/ "default" _ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt); }
+	= "case" ___ exp:StatementExpression __ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt, exp); }
+	/ "default" __ ":" __ stmt:Statement { return new PCCase(line(), column(), stmt); }
 
 IfStatement
-	= "if" _ "(" _ exp:Expression _ ")" __ ifStmt:Statement __ test:("else" __ Statement)? { return test != null ? new PCIfStmt(line(), column(), exp, ifStmt, test[2]) : new PCIfStmt(line(), column(), exp, ifStmt); }
+	= "if" __ "(" __ exp:Expression __ ")" __ ifStmt:Statement __ test:("else" __ Statement)? { return test != null ? new PCIfStmt(line(), column(), exp, ifStmt, test[2]) : new PCIfStmt(line(), column(), exp, ifStmt); }
 
 WhileStatement
-	= "while" _ "(" _ exp:Expression _ ")" __ stmt:Statement { return new PCWhileStmt(line(), column(), exp, stmt); }
+	= "while" __ "(" __ exp:Expression __ ")" __ stmt:Statement { return new PCWhileStmt(line(), column(), exp, stmt); }
 
 DoStatement
-	= "do" __ stmt:Statement __ "while" _ "(" _ exp:Expression _ ")" _ ";" { return new PCDoStmt(line(), column(), stmt, exp); }
+	= "do" __ stmt:Statement __ "while" __ "(" __ exp:Expression __ ")" __ ";" { return new PCDoStmt(line(), column(), stmt, exp); }
 
 ForStatement
-	= "for" _ "(" _ init:(ForInit)? _ ";" _ exp:(Expression)? _ ";" _ update:(ForUpdate)? _ ")" __ stmt:Statement	{
-																														var res = [];
-																														if (update != null)
-																														{
-																															res = res.concat(update);
-																														}
-																														res.unshift(line(), column(), stmt, init, exp);
-																														return construct(PCForStmt, res);
-																													}
+	= "for" __ "(" __ init:(ForInit)? __ ";" __ exp:(Expression)? __ ";" __ update:(ForUpdate)? __ ")" __ stmt:Statement	{
+																																var res = [];
+																																if (update != null)
+																																{
+																																	res = res.concat(update);
+																																}
+																																res.unshift(line(), column(), stmt, init, exp);
+																																return construct(PCForStmt, res);
+																															}
 
 ForInit
-	= head:(Declaration / StatementExpression) tail:(_ "," _ (Declaration / StatementExpression))*	{
-																										var inits = [line(), column()];
-																										inits.push(head);
-																										for (var i = 0; i < tail.length; ++i)
-																										{
-																											inits.push(tail[i][3]);
+	= head:(Declaration / StatementExpression) tail:(__ "," __ (Declaration / StatementExpression))*	{
+																											var inits = [line(), column()];
+																											inits.push(head);
+																											for (var i = 0; i < tail.length; ++i)
+																											{
+																												inits.push(tail[i][3]);
+																											}
+																											return construct(PCForInit, inits);
 																										}
-																										return construct(PCForInit, inits);
-																									}
 
 ForUpdate
 	= stmtList:StatementExpressionList { return stmtList; }
 
 ReturnStatement
-	= "return" ___ exp:(Expression)? _ ";" { return exp != null ? new PCReturnStmt(line(), column(), exp) : new PCReturnStmt(line(), column()); }
+	= "return" ___ exp:(Expression)? __ ";" { return exp != null ? new PCReturnStmt(line(), column(), exp) : new PCReturnStmt(line(), column()); }
 
 PrimitiveStatement
-	= "join" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN, exp); }
-	/ "lock" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.LOCK, exp); }
-	/ "unlock" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.UNLOCK, exp); }
-	/ "waitForCondition" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT, exp); }
-	/ "signal" ___ exp:Expression _ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL, exp); }
-	/ "signalAll" ___ exp:(Expression)? _ ";" { return exp != null ? new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL, exp) : new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL); }
+	= "join" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN, exp); }
+	/ "lock" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.LOCK, exp); }
+	/ "unlock" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.UNLOCK, exp); }
+	/ "waitForCondition" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT, exp); }
+	/ "signal" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL, exp); }
+	/ "signalAll" ___ exp:(Expression)? __ ";" { return exp != null ? new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL, exp) : new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL); }
 
 Println
-	= "println" _ "(" _ expList:ExpressionList _ ")" _ ";"	{
-																expList.unshift(line(), column());
-																return construct(PCPrintStmt, expList);
-															}
+	= "println" __ "(" __ expList:ExpressionList __ ")" __ ";"	{
+																	expList.unshift(line(), column());
+																	return construct(PCPrintStmt, expList);
+																}
