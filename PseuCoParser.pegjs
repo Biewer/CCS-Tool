@@ -522,7 +522,7 @@ ForUpdate
 	= stmtList:StatementExpressionList { return stmtList; }
 
 ReturnStatement
-	= "return" ___ exp:(Expression)? __ ";" { return exp != null ? new PCReturnStmt(line(), column(), exp) : new PCReturnStmt(line(), column()); }
+	= "return" exp:(___ Expression)? __ ";" { return exp != null ? new PCReturnStmt(line(), column(), exp[1]) : new PCReturnStmt(line(), column()); }
 
 PrimitiveStatement
 	= "join" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN, exp); }
@@ -530,7 +530,7 @@ PrimitiveStatement
 	/ "unlock" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.UNLOCK, exp); }
 	/ "waitForCondition" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT, exp); }
 	/ "signal" ___ exp:Expression __ ";" { return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL, exp); }
-	/ "signalAll" ___ exp:(Expression)? __ ";" { return exp != null ? new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL, exp) : new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL); }
+	/ "signalAll" exp:(___ Expression)? __ ";" { return exp != null ? new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL, exp[1]) : new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.SIGNAL_ALL); }
 
 Println
 	= "println" __ "(" __ expList:ExpressionList __ ")" __ ";"	{
