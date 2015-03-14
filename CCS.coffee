@@ -40,7 +40,7 @@ class Environment
 	constructor: -> @env = {}
 	getValue: (id) ->
 		res = @env[id]
-		throw new Error("Unbound identifier \"#{id}\"!") if ! res
+		throw ({message: "Unbound identifier '" + id + "'", line: @line, column: @column, name: "Evaluation Error"}) if ! res 	# ToDo: line not available
 		res
 	setValue: (id, type) ->
 		@env[id] = type
@@ -54,7 +54,7 @@ CCSGetMostGeneralType = (t1, t2) ->
 	return t1 if t2 == CCSTypeUnknown
 	return t2 if t1 == CCSTypeUnknown
 	return t1 if t1 == t2
-	throw new Error("Incompatible Types: #{CCSTypeToString t1} and #{CCSTypeToString t2}!");
+	throw ({message: "Incompatible Types: #{CCSTypeToString t1} and #{CCSTypeToString t2}!", line: @line, column: @column, name: "Type Error"})		# ToDo: no line
 
 CCSTypeToString = (t) ->
 	if t == CCSTypeChannel
@@ -72,16 +72,16 @@ class CCSEnvironment extends Environment
 	setType: (id, type) ->
 		now = @env[id]
 		if now
-			throw new Error("Duplicate process variable \"#{id}\"") if type == CCSTypeProcess
+			throw ({message: "Duplicate process variable \"#{id}\"", line: @line, column: @column, name: "Type Error"}) if type == CCSTypeProcess		# ToDo: no line
 			@env[id] = CCSGetMostGeneralType(now, type)
 		else
 			@env[id] = type
 	hasType: (id) -> @hasValue id
-	allowsUnboundedInputOnChannelName: (name) ->
+	allowsUnrestrictedInputOnChannelName: (name) ->
 		if @pd and @pd.usesParameterName(name)
 			false
 		else
-			@ccs.allowsUnboundedInputOnChannelName(name)
+			@ccs.allowsUnrestrictedInputOnChannelName(name)
 			
 
 
@@ -97,17 +97,28 @@ class CCS
 		penv = new CCSEnvironment(@)
 		(pd.setCCS @) for pd in @processDefinitions
 		(pd.computeTypes(penv)) for pd in @processDefinitions
-		try
-			@system.computeTypes(new CCSEnvironment(@))
-		catch e
-			e = new Error(e.message)
-			e.line = @system.line
-			e.column = 1
-			e.name = "TypeError"
-			e.code = @toString()
+		# try
+		@system.computeTypes(new CCSEnvironment(@))
+		# catch e
+		# 	e = new Error(e.message)
+		# 	e.line = @system.line
+		# 	e.column = 1
+		# 	e.name = "TypeError"
+		# 	e.code = @toString()
+		# 	throw e
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
 			throw e
+		@
 	
-	allowsUnboundedInputOnChannelName: (name) ->
+	allowsUnrestrictedInputOnChannelName: (name) ->
 		if @rootRestriction then @rootRestriction.restrictsChannelName(name) else false
 	
 	getProcessDefinition: (name, argCount) -> 
@@ -123,6 +134,17 @@ class CCS
 # - ProcessDefinition
 class CCSProcessDefinition
 	constructor: (@name, @process, @params, @line=0) ->					# string x Process x CCSVariable*
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
 	
 	getArgCount: -> if @params then @params.length else 0
 	usesParameterName: (name) ->
@@ -146,16 +168,16 @@ class CCSProcessDefinition
 				@ccs.warnings.push(e)
 			else
 				throw e	
-		try
-			penv.setType(@name, CCSTypeProcess)
-			@process.computeTypes(@env)
-		catch e
-			e = new Error(e.message)
-			e.line = @line
-			e.column = 1
-			e.name = "TypeError"
-			e.code = @ccs.toString()
-			throw e
+		# try
+		penv.setType(@name, CCSTypeProcess)
+		@process.computeTypes(@env)
+		# catch e
+		# 	e = new Error(e.message)
+		# 	e.line = @line
+		# 	e.column = 1
+		# 	e.name = "TypeError"
+		# 	e.code = @ccs.toString()
+		# 	throw e
 	
 	toString: -> 
 		result = @name
@@ -168,6 +190,17 @@ class CCSProcessDefinition
 class CCSProcess
 	constructor: (@subprocesses...) ->								# Process*
 		@__id = ObjID++
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
 		
 	setCCS: (@ccs) -> p.setCCS(@ccs) for p in @subprocesses
 	_setCCS: (@ccs) -> throw "no ccs" if !@ccs; @
@@ -182,10 +215,6 @@ class CCSProcess
 		@replaceVariable varName, new CCSConstantExpression(val)
 	replaceChannelName: (old, newID) ->
 		p.replaceChannelName(old, newID) for p in @subprocesses
-	###getTypeOfIdentifier: (identifier, type) ->
-		for t in (p.getTypeOfIdentifier(identifier, type) for p in @subprocesses)
-			type = CCSGetMostGeneralType(type, t)
-		type###
 	computeTypes: (env) ->
 		p.computeTypes(env) for p in @subprocesses
 		null
@@ -259,7 +288,7 @@ class CCSProcessApplication extends CCSProcess
 		type###
 	computeTypes: (env) ->
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
-		throw new Error("Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!") if not pd
+		throw ({message: "Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!", line: @line, column: @column, name: "Type Error"}) if not pd
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
 				type = @valuesToPass[i].computeTypes(env, true)
@@ -330,7 +359,7 @@ class CCSCondition extends CCSProcess
 		super identifier, type###
 	computeTypes: (env) ->
 		type = @expression.computeTypes(env, false)
-		throw new Error("Conditions can only check values, channel names are not supported!") if type == CCSTypeChannel
+		throw ({message: "Conditions can only check values. Channel names are not supported!", line: @line, column: @column, name: "Evaluation Error"}) if type == CCSTypeChannel
 		super
 	replaceVariable: (varName, exp) ->
 		@expression = @expression.replaceVariable(varName, exp)
@@ -400,6 +429,17 @@ class CCSRestriction extends CCSProcess
 
 class CCSChannel
 	constructor: (@name, @expression=null) ->	# string x Expression
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
 	
 	isEqual: (channel) ->
 		return false if channel.name != @name
@@ -420,7 +460,7 @@ class CCSChannel
 		env.setType(@name, CCSTypeChannel)
 		if @expression
 			type = @expression.computeTypes(env, false)
-			throw new Error("Channel variables are not allowed in channel specifier expression!") if type == CCSTypeChannel
+			throw ({message: "Channel variables are not allowed in channel specifier expression!", line: @line, column: @column, name: "Type Error"}) if type == CCSTypeChannel
 		null
 	toString: (mini) ->
 		result = "" + @name
@@ -431,19 +471,6 @@ class CCSChannel
 				result += "(#{@expression.toString(mini)})"
 		result
 	copy: -> new CCSChannel(@name, @expression?.copy())
-
-###
-class CCSInternalChannel extends CCSChannel
-	constructor: (name) ->
-		if name != CCSInternalChannel or name != CCSExitChannel
-			throw new Error("Only internal channel names are allowed!")
-		super name, null
-	isEqual: (channel) -> channel.name == @name and channel.expression == null
-	replaceVariable: (varName, exp) -> null
-	replaceChannelName: (old, newID) -> null
-	getTypeOfIdentifier: (identifier, type) -> type
-	toString: -> @name
-	###
 	
 	
 
@@ -451,11 +478,26 @@ class CCSInternalChannel extends CCSChannel
 class CCSAction
 	constructor: (@channel) ->		# CCSChannel
 		if @channel.name == "i"		# ??? TODO @channel is not a string?
-			if !@isSimpleAction() then throw new Error("Internal channel i is only allowed as simple action!")
+			if !@isSimpleAction() 
+				@_exceptionBuffer = ({message: "Internal channel i is only allowed as simple action!", line: @line, column: @column, name: "Parse Error"})
+				return
 			@channel.name = CCSInternalChannel
 		else if @channel.name == "e"
-			if !@isSimpleAction() then throw new Error("Exit channel e is only allowed as simple action!")
+			if !@isSimpleAction() 
+				@_exceptionBuffer = ({message: "Exit channel e is only allowed as simple action!", line: @line, column: @column, name: "Parse Error"})
+				return
 			@channel.name = CCSExitChannel
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
 	
 	isSimpleAction: -> false
 	isInputAction: -> false
@@ -491,9 +533,22 @@ CCSInternalActionCreate = (name) ->
 
 class CCSVariable
 	constructor: (@name, @set) -> throw new Error("Illegal variable name") if typeof @name != "string" or @name.length == 0
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
+
 	allowsValue: (value) -> if @set then @set.allowsValue value else true
 	possibleValues: ->
-		throw new Error("Cannot generate infinite values for unrestricted variables!") if not @set
+		throw ({message: "Unrestricted variable! Restrict using the 'range' syntax.", line: @line, column: @column, name: "Evaluation Error"}) if not @set
+		# throw new Error("Cannot generate infinite values for unrestricted variables!") if not @set
 		@set.possibleValues()
 	toString: -> "#{@name}#{if @set then ":"+@set.toString() else ""}"
 
@@ -501,6 +556,18 @@ class CCSVariable
 class CCSValueSet
 	constructor: (@type, @min, @max) ->
 		throw new Error("Unknown Type") if @type != "string" and @type != "number"
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
+
 	allowsValue: (value) ->
 		value = CCSStringDataForValue(value)
 		if @type == "string"
@@ -570,8 +637,8 @@ class CCSInput extends CCSAction
 	computeTypes: (env) ->
 		if @supportsValuePassing()
 			env.setType(@variable.name, CCSTypeValue) 
-			if not env.allowsUnboundedInputOnChannelName(@channel.name)
-				throw new Error("Unbounded input variable \"#{@variable}\"") if not @variable.set
+			if not env.allowsUnrestrictedInputOnChannelName(@channel.name)
+				throw ({message: "Unrestricted input variable \"#{@variable}\". Use the 'range' syntax to add a restriction.", line: @line, column: @column, name: "Type Error"}) if not @variable.set
 		super
 	
 	toString: (mini, inputValue) -> 
@@ -631,7 +698,7 @@ class CCSOutput extends CCSAction
 	computeTypes: (env) ->
 		if @expression
 			type = @expression.computeTypes(env, false)
-			throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
+			throw ({message: "Channels can not be sent over channels!", line: @line, column: @column, name: "Type Error"}) if type == CCSTypeChannel
 		super
 			
 	toString: (mini) -> "#{super}!#{if @expression then "(#{@expression.toString(mini)})" else ""}"
@@ -642,6 +709,18 @@ class CCSOutput extends CCSAction
 # -- Expression
 class CCSExpression
 	constructor: (@subExps...) ->			# Expression*
+		@_exceptionBuffer = null
+
+	setCodePos: (line, column) ->
+		@line = line
+		@column = column
+		if @_exceptionBuffer
+			e = @_exceptionBuffer
+			@_exceptionBuffer = null
+			e.line = line
+			e.column = column
+			throw e
+		@
 	
 	getLeft: -> @subExps[0]
 	getRight: -> @subExps[1]
@@ -683,6 +762,9 @@ class CCSExpression
 class CCSConstantExpression extends CCSExpression
 	constructor: (@value) -> 
 		super()
+		if typeof @value == "number" and (@value >= 9007199254740992 or @value <= -9007199254740992)
+			@_exceptionBuffer = ({message: "Value exceeds maximum integer bounds: [-9007199254740991 ; 9007199254740991]", line: @line, column: @column, name: "Type Error"})
+		
 	
 	getPrecedence: -> 18
 	evaluate: -> CCSStringDataForValue @value
@@ -694,7 +776,8 @@ class CCSConstantExpression extends CCSExpression
 	
 
 CCSStringDataForValue = (value) ->
-	value = (if value == true then "1" else "0") if typeof value == "boolean"
+	# value = (if value == true then "1" else "0") if typeof value == "boolean"
+	value = (if value == true then "true" else "false") if typeof value == "boolean"
 	value = "" + value
 
 CCSValueIsInt = (value) -> ("" + value).match(/^-?[0-9]+$/)
@@ -724,8 +807,8 @@ class CCSVariableExpression extends CCSExpression
 		if varName == @variableName then exp else @
 	replaceChannelName: (old, newID) ->
 		@variableName = newID if @variableName == old
-	evaluate: -> throw new Error('Unbound identifier!')
-	typeOfEvaluation: -> throw new Error('Unbound identifier!')
+	evaluate: -> throw ({message: "Unbound identifier", line: @line, column: @column, name: "Type Error"})
+	typeOfEvaluation: -> throw ({message: "Unbound identifier", line: @line, column: @column, name: "Type Error"})
 	isEvaluatable: -> false
 	toString: -> @variableName
 	
@@ -756,7 +839,17 @@ class CCSAdditiveExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
-		"" + (if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!"))
+		debugger
+		if isNaN(l)
+			console.log("NaN left")
+			# throw ({message: "Left operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+		if isNaN(r)
+			console.log("NaN left")
+			# throw ({message: "Right operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+		res = if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!")
+		if res >= 9007199254740992 or res <= -9007199254740992
+			throw ({message: "Value exceeds maximum integer bounds: [-9007199254740991 ; 9007199254740991]", line: @line, column: @column, name: "Type Error"})
+		"" + (res)
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "number"
 	toString: (mini) -> 
@@ -776,8 +869,15 @@ class CCSMultiplicativeExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
-		"" + (if @op == "*" then l * r else if @op == "/" then Math.floor(l/r) else if @op == "%" then l % r
-		else throw new Error("Invalid operator \"#{@op}\"!"))
+		if isNaN(l)
+			throw ({message: "Left operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+		if isNaN(r)
+			throw ({message: "Right operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+		res = if @op == "*" then l * r else if @op == "/" then Math.floor(l/r) else if @op == "%" then l % r
+		else throw new Error("Invalid operator \"#{@op}\"!")
+		if res >= 9007199254740992 or res <= -9007199254740992
+			throw ({message: "Value exceeds maximum integer bounds: [-9007199254740991 ; 9007199254740991]", line: @line, column: @column, name: "Type Error"})
+		"" + (res)
 	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
 	typeOfEvaluation: -> "number"
 	toString: (mini) -> 
@@ -814,6 +914,10 @@ class CCSRelationalExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
+		if isNaN(l)
+			throw ({message: "Left operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+		if isNaN(r)
+			throw ({message: "Right operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
 		res = if @op == "<" then l < r else if @op == "<=" then l <= r
 		else if @op == ">" then l > r else if @op == ">=" then l >= r
 		else throw new Error("Invalid operator!")

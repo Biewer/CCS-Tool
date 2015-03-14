@@ -33,7 +33,8 @@ CCS
 		                                  		if (PDefs[i])
 		                                  			defs.push(PDefs[i]);
 		                                  	}
-		                                  	return new CCS(defs, System);
+		                                  	
+		                                  	return new CCS(defs, System).setCodePos(line(),column());
 		                                }
                                 
 
@@ -44,7 +45,7 @@ RangeDefinition
 Process
   = _ n:name _ params:("[" _ v:ValueIdentifier vs:(_ "," _ v2:ValueIdentifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
-		                                  return new CCSProcessDefinition(n, P, params ? params : null, line());
+		                                  return new CCSProcessDefinition(n, P, params ? params : null, line()).setCodePos(line(),column());
 		                                }
 
 
@@ -53,8 +54,8 @@ Process
 Restriction
   = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  (as) ? as : []; })?
   										{
-  											res = res ? new CCSRestriction(P, res) : P;
-  											res.line = line();
+  											res = res ? new CCSRestriction(P, res).setCodePos(line(),column()) : P;
+  											//res.line = line();
   											return res;
   										}
 
@@ -66,7 +67,7 @@ Sequence
 		                                  while(Ps.length > 1){
 		                                    var p = Ps.shift();
 		                                    var q = Ps.shift();
-		                                    Ps.unshift(new CCSSequence(p,q));
+		                                    Ps.unshift(new CCSSequence(p,q).setCodePos(line(),column()));
 		                                  }
 		                                  return Ps[0];
 		                                }
@@ -80,7 +81,7 @@ Parallel
 		                                  while(Ps.length > 1){
 		                                    var p = Ps.shift();
 		                                    var q = Ps.shift();
-		                                    Ps.unshift(new CCSParallel(p,q));
+		                                    Ps.unshift(new CCSParallel(p,q).setCodePos(line(),column()));
 		                                  }
 		                                  return Ps[0];
 		                                }
@@ -95,7 +96,7 @@ Choice
 									    while(Ps.length > 1){
 									      var p = Ps.shift();
 									      var q = Ps.shift();
-									      Ps.unshift(new CCSChoice(p,q));
+									      Ps.unshift(new CCSChoice(p,q).setCodePos(line(),column()));
 									    }
 									    return Ps[0];
 									  }
@@ -109,7 +110,7 @@ Prefix
 		/ Output
 		/ SimpleAction ) _ P:PostPrefix
 									{ 
-										return new CCSPrefix(A, P); 
+										return new CCSPrefix(A, P).setCodePos(line(),column()); 
 									}
 	/ Trivial
 	
@@ -118,32 +119,32 @@ Prefix
 Condition
   = _ "when" _ "(" _ e:expression _ ")" _ P:Prefix
 	  								{
-	  									return new CCSCondition(e, P);
+	  									return new CCSCondition(e, P).setCodePos(line(),column());
 	  								}
 	  								
 PostPrefix
   //= &";"		{ return new CCSExit(); }
-  // (&";"/&"+"/&"|"/&"\\"/!.) { return new autoProcessComplete(); }
+  // (&";"/&"+"/&"|"/&"\\"/!.) { return new autoProcessComplete().setCodePos(line(),column()); }
   = "." P:Prefix	{ return P; }
 
 Match
   = a:Action _ "?" _ "(" _ e:expression _ ")"
 									{ 
-										return new CCSMatch(a, e); 
+										return new CCSMatch(a, e).setCodePos(line(),column()); 
 									}
   								
 
 Input
   = a:Action _ "?" v:(_ t:ValueIdentifier { return t; })?
 	  								{ 
-	  									return new CCSInput(a, v); 
+	  									return new CCSInput(a, v).setCodePos(line(),column()); 
 	  								}
 
 
 Output
   = a:Action _ "!" e:(_ t:expression { return t; })?
 	  								{ 
-	  									return new CCSOutput(a, e ? e : null); 
+	  									return new CCSOutput(a, e ? e : null).setCodePos(line(),column()); 
 	  								}
 
 
@@ -151,7 +152,7 @@ Output
 SimpleAction
   = a:Action
 	                                { 
-	                                	return new CCSSimpleAction(a); 
+	                                	return new CCSSimpleAction(a).setCodePos(line(),column()); 
 	                                }
 
 
@@ -159,7 +160,7 @@ Action
   = c:channel e:( "(" e:expression? ")" { return e; } )?
   									{
   										if (!e) e = null;
-  										return new CCSChannel(c, e);
+  										return new CCSChannel(c, e).setCodePos(line(),column());
   									}
 	                                
 	                                
@@ -173,15 +174,15 @@ Trivial
   										return P; 
   									}
   / _ "0"                         	{ 
-  										return new CCSStop(); 
+  										return new CCSStop().setCodePos(line(),column()); 
   									}
   / _ "1"                         	{ 
-  										return new CCSExit(); 
+  										return new CCSExit().setCodePos(line(),column()); 
   									}
   / _ n:name 
   		args:(_ "[" _ e:expression es:(_ "," _ e1:expression { return e1; })* _ "]" { es.unshift(e); return es; } )?
   			                     	{ 
-                                  		return new CCSProcessApplication(n, args);
+                                  		return new CCSProcessApplication(n, args).setCodePos(line(),column());
                                 	}
 
 name "name"
@@ -192,14 +193,14 @@ identifier "identifier"
   = first:[a-z_$] rest:[A-Za-z0-9_$]* { return first + rest.join(''); }
 
 ValueIdentifier
-  = id:identifier __ r:(InlineRange)?	{ return new CCSVariable(id, r); }
+  = id:identifier __ r:(InlineRange)?	{ return new CCSVariable(id, r).setCodePos(line(),column()); }
  
 InlineRange
   = _ ":" _ r:CoreRange		{ return r; }
 
 CoreRange
-  = a:int ".." b:int	{ return new CCSValueSet("number", a, b); }
-  / a:("$"*) ".." b:("$"*) { return new CCSValueSet("string", a.length, b.length); }
+  = a:int ".." b:int	{ return new CCSValueSet("number", a, b).setCodePos(line(),column()); }
+  / a:("$"*) ".." b:("$"*) { return new CCSValueSet("string", a.length, b.length).setCodePos(line(),column()); }
   / id:name { return rangeDefinitions.getValue(id); }
 
 
@@ -276,7 +277,7 @@ expression
  		{ 
  			while (equal.length > 0) {
  				t = equal.shift();
- 				left = new CCSEqualityExpression(left, t[1], t[0]);
+ 				left = new CCSEqualityExpression(left, t[1], t[0]).setCodePos(line(),column());
  			}
  			return left;
  		}
@@ -289,7 +290,7 @@ expression
  		{ 
  			while (relational.length > 0) {
  				t = relational.shift();
- 				left = new CCSRelationalExpression(left, t[1], t[0]);
+ 				left = new CCSRelationalExpression(left, t[1], t[0]).setCodePos(line(),column());
  			}
  			return left;
  		}
@@ -301,7 +302,7 @@ expression
  		{ 
  			while (concat.length > 0) {
  				t = concat.shift();
- 				left = new CCSConcatenatingExpression(left, t);
+ 				left = new CCSConcatenatingExpression(left, t).setCodePos(line(),column());
  			}
  			return left;
  		}
@@ -314,7 +315,7 @@ expression
  		{
  			while (addition.length > 0) {
  				t = addition.shift();
- 				left = new CCSAdditiveExpression(left, t[1], t[0]);
+ 				left = new CCSAdditiveExpression(left, t[1], t[0]).setCodePos(line(),column());
  			}
  			return left;
  		}
@@ -327,14 +328,14 @@ expression
  		{
  			while (multiplication.length > 0) {
  				t = multiplication.shift();
- 				left = new CCSMultiplicativeExpression(left, t[1], t[0]);
+ 				left = new CCSMultiplicativeExpression(left, t[1], t[0]).setCodePos(line(),column());
  			}
  			return left;
  		}
  	
  	
  	complementExpression
- 		= "!" ___ e:complementExpression	{ return new CCSComplementExpression(e); }
+ 		= "!" ___ e:complementExpression	{ return new CCSComplementExpression(e).setCodePos(line(),column()); }
  		/ e: primaryExpression 				{ return e; }
  	
  	
@@ -348,14 +349,14 @@ expression
  	
  	exp_identifier "identifier"
  	  = first:[a-z_$] rest:[A-Za-z0-9_$]* 
- 	  	{ return new CCSVariableExpression(first + rest.join('')); }
+ 	  	{ return new CCSVariableExpression(first + rest.join('')).setCodePos(line(),column()); }
  	
  	exp_boolean "boolean literal"
- 		= 'true' { return new CCSConstantExpression(true); }
- 		/ 'false' { return new CCSConstantExpression(false); }
+ 		= 'true' { return new CCSConstantExpression(true).setCodePos(line(),column()); }
+ 		/ 'false' { return new CCSConstantExpression(false).setCodePos(line(),column()); }
  	
  	exp_integer "integer literal"
- 		= minus:('-')? digits:[0-9]+ { return new CCSConstantExpression(parseInt((minus ? minus : "") + digits.join(""))); }
+ 		= minus:('-')? digits:[0-9]+ { return new CCSConstantExpression(parseInt((minus ? minus : "") + digits.join(""))).setCodePos(line(),column()); }
  		
  	
  	exp_string "string literal"
@@ -363,7 +364,7 @@ expression
  	        s:(   exp_escapeSequence
  	        /   [^"]       
  	        )* 
- 	        '"' { return new CCSConstantExpression((s.join ? s.join("") : "")); }
+ 	        '"' { return new CCSConstantExpression((s.join ? s.join("") : "")).setCodePos(line(),column()); }
  	
  	exp_escapeSequence 
  	    =   '\\' (

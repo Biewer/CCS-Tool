@@ -80,7 +80,7 @@ CCSAddRecursiveProcessDefinition = (info, pd) ->
 	if res.recursion[pd.name] > 90
 		error = new Error("Too much unguarded recursion!")
 		error.line = pd.line
-		error.column = 1
+		error.column = pd.column
 		throw error
 	res
 
