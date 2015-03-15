@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 PCIndent = "   "
+PCErrorList = []
 
 class PCNode
 	constructor: (@line, @column, @children...) ->
@@ -66,28 +67,54 @@ class PCNode
 
 # - Program
 class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDecl|PCProcedure)+
-	collectClasses: (env) -> c.collectClasses(env) for c in @children
-	collectEnvironment: (env) -> c.collectEnvironment(env) for c in @children
+	collectClasses: (env) ->
+		for c in @children
+			try
+				c.collectClasses(env)
+			catch e
+				if e and e.wholeFile?
+					PCErrorList.push e
+	collectEnvironment: (env) ->
+		for c in @children
+			try
+				c.collectEnvironment(env)
+			catch e
+				if e and e.wholeFile?
+					PCErrorList.push e
 
 	# Collects complete environment for type checking
-	_collectEnvironment: (env) -> child._collectEnvironment(env) for child in @children
+	_collectEnvironment: (env) ->
+		for child in @children
+			try
+				child._collectEnvironment(env)
+			catch e
+				if e and e.wholeFile?
+					PCErrorList.push e
 
 	toString: -> (o.toString("") for o in @children).join("\n")
 
 	# Type checking
 	_getType: ->
+		PCErrorList = []
 		env = new PCTEnvironmentController()
 		@collectClasses(env)
 		@_collectEnvironment(env)
-		declaration.getType(env) for declaration in @children
+		for declaration in @children
+			try
+				declaration.getType(env)
+			catch e
+				if e and e.wholeFile?
+					PCErrorList.push e
 		try
 			env.getProcedureWithName("#mainAgent")
 		catch
-			throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "UndefinedMainAgent", "message" : "You must define a main agent!"})
+			PCErrorList.push ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "UndefinedMainAgent", "message" : "You must define a main agent!"})
 		cycleChecker = new PCTCycleChecker(env.getAllClasses())
 		trace = cycleChecker.cycleTraceForTypes()
-		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ClassStructureCycle", "message" : "Monitor/structure cycle detected: #{trace}!"}) if trace
-		null
+		if trace
+			PCErrorList.push ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "ClassStructureCycle", "message" : "Monitor/structure cycle detected: #{trace}!"})
+		if PCErrorList.length > 0
+			throw ({"errorlist" : true, "data" : PCErrorList})
 
 # - MainAgent Decl
 class PCMainAgent extends PCNode	# "mainAgent" PCStmtBlock
@@ -802,7 +829,11 @@ class PCStmtBlock extends PCNode
 	_getType: (env) ->
 		env.getEnvironment(@, @__id)
 		for child in @children
-			child.getType(env)
+			try
+				child.getType(env)
+			catch e
+				if e and e.wholeFile?
+					PCErrorList.push e
 			if child instanceof PCStatement and child.children[0]? and child.children[0] instanceof PCStmtBlock
 				env.setReturnExhaustive() if child.children[0].isReturnExhaustive
 		env.closeEnvironment()
