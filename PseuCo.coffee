@@ -314,7 +314,6 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 	collectClasses: (env) -> null
 	collectEnvironment: (env) ->
 		@type = @children[0].getType(env).type
-		@children[i].collectEnvironment(env, @type) for i in [1...@children.length] by 1
 
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> @collectEnvironment(env)
@@ -326,6 +325,7 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 
 	# Type checking
 	_getType: (env) ->
+		@children[i].collectEnvironment(env, @type) for i in [1...@children.length] by 1
 		for child in @children[1..]
 			type = child._getType(env, @type)
 			if type? and not @type.isEqual(type)
