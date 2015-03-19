@@ -112,7 +112,9 @@ CCSOutputRule =
 		if prefix?.action.isOutputAction() and prefix.action.supportsValuePassing()
 		then [new CCSBaseStep(prefix, @, copyOnPerform)]
 		else []
-	performStep: (step, info) -> step.process.getProcess()
+	performStep: (step, info) -> 
+		step.process.action.expression.evaluate()	# i.e. throw >now< if there is something wrong
+		step.process.getProcess()
 
 # - InputRule
 CCSInputRule = 
@@ -253,7 +255,7 @@ CCSResRule =
 CCSCondRule =
 	getPossibleSteps: (condition, info, copyOnPerform) ->
 		debugger if CCSCondRule.DEBUGGER
-		if condition.expression.evaluate() == "1"
+		if condition.expression.evaluate() == true
 		then condition.getProcess()._getPossibleSteps(info, copyOnPerform).filterActVPPlusSteps() 
 		else []
 	performStep: (step, info) -> step.substeps[0].perform(info)

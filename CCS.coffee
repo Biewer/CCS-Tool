@@ -706,6 +706,12 @@ class CCSOutput extends CCSAction
 	copy: -> new CCSOutput(@channel.copy(), (@expression?.copy()))
 	
 
+
+
+
+# Note - Mar 19, 2015: Changing strategy from saving all values as string to save value to most specific type possible
+
+
 # -- Expression
 class CCSExpression
 	constructor: (@subExps...) ->			# Expression*
@@ -731,18 +737,10 @@ class CCSExpression
 		@
 	replaceChannelName: (old, newID) -> null
 	
-	###usesIdentifier: (identifier) ->
-		@_childrenUseIdentifier identifier
-	_childrenUseIdentifier: (identifier) ->
-		result = false;
-		(result || e.usesIdentifier()) for e in @subExps
-		result###
 	computeTypes: (env, allowsChannel) ->
 		e.computeTypes(env, false) for e in @subExps
 		CCSTypeValue
-	###getTypeOfIdentifier: (identifier, type) ->
-		type = CCSGetMostGeneralType(type, CCSTypeValue) if @_childrenUseIdentifier(identifier)
-		type###
+
 	evaluate: -> throw new Error("Abstract method!")
 	isEvaluatable: -> false
 	typeOfEvaluation: -> throw new Error("Abstract method!")
@@ -767,13 +765,15 @@ class CCSConstantExpression extends CCSExpression
 		
 	
 	getPrecedence: -> 18
-	evaluate: -> CCSStringDataForValue @value
-		#if typeof @value == "boolean" then (if @value == true then 1 else 0) else @value
+	evaluate: -> @value
 	isEvaluatable: -> true
 	typeOfEvaluation: -> typeof @value
-	toString: -> CCSBestStringForValue @value #if typeof @value == "string" then '"'+@value+'"' else "" + @value
+	toString: -> CCSStringRepresentationForValue @value #if typeof @value == "string" then '"'+@value+'"' else "" + @value
 	copy: -> new CCSConstantExpression(@value)
 	
+
+CCSStringRepresentationForValue = (value) ->
+	if CCSValueIsInt(value) then "" + value else if value == true then "true" else if value == false then "false" else "\"#{value}\""
 
 CCSStringDataForValue = (value) ->
 	# value = (if value == true then "1" else "0") if typeof value == "boolean"
@@ -819,13 +819,15 @@ class CCSVariableExpression extends CCSExpression
 class CCSComplementExpression extends CCSExpression
 	getPrecedence: -> 17
 	evaluate: ->
-		res = not CCSBooleanForString(@subExps[0].evaluate())
-		CCSStringDataForValue res
-	isEvaluatable: -> @subExps[0].isEvaluatable()
+		v = @subExps[0].evaluate()
+		if typeof v != "boolean"
+			throw ({message: "Complement operand is not a boolean value!", line: @line, column: @column, name: "Type Error"})
+		not v
+	isEvaluatable: -> @subExps[0].isEvaluatable() and typeof @subExps[0].evaluate() == "boolean"
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			"!#{@stringForSubExp(@subExps[0], mini)}"
 	copy: -> new CCSComplementExpression(@subExps[0].copy())
@@ -839,22 +841,19 @@ class CCSAdditiveExpression extends CCSExpression
 	evaluate: ->
 		l = parseInt(@getLeft().evaluate())
 		r = parseInt(@getRight().evaluate())
-		debugger
 		if isNaN(l)
-			console.log("NaN left")
-			# throw ({message: "Left operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+			throw ({message: "Left operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
 		if isNaN(r)
-			console.log("NaN left")
-			# throw ({message: "Right operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
+			throw ({message: "Right operand is not an integer value!", line: @line, column: @column, name: "Type Error"})
 		res = if @op == "+" then l + r else if @op == "-" then l-r else throw new Error("Invalid operator!")
 		if res >= 9007199254740992 or res <= -9007199254740992
 			throw ({message: "Value exceeds maximum integer bounds: [-9007199254740991 ; 9007199254740991]", line: @line, column: @column, name: "Type Error"})
-		"" + (res)
-	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		res
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable() and !isNaN(parseInt(@getLeft().evaluate())) and !isNaN(parseInt(@getRight().evaluate()))
 	typeOfEvaluation: -> "number"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
@@ -877,12 +876,12 @@ class CCSMultiplicativeExpression extends CCSExpression
 		else throw new Error("Invalid operator \"#{@op}\"!")
 		if res >= 9007199254740992 or res <= -9007199254740992
 			throw ({message: "Value exceeds maximum integer bounds: [-9007199254740991 ; 9007199254740991]", line: @line, column: @column, name: "Type Error"})
-		"" + (res)
-	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		res
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable() and !isNaN(parseInt(@getLeft().evaluate())) and !isNaN(parseInt(@getRight().evaluate()))
 	typeOfEvaluation: -> "number"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
@@ -899,7 +898,7 @@ class CCSConcatenatingExpression extends CCSExpression
 	typeOfEvaluation: -> "string"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + "^" + @stringForSubExp(@getRight(), mini)
 	
@@ -921,12 +920,12 @@ class CCSRelationalExpression extends CCSExpression
 		res = if @op == "<" then l < r else if @op == "<=" then l <= r
 		else if @op == ">" then l > r else if @op == ">=" then l >= r
 		else throw new Error("Invalid operator!")
-		CCSStringDataForValue res
-	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		res
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable() and !isNaN(parseInt(@getLeft().evaluate())) and !isNaN(parseInt(@getRight().evaluate()))
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
@@ -941,14 +940,26 @@ class CCSEqualityExpression extends CCSExpression
 	evaluate: ->
 		l = @getLeft().evaluate()
 		r = @getRight().evaluate()
+		if typeof l != "boolean" and typeof r != "boolean"
+			l = "" + l
+			r = "" + r
+		else if typeof l != "boolean" or typeof r != "boolean"
+			throw ({message: "Both operands must be either booleans or of types int or string!", line: @line, column: @column, name: "Type Error"})
+		
+		
 		res = if @op == "==" then l == r else if @op == "!=" then l != r 
 		else throw new Error("Invalid operator!")
-		CCSStringDataForValue res
-	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		res
+	isEvaluatable: -> 
+		res = @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		l = @getLeft().evaluate()
+		r = @getRight().evaluate()
+		typesOkay = (typeof l != "boolean" and typeof r != "boolean") or (typeof l == "boolean" and typeof r == "boolean")
+		res and typesOkay
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + @op + @stringForSubExp(@getRight(), mini)
 	
@@ -961,13 +972,18 @@ class CCSAndExpression extends CCSExpression
 	
 	getPrecedence: -> 0
 	evaluate: -> 
-		res = CCSBooleanForString(@getLeft().evaluate()) && CCSBooleanForString(@getRight().evaluate())
-		CCSStringDataForValue res
-	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		l = @getLeft().evaluate()
+		r = @getRight().evaluate()
+		if typeof l != "boolean"
+			throw ({message: "Left operand is not a boolean value!", line: @line, column: @column, name: "Type Error"})
+		if typeof r != "boolean"
+			throw ({message: "Right operand is not a boolean value!", line: @line, column: @column, name: "Type Error"})
+		l and r
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable() and typeof @getLeft().evaluate() == "boolean" and typeof @getRight().evaluate() == "boolean"
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + "&&" + @stringForSubExp(@getRight(), mini)
 	
@@ -979,13 +995,18 @@ class CCSOrExpression extends CCSExpression
 	
 	getPrecedence: -> -3
 	evaluate: -> 
-		res = CCSBooleanForString(@getLeft().evaluate()) || CCSBooleanForString(@getRight().evaluate())
-		CCSStringDataForValue res
-	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		l = @getLeft().evaluate()
+		r = @getRight().evaluate()
+		if typeof l != "boolean"
+			throw ({message: "Left operand is not a boolean value!", line: @line, column: @column, name: "Type Error"})
+		if typeof r != "boolean"
+			throw ({message: "Right operand is not a boolean value!", line: @line, column: @column, name: "Type Error"})
+		l or r
+	isEvaluatable: -> @getLeft().isEvaluatable() and @getRight().isEvaluatable() and typeof @getLeft().evaluate() == "boolean" and typeof @getRight().evaluate() == "boolean"
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
-			CCSBestStringForValue(@evaluate())
+			CCSStringRepresentationForValue(@evaluate())
 		else
 			@stringForSubExp(@getLeft(), mini) + "||" + @stringForSubExp(@getRight(), mini)
 	
