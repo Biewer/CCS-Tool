@@ -48,6 +48,7 @@ PC.MainAgent::compile = (compiler) ->
 	
 
 PC.ProcedureDecl::compile = (compiler) ->
+	debugger
 	compiler.beginProcedure(@name)
 	proc = compiler.getProcedureWithNameOfClass(@name)
 	if proc.isMonitorProcedure()
@@ -55,7 +56,7 @@ PC.ProcedureDecl::compile = (compiler) ->
 		agent = compiler.getVariableWithNameOfClass("a", null, true)
 		compiler.emitOutput("lock", guard.getContainer(compiler), agent.getContainer(compiler))
 	compiler.compile(@getBody())		
-	proc.emitExit(compiler)
+	proc.emitExit(compiler)		# Ask the procedure to emit exit, because this depends on the procedure type: monitor procedures for example must return the mutex.
 	compiler.endProcedure()
 	[]
 	

@@ -158,6 +158,8 @@ class PCCCompiler
 		 compilerGetProcedure(compiler, identifier)
 		 compilerHandleNewIdentifierWithDefaultValueCallback(compiler, identifier, callback, context)
 		When these methods are called, the receiver may modify the compiler state by emitting CCS processes, pushing processes, ...
+
+		Note - Mar 19, 2015: compilerGetProcedure is not necessary anymore and gets not called anymore, because procedure objects are independent from the compile process. For variables, these calls are still important, because they are managed by process frames, so their internal state may change during compilation.
 	###
 	
 	getVariableWithName: (name) -> @getVariableWithNameOfClass(name, null, false)
@@ -172,8 +174,10 @@ class PCCCompiler
 	
 	getProcedureWithNameOfClass: (name, className) ->
 		if className
-			return @controller.getClassWithName(className).compilerGetProcedure(@, name)
-		@stack.compilerGetProcedure(@, name)
+			# return @controller.getClassWithName(className).compilerGetProcedure(@, name)
+			return @controller.getClassWithName(className).getProcedureWithName(name)
+		# @stack.compilerGetProcedure(@, name)
+		@controller.getProcedureWithName(name)
 	
 	getClassWithName: (name) -> @controller.getClassWithName name
 	getCurrentClass: ->
@@ -339,7 +343,8 @@ class PCCCompiler
 	
 	beginProcedure: (procedureName) ->
 		@controller.beginProcedure(procedureName)
-		procedure = @stack.compilerGetProcedure(@, procedureName)
+		debugger
+		procedure = @getProcedureWithName(procedureName)
 		throw new Error("Tried to begin unknown procedure!") if !procedure
 		frame = new PCCProcedureFrame(procedure)
 		element = new PCCProcedureStackElement(procedure)

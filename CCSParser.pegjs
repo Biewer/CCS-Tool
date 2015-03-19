@@ -186,7 +186,7 @@ Trivial
                                 	}
 
 name "name"
-  = first:[A-Z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
+  = first:[A-Z] rest:[$A-Za-z0-9_]* { return first + rest.join(''); }
 
 // The following rules are the same, but they have different names which makes error messages better understandable!
 identifier "identifier"

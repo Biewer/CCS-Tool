@@ -106,9 +106,9 @@ class PCCClass extends PC.Class
 #class PCCStruct extends PCCClass
 		
 class PCCProcedure extends PC.Procedure
-	getProcessName: -> "Proc#{@getComposedLabel()}"
-	getAgentStarterChannel: -> "start#{@getComposedLabel()}"
-	getAgentProcessName: -> "Agent#{@getComposedLabel()}"
+	getProcessName: -> "Proc_#{@getComposedLabel()}"
+	getAgentStarterChannel: -> "start_#{@getComposedLabel()}"
+	getAgentProcessName: -> "Agent_#{@getComposedLabel()}"
 	getVariableClass: -> PCCLocalVariable
 	getAllArgumentContainers: (compiler, explicitArgumentContainers, instanceContainer) ->
 		argumentContainers = explicitArgumentContainers[..]
@@ -463,6 +463,11 @@ _t::collectAgents = (env) -> 		# ToDo: PCProcedure should be renamed to PCTProce
 	env.beginProcedure(@name)
 	super
 	env.endProcedure()
+_t = PC.MainAgent
+_t::collectAgents = (env) -> 
+	env.beginMainAgent(@name)
+	super
+	env.endMainAgent()
 
 PC.StartExpression::collectAgents = (env) -> env.processProcedureAsAgent(@children[0].getProcedure(env))
 

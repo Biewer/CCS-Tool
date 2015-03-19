@@ -24,6 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	ToDo
 ###
 
+PCTEnvironmentControllerInternalMainAgentName = "$mainAgent"
+
 class PCTEnvironmentController
 	constructor: ->
 		@root = new PCTEnvironmentNode(null, "")		# global
@@ -64,6 +66,9 @@ class PCTEnvironmentController
 	
 	getProcedureWithName: (name, line, column) ->
 		@_envStack.getProcedureWithName(name, line, column)
+
+	getMainAgent: (line, column) ->
+		@getProcedureWithName(PCTEnvironmentControllerInternalMainAgentName, line, column)
 	
 	getExpectedReturnValue: ->
 		@_envStack.getExpectedReturnValue()
@@ -125,17 +130,17 @@ class PCTEnvironmentController
 	
 	beginMainAgent: (node) ->
 		try
-			@_envStack.getProcedureWithName("#mainAgent")
+			@_envStack.getProcedureWithName(PCTEnvironmentControllerInternalMainAgentName)
 		catch
-			@beginNewProcedure(node, "#mainAgent", new PCTType(PCTType.VOID), [])
+			@beginNewProcedure(node, PCTEnvironmentControllerInternalMainAgentName, new PCTType(PCTType.VOID), [])
 			return
-		@beginProcedure("#mainAgent")
+		@beginProcedure(PCTEnvironmentControllerInternalMainAgentName)
 
 	_beginMainAgent: (node) ->
 		try
-			@_envStack.getProcedureWithName("#mainAgent")
+			@_envStack.getProcedureWithName(PCTEnvironmentControllerInternalMainAgentName)
 		catch
-			@beginNewProcedure(node, "#mainAgent", new PCTType(PCTType.VOID), [])
+			@beginNewProcedure(node, PCTEnvironmentControllerInternalMainAgentName, new PCTType(PCTType.VOID), [])
 			return
 		throw ({"line" : node.line, "column" : node.column, "wholeFile" : false, "name" : "DuplicateMainAgent", "message" : "Main agent can't be declared twice!"})
 	
@@ -190,7 +195,7 @@ class PCTEnvironmentNode
 		else
 			@procedures[name]
 	getBlockWithId: (id) -> @blocks[id]
-	getComposedLabel: -> "#{if @parent then "#{@parent.getComposedLabel()}_" else ""}#{@label}"
+	getComposedLabel: -> "#{if @parent?.getComposedLabel?().length > 0 then "#{@parent.getComposedLabel()}_$" else ""}#{@label}"
 	getAllClasses: ->
 		result = []
 		for c in @children
@@ -242,7 +247,7 @@ class PCTVariable
 		@parent = null
 	getName: -> @label
 	getIdentifier: -> @label
-	getComposedLabel: -> "#{if @parent then "#{@parent.getComposedLabel()}_" else ""}#{@label}"
+	getComposedLabel: -> "#{if @parent then "#{@parent.getComposedLabel()}_$" else ""}#{@label}"
 
 # TODO comment
 class PCTCycleChecker

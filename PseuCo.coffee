@@ -81,7 +81,7 @@ class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDec
 		@_collectEnvironment(env)
 		declaration.getType(env) for declaration in @children
 		try
-			env.getProcedureWithName("#mainAgent")
+			env.getMainAgent()
 		catch
 			throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "UndefinedMainAgent", "message" : "You must define a main agent!"})
 		cycleChecker = new PCTCycleChecker(env.getAllClasses())
@@ -107,9 +107,10 @@ class PCMainAgent extends PCNode	# "mainAgent" PCStmtBlock
 
 	# Type checking
 	_getType: (env) ->
-		env.beginProcedure("#mainAgent")
+		# env.beginProcedure("$mainAgent")
+		env.beginMainAgent()
 		@children[0].getType(env)
-		env.endProcedure()
+		env.endMainAgent()
 		new PCTType(PCTType.MAINAGENT)
 
 	insideProcedure: -> true

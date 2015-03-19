@@ -28,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 	Groupable implements:
 	 getProcessName()
+	Optionally:
+	 compilerGetProcedure(compiler, identifier)
 ###
 
 class PCCProcessFrame
@@ -315,11 +317,18 @@ PCCProcedureFrame::compilerGetProcedure = (compiler, identifier, instanceContain
 
 
 
+
+
+
 # Convenience
 
 class PCCGroupable
 	constructor: (@processName) ->
 	getProcessName: -> @processName
+
+
+# PCCProcedure::compilerGetProcedure = (compiler, identifier, instanceContainer) -> 
+# 	if @getName() == identifier then @ else @getProcedureWithName(identifier)
 	
 	
 	
