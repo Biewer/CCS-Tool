@@ -50,7 +50,7 @@ __
 	= (WhiteSpace / LineTerminatorSequence / Comment)* {}
 
 ___
-	= (WhiteSpace / LineTerminatorSequence / SingleLineComment)+ {}
+	= (WhiteSpace / LineTerminatorSequence / Comment)+ {}
 
 EOF
 	= !. {}
