@@ -180,7 +180,7 @@ StructCode
 														}
 
 ConditionDeclarationStatement
-	= "condition" ___ id:Identifier __ "with" ___ exp:Expression __ ";" { return new PCConditionDecl(line, column, id, exp); }
+	= "condition" ___ id:Identifier __ "with" ___ exp:Expression __ ";" { return new PCConditionDecl(line(), column(), id, exp); }
 
 DeclarationStatement
 	= decl:Declaration __ ";"	{
