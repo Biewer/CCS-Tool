@@ -85,7 +85,7 @@ class PCTEnvironmentController
 		@_processNewClass tnode
 	
 	_processNewClass: (node) ->
-		throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "ClassError", "message" : "Class already registered!"}) if @classes[node.getName()]
+		throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "Redeclaration", "message" : "Class #{node.getName()} already declared!"}) if @classes[node.getName()]
 		@_envStack.addChild(node)
 		@classes[node.getName()] = node
 	
@@ -112,8 +112,13 @@ class PCTEnvironmentController
 		@_beginNewProcedure(tnode)
 	
 	_beginNewProcedure: (node) ->
-		@_envStack.addChild(node)
-		@beginProcedure(node.getName())
+		try
+			@_envStack.getProcedureWithName(node.getName())
+		catch
+			@_envStack.addChild(node)
+			@beginProcedure(node.getName())
+			return
+		throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "Redeclaration", "message" : "Procedure #{node.getName()} already declared!"})
 	
 	beginProcedure: (procedureName) ->
 		try
@@ -153,8 +158,13 @@ class PCTEnvironmentController
 		@_processNewVariable(variable)
 	
 	_processNewVariable: (node) ->
-		@_envStack.addChild(node)
-		node
+		try
+			@_envStack.getVariableWithName(node.getName())
+		catch
+			@_envStack.addChild(node)
+			node
+			return
+		throw ({"line" : 0, "column" : 0, "wholeFile" : false, "name" : "Redeclaration", "message" : "Variable #{node.getName()} already declared!"})
 
 
 

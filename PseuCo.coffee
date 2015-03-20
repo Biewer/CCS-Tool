@@ -162,7 +162,13 @@ class PCProcedureDecl extends PCNode	# Children: PCFormalParameter objects
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) ->
 		args = (parameter.getVariable(env) for parameter in @children[2..])
-		env.beginNewProcedure(@, @name, @getResultType().getType(env).type, args)
+		try
+			env.beginNewProcedure(@, @name, @getResultType().getType(env).type, args)
+		catch e
+			e.line = @line
+			e.column = @column
+			@redeclared = true
+			throw e
 		@getBody()._collectEnvironment(env)
 		env.endProcedure()
 	
@@ -170,13 +176,14 @@ class PCProcedureDecl extends PCNode	# Children: PCFormalParameter objects
 
 	# Type checking
 	_getType: (env) ->
-		proc = env.beginProcedure(@name)
-		child.getType(env) for child in @children
-		env.setReturnExhaustive() if @getBody().isReturnExhaustive
-		if not (@getResultType().type is PCSimpleType.VOID)
-			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "ReturnNotExhaustive", "message" : "In your procedure it might be possible that for some conditions no value gets returned."}) if not env.isReturnExhaustive()
-		env.endProcedure()
-		proc
+		if not @redeclared
+			proc = env.beginProcedure(@name)
+			child.getType(env) for child in @children
+			env.setReturnExhaustive() if @getBody().isReturnExhaustive
+			if not (@getResultType().type is PCSimpleType.VOID)
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "ReturnNotExhaustive", "message" : "In your procedure it might be possible that for some conditions no value gets returned."}) if not env.isReturnExhaustive()
+			env.endProcedure()
+			proc
 
 	insideProcedure: -> true
 		
@@ -289,7 +296,12 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 	getExpression: -> @children[0]
 	
 	collectEnvironment: (env) ->
-		env.processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
+		try
+			env.processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> @collectEnvironment(env)
@@ -301,7 +313,12 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 		type = @children[0].getType(env)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidLocation", "message" : "Conditions can only be declared inside monitors!"}) if not @insideMonitor()
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expressions assigned to condition must be boolean, not #{type}"}) if not type.isEqual(new PCTType(PCTType.BOOL))
-		env._processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
+		try
+			env._processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 		null
 
 # - Variable Decl
@@ -314,7 +331,6 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 	collectClasses: (env) -> null
 	collectEnvironment: (env) ->
 		@type = @children[0].getType(env).type
-		@children[i].collectEnvironment(env, @type) for i in [1...@children.length] by 1
 
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> @collectEnvironment(env)
@@ -326,6 +342,7 @@ class PCDecl extends PCNode	# Children: Type and variable declarator(s)
 
 	# Type checking
 	_getType: (env) ->
+		@children[i].collectEnvironment(env, @type) for i in [1...@children.length] by 1
 		for child in @children[1..]
 			type = child._getType(env, @type)
 			if type? and not @type.isEqual(type)
@@ -348,7 +365,13 @@ class PCVariableDeclarator extends PCNode	# Identifier and optional initializer
 	getInitializer: -> if @children.length > 0 then @children[0] else null
 	getTypeNode: -> @parent.getTypeNode()
 	
-	collectEnvironment: (env, type) -> env.processNewVariable(new PCTVariable(@, @name, type))
+	collectEnvironment: (env, type) ->
+		try
+			env.processNewVariable(new PCTVariable(@, @name, type))
+		catch e
+			e.line = @line
+			e.column = @column
+			throw e
 
 	toString: ->
 		res = @name

@@ -50,7 +50,7 @@ __
 	= (WhiteSpace / LineTerminatorSequence / Comment)* {}
 
 ___
-	= (WhiteSpace / LineTerminatorSequence / SingleLineComment)+ {}
+	= (WhiteSpace / LineTerminatorSequence / Comment)+ {}
 
 EOF
 	= !. {}
@@ -118,12 +118,18 @@ SourceElement
 	/ elem:DeclarationStatement { return elem; }
 
 Monitor
-	= "monitor" ___ id:Identifier __ "{" __ code:MonitorCode __ "}"	{
+	= "monitor" ___ id:Identifier __ "{" __ code:ClassCode __ "}"	{
 																		code.unshift(id, line(), column());
 																		return construct(PCMonitor, code);
 																	}
 
-MonitorCode
+Struct
+	= "struct" ___ id:Identifier __ "{" __ code:ClassCode "}"	{
+																	code.unshift(id, line(), column());
+																	return construct(PCStruct, code);
+																}
+
+ClassCode
 	= code:((Procedure / ConditionDeclarationStatement / DeclarationStatement) __)*	{
 																						var declarations = [];
 																						for (var i = 0; i < code.length; ++i)
@@ -163,24 +169,8 @@ FormalParameters
 FormalParameter
 	= type:Type ___ id:Identifier	{ return new PCFormalParameter(line(), column(), type, id); }
 
-Struct
-	= "struct" ___ id:Identifier __ "{" __ code:StructCode "}"	{
-																	code.unshift(id, line(), column());
-																	return construct(PCStruct, code);
-																}
-
-StructCode
-	= decls:((Procedure / DeclarationStatement) __)*	{
-															var declarations = [];
-															for (var i = 0; i < decls.length; ++i)
-															{
-																declarations.push(decls[i][0]);
-															}
-															return declarations;
-														}
-
 ConditionDeclarationStatement
-	= "condition" ___ id:Identifier __ "with" ___ exp:Expression __ ";" { return new PCConditionDecl(line, column, id, exp); }
+	= "condition" ___ id:Identifier __ "with" ___ exp:Expression __ ";" { return new PCConditionDecl(line(), column(), id, exp); }
 
 DeclarationStatement
 	= decl:Declaration __ ";"	{
