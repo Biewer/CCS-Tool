@@ -367,13 +367,14 @@ expression
  	        '"' { return new CCSConstantExpression((s.join ? s.join("") : "")).setCodePos(line(),column()); }
  	
  	exp_escapeSequence 
- 	    =   '\\' (
- 	                 't'  	{ return '\\t'; }
- 	             /   'n'  	{ return '\\n'; }
- 	             /   'r'  	{ return '\\r'; }
- 	             /   '"'  	{ return '\\"'; }
- 	             /   '\\'  	{ return '\\\\'; }
+ 	    =   '\\' res:(
+ 	                 't'  	{ return '\t'; }
+ 	             /   'n'  	{ return '\n'; }
+ 	             /   'r'  	{ return '\r'; }
+ 	             /   '"'  	{ return '"'; }
+ 	             /   '\\'  	{ return '\\'; }
  	             ) 
+ 	        { return res; }
  	
  	___ "whitespace"
  	  = ' '*               {}
