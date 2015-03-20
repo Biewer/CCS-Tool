@@ -566,9 +566,13 @@ PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 
 PC.PrintStmt::compile = (compiler, loopEntry) ->
 	return if @children.length == 0
-	out = compiler.compile(@children[0])
+	compiler.protectContainer(compiler.compile(c)) for c in @children
+	args = []
+	args.unshift(compiler.unprotectContainer()) for c in @children
+
+	out = args[0]
 	# Wrong: I have to protect containers!!!
-	(out = new PCCBinaryContainer(out, compiler.compile(@children[i]), "+")) for i in [1...@children.length] by 1
+	(out = new PCCBinaryContainer(out, args[i], "^")) for i in [1...@children.length] by 1
 	compiler.emitOutput("println", null, out)
 	[]
 	
