@@ -87,7 +87,7 @@ OctalEscapeSequence
 Identifier "identifier"
 	= head:Letter tail:(Letter / Digit)* { return head + tail.join(""); }
 
-Letter
+Letter 		// Note Sebastian: I removed '$' from the allowed letters in order to give CCS one more allowed letter to produce better readable code
 	= letter:[A-Z_a-z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\u0100-\u1fff\u3040-\u318f\u3300-\u337f\u3400-\u3d2d\u4e00-\u9fff\uf900-\ufaff] { return letter; }
 
 Digit
