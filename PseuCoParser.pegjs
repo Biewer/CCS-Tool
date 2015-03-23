@@ -67,7 +67,7 @@ StringCharacters
 
 StringCharacter
 	= !('"' / "\\" / LineTerminator) char_:SourceCharacter { return char_; }
-	/ "\\" seq:EscapeSequence { return "\\" + seq; }
+	/ "\\" seq:EscapeSequence { return seq; }
 	/ con:LineContinuation { return con; }
 
 LineContinuation

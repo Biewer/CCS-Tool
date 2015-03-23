@@ -67,6 +67,10 @@ class PCNode
 
 # - Program
 class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDecl|PCProcedure)+
+	globalDeclarations: (env) ->
+		env.beginNewProcedure(@, "println", PCSimpleType.VOID, [])
+		env.endProcedure()
+
 	collectClasses: (env) ->
 		for c in @children
 			try
@@ -75,6 +79,7 @@ class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDec
 				if e and e.wholeFile?
 					PCErrorList.push e
 	collectEnvironment: (env) ->
+		@globalDeclarations(env)
 		for c in @children
 			try
 				c.collectEnvironment(env)
@@ -84,6 +89,7 @@ class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDec
 
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) ->
+		@globalDeclarations(env)
 		for child in @children
 			try
 				child._collectEnvironment(env)
