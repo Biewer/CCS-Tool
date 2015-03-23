@@ -43,6 +43,9 @@ class PCTEnvironmentController
 		@_envStack = child
 		child
 
+	reopenEnvironment: (node) ->
+		@getEnvironment(node, node.__id)
+
 	getEnvironment: (node, id) ->
 		node = @_envStack.getBlockWithId(id)
 		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "BlockNotFound", "message" : "Block not found!"}) if not node

@@ -48,7 +48,6 @@ PC.MainAgent::compile = (compiler) ->
 	
 
 PC.ProcedureDecl::compile = (compiler) ->
-	debugger
 	compiler.beginProcedure(@name)
 	proc = compiler.getProcedureWithNameOfClass(@name)
 	if proc.isMonitorProcedure()
@@ -376,10 +375,12 @@ PC.ContinueStmt::compile = (compiler, loopEntry) ->
 	
 
 PC.StmtBlock::compile = (compiler, loopEntry) ->
+	compiler.reopenEnvironment(@)
 	statusQuo = compiler.getProcessFrame()
 	compiler.emitNewScope()
 	breaks = SBArrayConcatChildren(compiler.compile(c, loopEntry) for c in @children)
-	compiler.emitNewScope(statusQuo);
+	compiler.emitNewScope(statusQuo)
+	compiler.closeEnvironment()
 	breaks
 	
 	
@@ -392,6 +393,7 @@ PC.StmtExpression::compile = (compiler, loopEntry) ->
 
 PC.SelectStmt::compile = (compiler, loopEntry) ->
 	return if @children.length == 0
+	compiler.reopenEnvironment(@)
 	placeholders = []
 	breaks = []
 	for i in [0...@children.length-1] by 1
@@ -402,6 +404,7 @@ PC.SelectStmt::compile = (compiler, loopEntry) ->
 	breaks.concat(compiler.compile(@children[@children.length-1], loopEntry))
 	placeholders.push(compiler.emitProcessApplicationPlaceholder())
 	compiler.emitMergeOfProcessFramesOfPlaceholders(placeholders)
+	compiler.closeEnvironment()
 	breaks
 	
 	
@@ -417,6 +420,7 @@ PC.Case::compile = (compiler, loopEntry) ->
 	
 
 PC.IfStmt::compile = (compiler, loopEntry) ->
+	compiler.reopenEnvironment(@)
 	placeholders = []
 	b = compiler.compile(@children[0])
 	control = compiler.emitChoice()
@@ -431,11 +435,13 @@ PC.IfStmt::compile = (compiler, loopEntry) ->
 		placeholders.push(compiler.emitProcessApplicationPlaceholder())
 	control.setBranchFinished()	# right is finished
 	compiler.emitMergeOfProcessFramesOfPlaceholders(placeholders)
+	compiler.closeEnvironment()
 	breaks
 	
 	
 
 PC.WhileStmt::compile = (compiler) ->
+	compiler.reopenEnvironment(@)
 	entry = compiler.emitNextProcessFrame()
 	b = compiler.compile(@children[0])
 	control = compiler.emitChoice()
@@ -446,10 +452,12 @@ PC.WhileStmt::compile = (compiler) ->
 	compiler.emitCondition(new PCCUnaryContainer("!", b))
 	out = compiler.emitNextProcessFrame()
 	out.emitCallProcessFromFrame(compiler, b.frame, b) for b in breaks
+	compiler.closeEnvironment()
 	[]
 	
 
 PC.DoStmt::compile = (compiler) ->
+	compiler.reopenEnvironment(@)
 	statusQuo = compiler.getProcessFrame()
 	entry = compiler.emitNextProcessFrame()
 	breaks = compiler.compile(@children[0], entry)
@@ -463,6 +471,7 @@ PC.DoStmt::compile = (compiler) ->
 	control.setBranchFinished()
 	out = compiler.emitNextProcessFrame([statusQuo])
 	out.emitCallProcessFromFrame(compiler, b.frame, b) for b in breaks
+	compiler.closeEnvironment()
 	[]
 	
 	
@@ -470,6 +479,7 @@ PC.DoStmt::compile = (compiler) ->
 	
 
 PC.ForStmt::compile = (compiler) ->
+	compiler.reopenEnvironment(@)
 	statusQuo = compiler.getProcessFrame()
 	if @init
 		compiler.emitNewScope()
@@ -490,6 +500,7 @@ PC.ForStmt::compile = (compiler) ->
 	control.setBranchFinished() if control
 	out = compiler.emitNextProcessFrame([statusQuo])
 	out.emitCallProcessFromFrame(compiler, b.frame, b) for b in breaks
+	compiler.closeEnvironment()
 	[]
 	
 	
@@ -571,7 +582,6 @@ PC.PrintStmt::compile = (compiler, loopEntry) ->
 	args.unshift(compiler.unprotectContainer()) for c in @children
 
 	out = args[0]
-	# Wrong: I have to protect containers!!!
 	(out = new PCCBinaryContainer(out, args[i], "^")) for i in [1...@children.length] by 1
 	compiler.emitOutput("println", null, out)
 	[]

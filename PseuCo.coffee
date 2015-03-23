@@ -94,9 +94,9 @@ class PCProgram extends PCNode	# Children: (PCMonitor|PCStruct|PCMainAgent|PCDec
 	toString: -> (o.toString("") for o in @children).join("\n")
 
 	# Type checking
-	_getType: ->
+	_getType: (env) ->
 		PCErrorList = []
-		env = new PCTEnvironmentController()
+		env = new PCTEnvironmentController() if not env
 		@collectClasses(env)
 		@_collectEnvironment(env)
 		for declaration in @children

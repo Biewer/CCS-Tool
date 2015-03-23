@@ -48,12 +48,11 @@ PCCSysUnknownWeight = 5000
 PCCVarNameForPseucoVar = (name) -> "$#{name}"
 PCCVarNameForInternalVar = (name) -> name
 
-class PCCCompiler
-	constructor: (@program, @flags=0) ->
-		@controller = null
+class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (for type checking)
+	constructor: (@program, @controller=null, @flags=0) ->
 		@stack = null	
 		@groupElements = []	
-		@controller = new PCCProgramController(@program)
+		@controller = new PCCProgramController(@program) if not @controller
 		@systemProcesses = {}
 		@compilingNodes = []	# stack
 		@useReentrantLocks = true
@@ -65,8 +64,9 @@ class PCCCompiler
 	trackAgents: -> (@flags & PCCFlags.trackAgents) == PCCFlags.trackAgents
 	
 	compileProgram: -> 
-		@program.collectClasses(@controller)
-		@program.collectEnvironment(@controller)
+		# @program.collectClasses(@controller)
+		# @program.collectEnvironment(@controller)
+		@program.getType(@controller)		# Because of type checker improvements, collectEnvironments does not collect variables anymore. getType does however. getType does also collect classes and the environment.
 		@program.collectAgents(@controller)
 		global = new PCCGlobalStackElement(@controller.getGlobal())
 		@stack = new PCCCompilerStack(global)
@@ -343,7 +343,6 @@ class PCCCompiler
 	
 	beginProcedure: (procedureName) ->
 		@controller.beginProcedure(procedureName)
-		debugger
 		procedure = @getProcedureWithName(procedureName)
 		throw new Error("Tried to begin unknown procedure!") if !procedure
 		frame = new PCCProcedureFrame(procedure)
@@ -358,6 +357,11 @@ class PCCCompiler
 		throw new Error("Unexpected stack element!") if not (proc instanceof PCCProcedureStackElement)
 		controlElement = @_getControlElement()
 		@_handleStackResult(proc.removeFromStack(), controlElement)
+
+	reopenEnvironment: (node) ->
+		@controller.reopenEnvironment(node)
+
+	closeEnvironment: -> @controller.closeEnvironment()
 	
 	
 	beginStatement: (statement) ->

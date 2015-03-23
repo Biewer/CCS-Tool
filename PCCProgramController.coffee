@@ -25,6 +25,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
 
+_t = PC.EnvironmentNode
+_t::getVariableClass = -> @parent.getVariableClass()
+
 class PCCGlobal extends PC.EnvironmentNode
 	constructor: (program) -> super program, ""
 	getVariableClass: -> PCCGlobalVariable
@@ -468,6 +471,40 @@ _t::collectAgents = (env) ->
 	env.beginMainAgent(@name)
 	super
 	env.endMainAgent()
+
+_wrapCollectAgentsWithOpenCloseEnvironment = (cls) ->
+	cls::collectAgents = (env) ->
+		env.reopenEnvironment(@)
+		super
+		env.closeEnvironment()
+
+_wrapCollectAgentsWithOpenCloseEnvironment(PC.StmtBlock)
+_wrapCollectAgentsWithOpenCloseEnvironment(PC.SelectStmt)
+_wrapCollectAgentsWithOpenCloseEnvironment(PC.IfStmt)
+_wrapCollectAgentsWithOpenCloseEnvironment(PC.WhileStmt)
+_wrapCollectAgentsWithOpenCloseEnvironment(PC.DoStmt)
+_wrapCollectAgentsWithOpenCloseEnvironment(PC.ForStmt)
+
+# _t = PC.StmtBlock
+# _t::collectAgents = (env) ->
+# 	env.reopenEnvironment(@)
+# 	super
+# 	env.closeEnvironment()
+# _t = PC.SelectStmt
+# _t::collectAgents = (env) ->
+# 	env.reopenEnvironment(@)
+# 	super
+# 	env.closeEnvironment()
+# _t = PC.IfStmt
+# _t::collectAgents = (env) ->
+# 	env.reopenEnvironment(@)
+# 	super
+# 	env.closeEnvironment()
+# _t = PC.WhileStmt
+# _t::collectAgents = (env) ->
+# 	env.reopenEnvironment(@)
+# 	super
+# 	env.closeEnvironment()
 
 PC.StartExpression::collectAgents = (env) -> env.processProcedureAsAgent(@children[0].getProcedure(env))
 
