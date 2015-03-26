@@ -33,8 +33,8 @@ CCS
 		                                  		if (PDefs[i])
 		                                  			defs.push(PDefs[i]);
 		                                  	}
-		                                  	
 		                                  	return new CCS(defs, System).setCodePos(line(),column());
+		                                  	//System.performAutoComplete(CCSStop);
 		                                }
                                 
 
@@ -45,7 +45,9 @@ RangeDefinition
 Process
   = _ n:name _ params:("[" _ v:ValueIdentifier vs:(_ "," _ v2:ValueIdentifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
-		                                  return new CCSProcessDefinition(n, P, params ? params : null, line()).setCodePos(line(),column());
+		                                  //P.performAutoComplete(CCSStop);
+		                                  var res = new CCSProcessDefinition(n, P, params ? params : null, line()).setCodePos(line(),column());
+		                                  return res;
 		                                }
 
 
@@ -108,7 +110,7 @@ Prefix
   	/ _ A:(Match
 		/ Input
 		/ Output
-		/ SimpleAction ) _ P:PostPrefix
+		/ SimpleAction ) P:PostPrefix?
 									{ 
 										return new CCSPrefix(A, P).setCodePos(line(),column()); 
 									}
@@ -125,7 +127,7 @@ Condition
 PostPrefix
   //= &";"		{ return new CCSExit(); }
   // (&";"/&"+"/&"|"/&"\\"/!.) { return new autoProcessComplete().setCodePos(line(),column()); }
-  = "." P:Prefix	{ return P; }
+  = _ "." P:Prefix	{ return P; }
 
 Match
   = a:Action _ "?" _ "(" _ e:expression _ ")"

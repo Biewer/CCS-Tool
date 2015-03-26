@@ -96,6 +96,8 @@ class CCS
 		@system.setCCS @
 		penv = new CCSEnvironment(@)
 		(pd.setCCS @) for pd in @processDefinitions
+		@system.performAutoComplete(CCSStop)
+		(pd.performAutoComplete(CCSStop, false)) for pd in @processDefinitions
 		(pd.computeTypes(penv)) for pd in @processDefinitions
 		# try
 		@system.computeTypes(new CCSEnvironment(@))
@@ -145,6 +147,17 @@ class CCSProcessDefinition
 			e.column = column
 			throw e
 		@
+
+	performAutoComplete: (cls, force=true) ->
+		if @__classesAutoCompleted
+			return if not force
+		else
+			@__classesAutoCompleted = [] 
+		if @__classesAutoCompleted.indexOf(cls) == -1
+			@__classesAutoCompleted.push(cls)
+			@process.performAutoComplete(cls)
+		null
+		
 	
 	getArgCount: -> if @params then @params.length else 0
 	usesParameterName: (name) ->
@@ -162,7 +175,7 @@ class CCSProcessDefinition
 			e = new Error("You are using unguarded recursion") 
 			e.line = @line
 			e.column = 1
-			e.name = "TypeError"
+			e.name = if @ccs.allowUnguardedRecursion then "Type Warning" else "Type Error"
 			e.code = @ccs.toString()
 			if @ccs.allowUnguardedRecursion
 				@ccs.warnings.push(e)
@@ -208,6 +221,10 @@ class CCSProcess
 	getRight: -> @subprocesses[1]
 	setLeft: (left) -> @subprocesses[0] = left
 	setRight: (right) -> @subprocesses[1] = right
+
+	performAutoComplete: (cls) ->		# auto complete stop or exit
+		p.performAutoComplete(cls) for p in @subprocesses
+		null
 	
 	replaceVariable: (varName, exp) -> 
 		p.replaceVariable(varName, exp) for p in @subprocesses
@@ -254,12 +271,18 @@ class CCSExit extends CCSProcess
 	getExits: -> [@]
 	toString: -> "1"
 	copy: -> (new CCSExit())._setCCS(@ccs)
+
+# class CCSAutoComplete extends CCSProcess
+# 	getPrecedence: -> 12
 	
 	
 	
 # - ProcessApplication
 class CCSProcessApplication extends CCSProcess
 	constructor: (@processName, @valuesToPass=[]) -> super()		# string x Expression list
+
+	performAutoComplete: (cls) ->
+		@getProcessDefinition().performAutoComplete(cls)
 	
 	getArgCount: -> @valuesToPass.length
 	getProcessDefinition: -> @ccs.getProcessDefinition(@processName, @getArgCount())
@@ -318,7 +341,25 @@ class CCSProcessApplication extends CCSProcess
 
 # - Prefix
 class CCSPrefix extends CCSProcess
-	constructor: (@action, process) -> super process		# Action x Process
+	constructor: (@action, process) -> 
+		if process 
+			super process	
+		else 
+			super []...	# Action x Process
+
+	performAutoComplete: (cls) ->
+		if @subprocesses.length == 0
+			@subprocesses[0] = new cls()
+			@subprocesses[0].setCCS(@ccs)
+			@__autoCompleted = cls
+		else
+			if @__autoCompleted and @__autoCompleted != cls
+				warning = ({message: "Auto-completion of CCS process is ambiguous. Inferred as exit (1).", line: @line, column: @column, name: "Auto-completion"})
+				@subprocesses[0] = new CCSExit()
+				@subprocesses[0].setCCS(@ccs)
+				@__autoCompleted = CCSExit
+				@ccs.warnings.push(warning)
+			super
 	
 	getPrecedence: -> 12
 	getApplicapleRules: -> [CCSPrefixRule, CCSOutputRule, CCSInputRule, CCSMatchRule]
@@ -330,13 +371,6 @@ class CCSPrefix extends CCSProcess
 		@action.replaceChannelName(old, newID)
 		super old, newID #if @action.replaceChannelName(old, newID)
 	getPrefixes: -> return [@]
-	###getTypeOfIdentifier: (identifier, type) ->
-		type = @action.getTypeOfIdentifier(identifier, type)
-		if @action.isInputAction() and @action.variable == identifier	# new var starts with type "value"
-			super identifier, CCSTypeValue
-			type		# Was macht das da?
-		else
-			super identifier, type###
 	computeTypes: (env) ->
 		@action.computeTypes(env)
 		super
@@ -394,11 +428,17 @@ class CCSParallel extends CCSProcess
 # - Sequence
 class CCSSequence extends CCSProcess
 	constructor: (left, right) -> super left, right		# Process x Process
+
+	performAutoComplete: (cls) ->
+		@getLeft().performAutoComplete(CCSExit)
+		@getRight().performAutoComplete(cls)
 	
 	getPrecedence: -> 3
 	getApplicapleRules: -> [CCSSeq1Rule, CCSSeq2Rule]
 	getPrefixes: -> @getLeft().getPrefixes()
 	getExits: -> @getLeft().getExits()
+
+	isUnguardedRecursion: -> @getLeft().isUnguardedRecursion() 		# if the left process is guarded, then the complete expression is, because the right one is guarded by a tau
 	
 	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} ; #{@stringForSubprocess(@getRight(), mini)}"
 	copy: -> (new CCSSequence(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
