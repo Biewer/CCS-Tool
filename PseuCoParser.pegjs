@@ -320,7 +320,7 @@ SourceElement
 
 /*
  * pseuCo monitors are introduces through the keyword "monitor". This keyword is
- * followed by an identifier and a code block for class code ("{ /* code */ }").
+ * followed by an identifier and a code block for class code ("{ code }").
  */
 Monitor
 	= "monitor" ___ id:Identifier __ "{" __ code:ClassCode __ "}"
@@ -332,7 +332,7 @@ Monitor
 /*
  * pseuCo structures are introduces through the keyword "struct". This keyword
  * is followed by an identifier and a code block for class code
- * ("{ /* code */ }").
+ * ("{ code }").
  */
 Struct
 	= "struct" ___ id:Identifier __ "{" __ code:ClassCode "}"
@@ -364,7 +364,7 @@ ClassCode
  * The main agent is the entry point of every pseuCo program and is like a
  * special procedure. This procedure has no return type and is named
  * "mainAgent". Beyond that it has no argument list not even an empty pair of
- * parenthesis. Like a normal procedure it has a code block ("{/* code */}").
+ * parenthesis. Like a normal procedure it has a code block ("{ code }").
  */
 MainAgent
 	= "mainAgent" __ stmtBlock:StatementBlock
@@ -417,7 +417,7 @@ FormalParameter
 
 /*
  * pseuCo supports the following statements:
- * - A block statement ("{/* some code */}").
+ * - A block statement ("{ some code }").
  * - A print line statement (prints a line).
  * - A select statement (non-deterministic choice).
  * - An if statements (deterministic choice).
