@@ -34,7 +34,6 @@ CCS
 		                                  			defs.push(PDefs[i]);
 		                                  	}
 		                                  	return new CCS(defs, System).setCodePos(line(),column());
-		                                  	//System.performAutoComplete(CCSStop);
 		                                }
                                 
 
@@ -45,7 +44,6 @@ RangeDefinition
 Process
   = _ n:name _ params:("[" _ v:ValueIdentifier vs:(_ "," _ v2:ValueIdentifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
 		                                { 
-		                                  //P.performAutoComplete(CCSStop);
 		                                  var res = new CCSProcessDefinition(n, P, params ? params : null, line()).setCodePos(line(),column());
 		                                  return res;
 		                                }
