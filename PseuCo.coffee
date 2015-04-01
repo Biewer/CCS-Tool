@@ -319,12 +319,6 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 		type = @children[0].getType(env)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidLocation", "message" : "Conditions can only be declared inside monitors!"}) if not @insideMonitor()
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expressions assigned to condition must be boolean, not #{type}"}) if not type.isEqual(new PCTType(PCTType.BOOL))
-		try
-			env._processNewVariable(new PCTVariable(@, @name, new PCTType(PCTType.CONDITION)))
-		catch e
-			e.line = @line
-			e.column = @column
-			throw e
 		null
 
 # - Variable Decl
