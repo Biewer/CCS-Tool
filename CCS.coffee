@@ -136,6 +136,7 @@ class CCS
 # - ProcessDefinition
 class CCSProcessDefinition
 	constructor: (@name, @process, @params, @line=0) ->					# string x Process x CCSVariable*
+		@insertLinesBefore = 0 		# for toString... can be set by compiler for example
 
 	setCodePos: (line, column) ->
 		@line = line
@@ -193,7 +194,9 @@ class CCSProcessDefinition
 		# 	throw e
 	
 	toString: -> 
-		result = @name
+		result = ""
+		result += "\n" for i in [1..@insertLinesBefore] by 1
+		result += @name
 		result += "[#{@params.join ", "}]" if @params?.length > 0
 		result +=" := #{@process.toString()}\n"
 		return result;

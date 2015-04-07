@@ -249,12 +249,16 @@ class PCCProcessDefinitionStackElement extends PCCUnaryStackElement
 	constructor: (@processName, argContainers=[]) -> 
 		@argContainers = argContainers[..]
 		super
+	setFlag: (flagName, flagValue) ->
+		@_flags = {} if not @_flags
+		@_flags[flagName] = flagValue
 	getResults: ->
 		container = @next.getResults()
 		pRes = container.getResult()
 		throw new Error("Unexpected result type!") if pRes.type != PCCStackResult.TYPE_CCSPROCESS
 		argNames = ((@createCalculusNode(CCS.Variable, c.identifier)) for c in @argContainers)
 		def = @createCalculusNode(CCS.ProcessDefinition, @processName, pRes.data, argNames)
+		def.compilerFlags = @_flags if @_flags
 		container.replaceResult(PCCStackResult.TYPE_CCSPROCESS_DEFINITION, def)
 		container
 
@@ -305,6 +309,14 @@ class PCCGlobalStackElement extends PCCUnaryStackElement
 class PCCProcedureStackElement extends PCCUnaryStackElement
 	constructor: (@procedure) -> super
 	getCurrentControlElement: -> @procedure
+	# getResults: ->
+	# 	res = super
+	# 	def = res.getResult().data
+	# 	if (def instanceof CCS.ProcessDefinition)
+	# 		def.representsProcedure = true
+	# 	else
+	# 		console.log "WARNING: Result was not a process definition!"
+	# 	res
 	
 	
 	

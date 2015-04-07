@@ -129,7 +129,7 @@ class PCCProcedure extends PC.Procedure
 		res = @arguments.length + 1
 		res++ if @isClassProcedure()
 		res
-	emitAgentConstructor: (compiler) ->
+	emitAgentConstructor: (compiler, addJoiner=true) ->
 		definitionName = @getAgentProcessName()
 		compiler.beginProcessDefinition(definitionName, [])
 		i = new PCCVariableContainer("i", PCCType.INT)
@@ -145,7 +145,7 @@ class PCCProcedure extends PC.Procedure
 		control1 = compiler.emitParallel()
 		compiler.emitProcessApplication(definitionName, [])
 		control1.setBranchFinished()
-		control2 = compiler.emitParallel()
+		control2 = if addJoiner then compiler.emitParallel() else null
 		control3 = compiler.emitSequence()
 		args.unshift(i)		# Basically, here we replace 'starter' with the instance number of the new agent
 		compiler.emitProcessApplication(@getProcessName(), args)
@@ -153,9 +153,10 @@ class PCCProcedure extends PC.Procedure
 		compiler.emitOutput("agent_terminate", i, null)
 		compiler.emitStop()
 		control3.setBranchFinished()
-		control2.setBranchFinished()
-		compiler.emitProcessApplication("AgentJoiner", [i, new PCCConstantContainer(0)])
-		control2.setBranchFinished()
+		if control2
+			control2.setBranchFinished()
+			compiler.emitProcessApplication("AgentJoiner", [i, new PCCConstantContainer(0)])
+			control2.setBranchFinished()
 		control1.setBranchFinished()
 		compiler.endProcessDefinition()
 	emitExit : (compiler) ->
@@ -430,6 +431,11 @@ class PCCProgramController extends PC.EnvironmentController
 		res = 
 			arrays: {}
 			channels: {}
+			# returnings: false	# use of return
+			# mutex: false
+			# waitRoom: false
+			# agents: false
+			# agentJoiners: false
 		@root.getUsedTypes(res)
 		res
 	
@@ -448,6 +454,14 @@ PC.ArrayType::getUsedTypes = (res) ->
 PC.ChannelType::getUsedTypes = (res) ->
 	res.channels[@getApplicableCapacity()] = true
 	null
+# _t = PC.Monitor
+# _t::getUsedTypes = (res) ->
+# 	res.mutex = true
+# 	super
+# _t = PC.ConditionDecl
+# _t::getUsedTypes = (res) ->
+# 	res.waitRoom = true
+
 		
 
 PC.Node::collectAgents = (env) -> c.collectAgents(env) for c in @children

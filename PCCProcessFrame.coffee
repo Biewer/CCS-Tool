@@ -207,12 +207,13 @@ class PCCProcessFrame
 	
 	
 			
-		
+
+# PCCProcedureFrame::isProcedure = -> false	
 
 class PCCProcedureFrame extends PCCProcessFrame
 	constructor: (procedure, variables, tempTypes, autoInit) -> 
 		if not variables
-			variables = procedure.arguments
+			variables = procedure.arguments[..]
 			if procedure.isClassProcedure()
 				variables.unshift(new PCCVariableInfo(null, "i", null, true)) 	#ToDo: add type
 			variables.unshift(new PCCVariableInfo(null, "a", null, true))
@@ -227,6 +228,15 @@ class PCCProcedureFrame extends PCCProcessFrame
 		res = new PCCProcedureFrame(@groupable, @variables[..], @getTypesForTemporaryValues(), false)
 		@_configureVariablesInScope(res)
 		res
+
+	emitProcessDefinition: (compiler) ->
+		def = super
+		if def
+			def.setFlag("isProcedure", true)
+		else
+			throw new Error("Expected process definition!") if not @isScope
+
+	# isProcedure: -> true
 	
 	
 	

@@ -25,6 +25,8 @@ PC.Node::compile = (compiler) ->
 	throw new Error("Abstract method!")
 PC.Node::_childrenCompile = (compiler) ->
 	compiler.compile(c) for c in @children
+# PC.Node::registerServices = (compiler) ->		# services like mutex, waitroom, ... -> only generate CCS for necessary services
+# 	c.registerServices(compiler) for c in @children
 	
 	
 
@@ -68,8 +70,12 @@ PC.FormalParameter::compile = (compiler) ->
 
 PC.Monitor::compile = (compiler) ->
 	compiler.beginClass(@name)
+	compiler.setNeedsMutex()
 	@_childrenCompile(compiler)
 	compiler.endClass()
+# PC.Monitor::registerServices = (compiler) ->
+# 	compiler.setNeedsMutex()
+# 	super
 	
 	
 
@@ -82,6 +88,7 @@ PC.Struct::compile = (compiler) ->
 
 
 PC.ConditionDecl::compile = (compiler) ->
+	compiler.setNeedsWaitRoom()
 	context = {target: @, compiler: compiler}
 	variable = new PCCVariableInfo(@, @name, new PC.Type(PC.Type.CONDITION))
 	compiler.handleNewVariableWithDefaultValueCallback(variable)
@@ -97,6 +104,7 @@ PC.ConditionDecl::compileDefaultValue = (compiler) ->
 
 PC.Decl::compile = (compiler) ->
 	type = @children[0]
+	compiler.setNeedsMutex() if type.getType().type.kind == PC.Type.MUTEX
 	compiler.compile(vd) for vd in @getDeclarators()
 	[]
 	
@@ -134,6 +142,7 @@ PC.Expression::compile = (compiler) ->
 	
 
 PC.StartExpression::compile = (compiler) ->
+	compiler.setNeedsAgentManager()
 	@children[0].compileSend(compiler)
 	
 	
@@ -513,9 +522,14 @@ PC.ForInit::compile = (compiler) ->
 
 PC.ReturnStmt::compile = (compiler, loopEntry) ->
 	if @children.length == 1
+		compiler.setNeedsReturn()
 		res = compiler.compile(@children[0])
 		compiler.emitOutput("return", null, res)
-	compiler.getCurrentProcedure().emitExit(compiler)
+	proc = compiler.getCurrentProcedure()
+	if proc
+		proc.emitExit(compiler)
+	else 	# mainAgent
+		compiler.emitExit()
 	[]
 	
 	
@@ -523,6 +537,7 @@ PC.ReturnStmt::compile = (compiler, loopEntry) ->
 PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 	switch @kind
 		when PC.PrimitiveStmt.JOIN
+			compiler.setNeedsAgentJoiner()
 			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("join_register", c, null)
 			compiler.emitOutput("join", c, null)
@@ -550,14 +565,15 @@ PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 			c = cond.getContainer(compiler)
 			compiler.emitOutput("add", c, null)
 			g = compiler.getVariableWithNameOfClass("guard", null, true).getContainer(compiler)
-			compiler.emitOutput("unlock", g, null)
+			a = if compiler.useReentrantLocks then compiler.getVariableWithNameOfClass("a", null, true).getContainer(compiler) else null
+			compiler.emitOutput("unlock", g, a)
 			compiler.emitOutput("wait", c, null)
-			compiler.emitOutput("lock", g, null)
+			compiler.emitOutput("lock", g, a)
 			entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
 			control.setBranchFinished()
 			compiler.emitCondition(b)
 			
-		when PC.PrimitiveStmt.SIGNAL  
+		when PC.PrimitiveStmt.SIGNAL
 			c = compiler.compile(@children[0], loopEntry)
 			compiler.emitOutput("signal", c, null)
 		when PC.PrimitiveStmt.SIGNAL_ALL

@@ -56,6 +56,22 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 		@systemProcesses = {}
 		@compilingNodes = []	# stack
 		@useReentrantLocks = true
+
+		@needsReturn = false
+		@needsMutex = false
+		@needsWaitRoom = false
+		@needsArrayManager = false
+		@needsChannelManager = false
+		@needsAgentManager = false
+		@needsAgentJoiner = false
+
+	setNeedsReturn: -> @needsReturn = true
+	setNeedsMutex: -> @needsMutex = true
+	setNeedsWaitRoom: -> @needsWaitRoom = true
+	setNeedsArrayManager: -> @needsArrayManager = true
+	setNeedsChannelManager: -> @needsChannelManager = true
+	setNeedsAgentManager: -> @needsAgentManager = true
+	setNeedsAgentJoiner: -> @needsAgentJoiner = true
 	
 	trackGlobalVars: -> (@flags & PCCFlags.trackGlobalVariables) == PCCFlags.trackGlobalVariables
 	trackClassVars: -> (@flags & PCCFlags.trackClassVariables) == PCCFlags.trackClassVariables
@@ -71,36 +87,53 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 		global = new PCCGlobalStackElement(@controller.getGlobal())
 		@stack = new PCCCompilerStack(global)
 		usedTypes = @controller.getUsedTypes()
-		@compileReturn()
+		# @needsChannelManager = false
+		((@setNeedsChannelManager() ; break) if c > 0 and v == true) for c,v of usedTypes.channels
+		((@setNeedsArrayManager() ; break) if c > 0 and v == true) for c,v of usedTypes.arrays
+		@program.compile(@)
 		@__assertEmptyGroupStack()
-		if @useReentrantLocks
-			@compileReentrantMutex()
-		else
-			@compileSimpleMutex()
+		@compileReturn() if @needsReturn
 		@__assertEmptyGroupStack()
-		@compileWaitRoom()
+		if @needsMutex
+			if @useReentrantLocks
+				@compileReentrantMutex()
+			else
+				@compileSimpleMutex()
 		@__assertEmptyGroupStack()
-		@compileArrayManager()
+		@compileWaitRoom() if @needsWaitRoom
+		@__assertEmptyGroupStack()
+		@compileArrayManager() if @needsArrayManager
 		@__assertEmptyGroupStack()
 		@compileArrayWithCapacity(n) for n of usedTypes.arrays
 		@__assertEmptyGroupStack()
-		@compileChannelManager()
+		@compileChannelManager() if @needsChannelManager
 		@__assertEmptyGroupStack()
 		@compileChannelWithCapacity(n) for n of usedTypes.channels
 		@__assertEmptyGroupStack()
-		@compileAgentTools()
+		@compileAgentTools(@needsAgentJoiner) if @needsAgentManager
 		@__assertEmptyGroupStack()
 		for p in @controller.getAgents()
-			p.emitAgentConstructor(@)
+			p.emitAgentConstructor(@, @needsAgentJoiner)
 			@beginSystemProcess(PCCSysAgent)
 			@emitProcessApplication(p.getAgentProcessName(), [])
 			@endSystemProcess()
 		@__assertEmptyGroupStack()
 		cls.emitConstructor(@) for cls in @controller.getAllClasses()
 		@__assertEmptyGroupStack()
-		@program.compile(@)
-		@__assertEmptyGroupStack()
-		new CCS.CCS(@controller.root.collectPDefs(), @_getSystem())
+		pdefs = @controller.root.collectPDefs()
+		sysDefs = []
+		procDefs = []
+		mainAgentDefs = []
+		for def in pdefs
+			if def.compilerFlags?["isProcedure"] == true
+				procDefs.push(def)
+			else if def.name.substr(0,9) == "MainAgent"
+				mainAgentDefs.push(def)
+			else
+				sysDefs.push(def)
+		procDefs[0].insertLinesBefore = 1 if procDefs.length > 0 and sysDefs.length > 0
+		mainAgentDefs[0].insertLinesBefore = 1 if mainAgentDefs.length > 0 and (procDefs.length > 0 or sysDefs.length > 0)
+		new CCS.CCS(sysDefs.concat(procDefs).concat(mainAgentDefs), @_getSystem())
 	
 	__assertEmptyGroupStack: -> 
 		if @groupElements.length > 0 
@@ -643,7 +676,7 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 			
 	
 	
-	compileAgentTools: ->
+	compileAgentTools: (addAgentJoiner=true) ->
 		i = new PCCVariableContainer("next_i", PCCType.INT)
 		@beginProcessDefinition("AgentManager", [i])
 		@emitOutput("agent_new", null, i)
@@ -651,6 +684,8 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 		@endProcessDefinition()
 		@emitSystemProcessApplication("AgentManager", [new PCCConstantContainer(2)], PCCSysInstanceManager)
 		
+		return if not addAgentJoiner
+
 		a = new PCCVariableContainer("a", PCCType.INT)
 		c = new PCCVariableContainer("c", PCCType.INT)
 		@beginProcessDefinition("AgentJoiner", [a, c])
