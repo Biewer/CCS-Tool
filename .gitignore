@@ -5,6 +5,7 @@ Editor.esproj/*
 node_modules/CCS/*.js
 node_modules/PseuCo/*.js
 node_modules/CCSCompiler/*.js
+spec/node_modules/*
 
 htdocs/*.js
 
