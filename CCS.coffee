@@ -85,6 +85,49 @@ class CCSEnvironment extends Environment
 			
 
 
+
+class CCSReplacementDescriptor
+	constructor: -> @_items = {}
+
+	updateForVariableWithExpression: (varName, expression) ->
+		item = 
+			"variableName": varName
+			"expression": expression
+			"replacement": "exp"
+		@_items[varName] = item
+		null
+
+	updateForVariableWithChannelName: (varName, channelName) ->
+		item = 
+			"variableName": varName
+			"channelName": channelName
+			"replacement": "channel"
+		@_items[varName] = item
+		null
+
+	hasReplacementInfoForVariableName: (varName) ->
+		@_items[varName]?.replacement?
+
+	variableHasExpressionReplacement: (varName) ->
+		@_items[varName]?.replacement == "exp"
+
+	variableHasChannelReplacement: (varName) ->
+		@_items[varName]?.replacement == "channel"
+
+	expressionForVariableName: (varName) ->
+		@_items[varName]?.expression
+
+	channelNameForVariableName: (varName) ->
+		@_items[varName]?.channelName
+
+	descriptorWithoutVariableName: (varName) ->
+		res = new CCSReplacementDescriptor()
+		for k,v of @_items
+			res._items[k] = v if v.variableName != varName
+		res
+
+
+
 # - CCS
 class CCS
 	constructor: (@processDefinitions, @system, @allowUnguardedRecursion=true) ->
@@ -229,12 +272,16 @@ class CCSProcess
 		p.performAutoComplete(cls) for p in @subprocesses
 		null
 	
-	replaceVariable: (varName, exp) -> 
-		p.replaceVariable(varName, exp) for p in @subprocesses
+	# replaceVariable: (varName, exp) -> 
+	# 	p.replaceVariable(varName, exp) for p in @subprocesses
+	applyReplacementDescriptor: (replaces) ->
+		p.applyReplacementDescriptor(replaces) for p in @subprocesses
 	replaceVariableWithValue: (varName, val) -> 
-		@replaceVariable varName, new CCSConstantExpression(val)
-	replaceChannelName: (old, newID) ->
-		p.replaceChannelName(old, newID) for p in @subprocesses
+		replacer = new CCSReplacementDescriptor()
+		replacer.updateForVariableWithExpression(varName, new CCSConstantExpression(val))
+		@applyReplacementDescriptor(replacer)
+	# replaceChannelName: (old, newID) ->
+	# 	p.replaceChannelName(old, newID) for p in @subprocesses
 	computeTypes: (env) ->
 		p.computeTypes(env) for p in @subprocesses
 		null
@@ -294,15 +341,19 @@ class CCSProcessApplication extends CCSProcess
 		pd = @getProcessDefinition()
 		@process = pd.process.copy()
 		if pd.params
+			replaces = new CCSReplacementDescriptor()
 			for i in [0..pd.params.length-1] by 1
 				id = pd.params[i].name
 				if pd.env.getType(id) == CCSTypeChannel
-					@process.replaceChannelName(id, @valuesToPass[i].variableName)
+					replaces.updateForVariableWithChannelName(id, @valuesToPass[i].variableName)
+					# @process.replaceChannelName(id, @valuesToPass[i].variableName)
 				else
 					if !(pd.params[i].allowsValue(@valuesToPass[i].evaluate()))
 						@process = null
 						return null
-					@process.replaceVariable(id, @valuesToPass[i])	
+					replaces.updateForVariableWithExpression(id, @valuesToPass[i])
+					# @process.replaceVariable(id, @valuesToPass[i])	
+			@process.applyReplacementDescriptor(replaces)
 		@process
 	getPrecedence: -> 12
 	###getTypeOfIdentifier: (identifier, type) ->
@@ -325,10 +376,12 @@ class CCSProcessApplication extends CCSProcess
 	getApplicapleRules: -> [CCSRecRule]
 	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
 	getExits: -> if @process then @process.getExits() else []
-	replaceVariable: (varName, exp) -> 
-		@valuesToPass = (e.replaceVariable(varName, exp) for e in @valuesToPass)
-	replaceChannelName: (old, newID) -> 
-		e.replaceChannelName(old, newID) for e in @valuesToPass
+	applyReplacementDescriptor: (replaces) ->
+		@valuesToPass = (e.applyReplacementDescriptor(replaces) for e in @valuesToPass)
+	# replaceVariable: (varName, exp) -> 
+	# 	@valuesToPass = (e.replaceVariable(varName, exp) for e in @valuesToPass)
+	# replaceChannelName: (old, newID) -> 
+	# 	e.replaceChannelName(old, newID) for e in @valuesToPass
 	###getProxy: -> 	# ToDo: cache result
 		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
 		new ProcessApplicationProxy(@, pd.process.copy())###
@@ -368,11 +421,14 @@ class CCSPrefix extends CCSProcess
 	getApplicapleRules: -> [CCSPrefixRule, CCSOutputRule, CCSInputRule, CCSMatchRule]
 	getProcess: -> @subprocesses[0]
 	
-	replaceVariable: (varName, exp) ->
-		super varName, exp if @action.replaceVariable(varName, exp)
-	replaceChannelName: (old, newID) ->
-		@action.replaceChannelName(old, newID)
-		super old, newID #if @action.replaceChannelName(old, newID)
+	applyReplacementDescriptor: (replaces) ->
+		replaces = @action.applyReplacementDescriptor(replaces)
+		super(replaces)
+	# replaceVariable: (varName, exp) ->
+	# 	super varName, exp if @action.replaceVariable(varName, exp)
+	# replaceChannelName: (old, newID) ->
+	# 	@action.replaceChannelName(old, newID)
+	# 	super old, newID #if @action.replaceChannelName(old, newID)
 	getPrefixes: -> return [@]
 	computeTypes: (env) ->
 		@action.computeTypes(env)
@@ -398,9 +454,12 @@ class CCSCondition extends CCSProcess
 		type = @expression.computeTypes(env, false)
 		throw ({message: "Conditions can only check values. Channel names are not supported!", line: @line, column: @column, name: "Evaluation Error"}) if type == CCSTypeChannel
 		super
-	replaceVariable: (varName, exp) ->
-		@expression = @expression.replaceVariable(varName, exp)
-		super varName, exp
+	applyReplacementDescriptor: (replaces) ->
+		@expression = @expression.applyReplacementDescriptor(replaces)
+		super
+	# replaceVariable: (varName, exp) ->
+	# 	@expression = @expression.replaceVariable(varName, exp)
+	# 	super varName, exp
 	
 	toString: (mini) -> "when (#{@expression.toString(mini)}) #{@stringForSubprocess(@getProcess(), mini)}"
 	copy: -> (new CCSCondition(@expression.copy(), @getProcess().copy()))._setCCS(@ccs)
@@ -489,12 +548,17 @@ class CCSChannel
 		return true if not channel.expression and not @expression
 		return false if not channel.expression or not @expression
 		return channel.expression.evaluate() == @expression.evaluate()
-	replaceVariable: (varName, exp) ->
-		@expression = @expression.replaceVariable(varName, exp) if @expression
+	applyReplacementDescriptor: (replaces) ->
+		@expression = @expression.applyReplacementDescriptor(replaces) if @expression
+		if replaces.variableHasChannelReplacement(@name)
+			@name = replaces.channelNameForVariableName(@name)
 		null
-	replaceChannelName: (old, newID) ->
-		@name = newID if @name == old
-		null
+	# replaceVariable: (varName, exp) ->
+	# 	@expression = @expression.replaceVariable(varName, exp) if @expression
+	# 	null
+	# replaceChannelName: (old, newID) ->
+	# 	@name = newID if @name == old
+	# 	null
 	###getTypeOfIdentifier: (identifier, type) ->
 		type = CCSGetMostGeneralType(type, CCSTypeChannel) if @name == identifier
 		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
@@ -553,10 +617,13 @@ class CCSAction
 	toString: (mini) -> @channel.toString(mini)
 	transferDescription: -> @channel.toString(true)
 	isSyncableWithAction: (action) -> false
-	replaceVariable: (varName, exp) ->		# returns true if prefix should continue replacing the variable in its subprocess
-		@channel.replaceVariable(varName, exp)
-		true
-	replaceChannelName: (old, newID) -> @channel.replaceChannelName old, newID
+	applyReplacementDescriptor: (replaces) ->
+		@channel.applyReplacementDescriptor(replaces)
+		replaces
+	# replaceVariable: (varName, exp) ->		# returns true if prefix should continue replacing the variable in its subprocess
+	# 	@channel.replaceVariable(varName, exp)
+	# 	true
+	# replaceChannelName: (old, newID) -> @channel.replaceChannelName old, newID
 	#getTypeOfIdentifier: (identifier, type) -> @channel.getTypeOfIdentifier(identifier, type)
 	computeTypes: (env) -> @channel.computeTypes(env)
 
@@ -672,9 +739,12 @@ class CCSInput extends CCSAction
 	isInputAction: -> true
 	supportsValuePassing: -> if @variable then true else false
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and (if action.supportsValuePassing() then @supportsValuePassing() and @variable.allowsValue(action.expression.evaluate()) else not @supportsValuePassing())
-	replaceVariable: (varName, exp) -> 
-		super varName, exp
-		not @variable or @variable.name != varName	# stop replacing if identifier is equal to its own variable name
+	applyReplacementDescriptor: (replaces) ->
+		super
+		if @variable then replaces.descriptorWithoutVariableName(@variable.name) else replaces 		# return new replaces without current varName to stop further replacing
+	# replaceVariable: (varName, exp) -> 
+	# 	super varName, exp
+	# 	not @variable or @variable.name != varName	# stop replacing if identifier is equal to its own variable name
 	allowsValueAsInput: (value) -> @variable.allowsValue(value)
 	
 	computeTypes: (env) ->
@@ -702,10 +772,14 @@ class CCSMatch extends CCSAction
 	isMatchAction: -> true
 	supportsValuePassing: -> true
 	isSyncableWithAction: (action) -> action?.isOutputAction() and action.channel.isEqual(@channel) and action.supportsValuePassing() and action.expression.evaluate() == this.expression.evaluate()
-	replaceVariable: (varName, exp) -> 
-		super varName, exp
-		@expression = @expression.replaceVariable(varName, exp)
-		true
+	applyReplacementDescriptor: (replaces) ->
+		super
+		@expression = @expression.applyReplacementDescriptor(replaces)
+		replaces
+	# replaceVariable: (varName, exp) -> 
+	# 	super varName, exp
+	# 	@expression = @expression.replaceVariable(varName, exp)
+	# 	true
 	###getTypeOfIdentifier: (identifier, type) -> 
 		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
 		super identifier, type###
@@ -731,10 +805,14 @@ class CCSOutput extends CCSAction
 			action.isSyncableWithAction(this)
 		else
 			false
-	replaceVariable: (varName, exp) -> 
-		super varName, exp
-		@expression = @expression.replaceVariable(varName, exp) if @expression
-		true
+	applyReplacementDescriptor: (replaces) ->
+		super
+		@expression = @expression.applyReplacementDescriptor(replaces) if @expression
+		replaces
+	# replaceVariable: (varName, exp) -> 
+	# 	super varName, exp
+	# 	@expression = @expression.replaceVariable(varName, exp) if @expression
+	# 	true
 	###getTypeOfIdentifier: (identifier, type) -> 
 		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
 		super identifier, type###
@@ -773,12 +851,17 @@ class CCSExpression
 	
 	getLeft: -> @subExps[0]
 	getRight: -> @subExps[1]
-	replaceVariable: (varName, exp) -> 
+	applyReplacementDescriptor: (replaces) ->
 		@subExps = ((
-			e.replaceVariable(varName, exp)
+			e.applyReplacementDescriptor(replaces)
 		) for e in @subExps)
 		@
-	replaceChannelName: (old, newID) -> null
+	# replaceVariable: (varName, exp) -> 
+	# 	@subExps = ((
+	# 		e.replaceVariable(varName, exp)
+	# 	) for e in @subExps)
+	# 	@
+	# replaceChannelName: (old, newID) -> null
 	
 	computeTypes: (env, allowsChannel) ->
 		e.computeTypes(env, false) for e in @subExps
@@ -846,10 +929,17 @@ class CCSVariableExpression extends CCSExpression
 			env.setType(@variableName, CCSTypeValue)	# We have to force type "value"
 			super
 	#usesIdentifier: (identifier) -> identifier == @variableName
-	replaceVariable: (varName, exp) -> 
-		if varName == @variableName then exp else @
-	replaceChannelName: (old, newID) ->
-		@variableName = newID if @variableName == old
+	applyReplacementDescriptor: (replaces) ->
+		if replaces.variableHasExpressionReplacement(@variableName)
+			return replaces.expressionForVariableName(@variableName)
+		else if replaces.variableHasChannelReplacement(@variableName)
+			@variableName = replaces.channelNameForVariableName(@variableName)
+		@
+		
+	# replaceVariable: (varName, exp) -> 
+	# 	if varName == @variableName then exp else @
+	# replaceChannelName: (old, newID) ->
+	# 	@variableName = newID if @variableName == old
 	evaluate: -> throw ({message: "Unbound identifier", line: @line, column: @column, name: "Type Error"})
 	typeOfEvaluation: -> throw ({message: "Unbound identifier", line: @line, column: @column, name: "Type Error"})
 	isEvaluatable: -> false
@@ -995,10 +1085,11 @@ class CCSEqualityExpression extends CCSExpression
 		res
 	isEvaluatable: -> 
 		res = @getLeft().isEvaluatable() and @getRight().isEvaluatable()
+		return res if not res
 		l = @getLeft().evaluate()
 		r = @getRight().evaluate()
 		typesOkay = (typeof l != "boolean" and typeof r != "boolean") or (typeof l == "boolean" and typeof r == "boolean")
-		res and typesOkay
+		typesOkay
 	typeOfEvaluation: -> "boolean"
 	toString: (mini) -> 
 		if mini and @isEvaluatable()
