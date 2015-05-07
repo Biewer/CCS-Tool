@@ -73,6 +73,7 @@ CCSAddToInfo = (info, key, value) ->
 	res
 
 CCSAddRecursiveProcessDefinition = (info, pd) ->
+	return info if not pd
 	res = CCSCopyInfoMap(info)
 	res.recursion = {} if not res.recursion
 	res.recursion[pd.name] = 0 if not res.recursion[pd.name]

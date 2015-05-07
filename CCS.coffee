@@ -132,6 +132,7 @@ class CCSReplacementDescriptor
 class CCS
 	constructor: (@processDefinitions, @system, @allowUnguardedRecursion=true) ->
 		@warnings = []
+		@unknownProcessDefnitions = {}
 		if @system instanceof CCSRestriction
 			@rootRestriction = @system
 		else
@@ -169,6 +170,12 @@ class CCS
 	getProcessDefinition: (name, argCount) -> 
 		result = null
 		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pd in @processDefinitions
+		if not result
+			uid = "#{pd.name}&#{argCount}"
+			if @unknownProcessDefnitions[uid] != true
+				@unknownProcessDefnitions[uid] = true
+				warning = ({message: "Did not find definition for process \"#{name}\" with #{argCount} arguments. Assuming stop (0).", wholeFile:true, name: "Missing process definition"})
+				@warnings.push(warning)
 		return result
 	getPossibleSteps: (copyOnPerform) -> @system.getPossibleSteps(copyOnPerform)
 	#performStep: (step) -> @system = step.perform()
@@ -332,13 +339,16 @@ class CCSProcessApplication extends CCSProcess
 	constructor: (@processName, @valuesToPass=[]) -> super()		# string x Expression list
 
 	performAutoComplete: (cls) ->
-		@getProcessDefinition().performAutoComplete(cls)
+		@getProcessDefinition()?.performAutoComplete(cls)
 	
 	getArgCount: -> @valuesToPass.length
 	getProcessDefinition: -> @ccs.getProcessDefinition(@processName, @getArgCount())
 	getProcess: -> 
 		return @process if @process
 		pd = @getProcessDefinition()
+		if not pd
+			@process = new CCSStop()._setCCS(@ccs).setCodePos(@line, @column)
+			return @process
 		@process = pd.process.copy()
 		if pd.params
 			replaces = new CCSReplacementDescriptor()
@@ -364,14 +374,15 @@ class CCSProcessApplication extends CCSProcess
 				type = CCSGetMostGeneralType(type, pd.types[i])
 		type###
 	computeTypes: (env) ->
-		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
-		throw ({message: "Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!", line: @line, column: @column, name: "Type Error"}) if not pd
+		pd = @getProcessDefinition()
+		return if not pd
+		# throw ({message: "Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!", line: @line, column: @column, name: "Type Error"}) if not pd
 		if pd.params
 			for i in [0..pd.params.length-1] by 1
 				type = @valuesToPass[i].computeTypes(env, true)
 				pd.env.setType(pd.params[i].name, type)
 		super
-	isUnguardedRecursion: -> true
+	isUnguardedRecursion: -> @getProcessDefinition() != null
 	
 	getApplicapleRules: -> [CCSRecRule]
 	getPrefixes : -> @getProcess().getPrefixes() #if @process then @process.getPrefixes() else []
@@ -1121,7 +1132,7 @@ class CCSAndExpression extends CCSExpression
 		else
 			@stringForSubExp(@getLeft(), mini) + "&&" + @stringForSubExp(@getRight(), mini)
 	
-	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
+	copy: -> new CCSAndExpression(@getLeft().copy(), @getRight().copy())
 
 # - CCSOrExpression
 class CCSOrExpression extends CCSExpression
@@ -1144,7 +1155,7 @@ class CCSOrExpression extends CCSExpression
 		else
 			@stringForSubExp(@getLeft(), mini) + "||" + @stringForSubExp(@getRight(), mini)
 	
-	copy: -> new CCSConcatenatingExpression(@getLeft().copy(), @getRight().copy())
+	copy: -> new CCSOrExpression(@getLeft().copy(), @getRight().copy())
 	
 
 	
