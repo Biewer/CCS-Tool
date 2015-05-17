@@ -354,7 +354,7 @@ class CCSProcessApplication extends CCSProcess
 			replaces = new CCSReplacementDescriptor()
 			for i in [0..pd.params.length-1] by 1
 				id = pd.params[i].name
-				if pd.env.getType(id) == CCSTypeChannel
+				if pd.env.getType(id) == CCSTypeChannel or pd.env.getType(id) == CCSTypeUnknown   # Note: if a variable exp cannot be typed, it is probably a channel name. Example: P[a,b] := c!.P[a,b]
 					replaces.updateForVariableWithChannelName(id, @valuesToPass[i].variableName)
 					# @process.replaceChannelName(id, @valuesToPass[i].variableName)
 				else
@@ -931,7 +931,7 @@ class CCSVariableExpression extends CCSExpression
 		super()
 	
 	getPrecedence: -> 18
-	computeTypes: (env, allowsChannel) -> 
+	computeTypes: (env, allowsChannel) -> 		# channel is allowed if cariable expression is root expression of a process application argument
 		if allowsChannel
 			env.setType(@variableName, CCSTypeUnknown)
 			env.getType(@variableName)
