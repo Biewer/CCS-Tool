@@ -45,7 +45,7 @@ class PCCGlobal extends PC.EnvironmentNode
 class PCCClass extends PC.Class
 	constructor: ->
 		super
-		@addChild(new PCCInternalReadOnlyField(null, "guard", new PC.Type(PC.Type.MUTEX), true))	# ToDo: guard only in monitor?
+		@addChild(new PCCInternalReadOnlyField(null, "guard", new PC.Type(PC.Type.MUTEX), true)) if @isMonitor()
 	getAllConditions: ->
 		result = []
 		for n, v of @variables
