@@ -354,7 +354,12 @@ class CCSProcessApplication extends CCSProcess
 			replaces = new CCSReplacementDescriptor()
 			for i in [0..pd.params.length-1] by 1
 				id = pd.params[i].name
-				if pd.env.getType(id) == CCSTypeChannel or pd.env.getType(id) == CCSTypeUnknown   # Note: if a variable exp cannot be typed, it is probably a channel name. Example: P[a,b] := c!.P[a,b]
+				# Note: if a variable exp cannot be typed, it is probably a channel name. Example: P[a,b] := c!.P[a,b]
+				# Note 2: Maybe, but probably is not enough here. Imagine P[2,3]: a is a constant expression, which does not have a .variableName!
+				type = pd.env.getType(id)
+				if type == CCSTypeUnknown
+					type = if @valuesToPass[i].variableName then CCSTypeChannel else CCSTypeValue
+				if type == CCSTypeChannel  
 					replaces.updateForVariableWithChannelName(id, @valuesToPass[i].variableName)
 					# @process.replaceChannelName(id, @valuesToPass[i].variableName)
 				else
@@ -929,6 +934,8 @@ CCSBooleanForString = (string) -> if string == "0" then false else if string == 
 class CCSVariableExpression extends CCSExpression
 	constructor: (@variableName) -> 
 		super()
+		if not @variableName
+			throw new Error("Tried to instantiate a variable expression without a variable name!")
 	
 	getPrecedence: -> 18
 	computeTypes: (env, allowsChannel) -> 		# channel is allowed if cariable expression is root expression of a process application argument
@@ -944,6 +951,7 @@ class CCSVariableExpression extends CCSExpression
 		if replaces.variableHasExpressionReplacement(@variableName)
 			return replaces.expressionForVariableName(@variableName)
 		else if replaces.variableHasChannelReplacement(@variableName)
+			debugger
 			@variableName = replaces.channelNameForVariableName(@variableName)
 		@
 		
