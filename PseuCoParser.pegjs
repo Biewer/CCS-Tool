@@ -748,32 +748,32 @@ ReturnStatement
  * - The signal all statement for firing signals for all waiting agents.
  */
 PrimitiveStatement
-	= "join" ___ exp:Expression __ ";"
+	= "join" __ "(" __ exp:Expression __ ")" __ ";"
 		{
 			return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN,
 				exp);
 		}
-	/ "lock" ___ exp:Expression __ ";"
+	/ "lock" __ "(" __ exp:Expression __ ")" __ ";"
 		{
 			return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.LOCK,
 				exp);
 		}
-	/ "unlock" ___ exp:Expression __ ";"
+	/ "unlock" __ "(" __ exp:Expression __ ")" __ ";"
 		{
 			return new PCPrimitiveStmt(line(), column(),
 				PCPrimitiveStmt.UNLOCK, exp);
 		}
-	/ "waitForCondition" ___ exp:Expression __ ";"
+	/ "waitForCondition" __ "(" __ exp:Expression __ ")" __ ";"
 		{
 			return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT,
 				exp);
 		}
-	/ "signal" ___ exp:Expression __ ";"
+	/ "signal" __ "(" __ exp:Expression __ ")" __ ";"
 		{
 			return new PCPrimitiveStmt(line(), column(),
 				PCPrimitiveStmt.SIGNAL, exp);
 		}
-	/ "signalAll" exp:(___ Expression)? __ ";"
+	/ "signalAll" __ "(" exp:(__ Expression)? __ ")" __ ";"
 		{
 			return exp != null ?
 				new PCPrimitiveStmt(line(), column(),
@@ -810,7 +810,7 @@ PrimitiveType
 	/ "int" { return new PCSimpleType(line(), column(), PCSimpleType.INT); }
 	/ "string"
 		{ return new PCSimpleType(line(), column(), PCSimpleType.STRING); }
-	/ "mutex" { return new PCSimpleType(line(), column(), PCSimpleType.MUTEX); }
+	/ "lock" { return new PCSimpleType(line(), column(), PCSimpleType.MUTEX); }
 	/ "agent" { return new PCSimpleType(line(), column(), PCSimpleType.AGENT); }
 	/ id:Identifier { return new PCClassType(line(), column(), id); }
 
@@ -860,7 +860,7 @@ Expression
  * Start an agent. Starts with the keyword "start" followed by a procedure call.
  */
 StartExpression
-	= "start" ___ exp:(MonCall / ProcCall)
+	= "start" __ "(" __ exp:(MonCall / ProcCall) __ ")" __
 		{ return new PCStartExpression(line(), column(), exp); }
 
 /*
