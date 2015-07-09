@@ -257,6 +257,8 @@ PC.Type::createContainer = (compiler, container) ->
 		result
 	else if @kind == PC.Type.STRING
 		new PCCConstantContainer("")
+	else if @kind == PC.Type.BOOL
+		new PCCConstantContainer(false)
 	else
 		new PCCConstantContainer(0)
 PC.ChannelType::createContainer = (compiler, container) ->
