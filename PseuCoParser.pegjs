@@ -284,7 +284,7 @@ Digit
 Program
 	= source:SourceElements
 		{
-			source.unshift(line(), column());
+			source.unshift(location().start.line, location().start.column);
 			return construct(PCProgram, source);
 		}
 
@@ -325,7 +325,7 @@ SourceElement
 Monitor
 	= "monitor" ___ id:Identifier __ "{" __ code:ClassCode __ "}"
 		{
-			code.unshift(id, line(), column());
+			code.unshift(id, location().start.line, location().start.column);
 			return construct(PCMonitor, code);
 		}
 
@@ -337,7 +337,7 @@ Monitor
 Struct
 	= "struct" ___ id:Identifier __ "{" __ code:ClassCode "}"
 		{
-			code.unshift(id, line(), column());
+			code.unshift(id, location().start.line, location().start.column);
 			return construct(PCStruct, code);
 		}
 
@@ -368,7 +368,7 @@ ClassCode
  */
 MainAgent
 	= "mainAgent" __ stmtBlock:StatementBlock
-		{ return new PCMainAgent(line(), column(), stmtBlock); }
+		{ return new PCMainAgent(location().start.line, location().start.column, stmtBlock); }
 
 /*
  * The normal procedure declarations in pseuCo consist of:
@@ -381,7 +381,7 @@ Procedure
 	= type:ResultType ___ id:Identifier __ fp:FormalParameters __
 		stmtBlock:StatementBlock
 		{
-			fp.unshift(line(), column(), type, id, stmtBlock);
+			fp.unshift(location().start.line, location().start.column, type, id, stmtBlock);
 			return construct(PCProcedureDecl, fp);
 		}
 
@@ -413,7 +413,7 @@ FormalParameters
  */
 FormalParameter
 	= type:Type ___ id:Identifier
-		{ return new PCFormalParameter(line(), column(), type, id); }
+		{ return new PCFormalParameter(location().start.line, location().start.column, type, id); }
 
 /*
  * pseuCo supports the following statements:
@@ -432,29 +432,29 @@ FormalParameter
  * - An empty statement.
  */
 Statement
-	= stmt:StatementBlock { return new PCStatement(line(), column(), stmt); }
-	/ stmt:Println { return new PCStatement(line(), column(), stmt); }
-	/ stmt:SelectStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:IfStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:WhileStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:DoStatement { return new PCStatement(line(), column(), stmt); }
-	/ stmt:ForStatement { return new PCStatement(line(), column(), stmt); }
+	= stmt:StatementBlock { return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ stmt:Println { return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ stmt:SelectStatement { return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ stmt:IfStatement { return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ stmt:WhileStatement { return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ stmt:DoStatement { return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ stmt:ForStatement { return new PCStatement(location().start.line, location().start.column, stmt); }
 	/ "break" __ ";"
 		{
-			return new PCStatement(line(), column(), new PCBreakStmt(line(),
-				column()));
+			return new PCStatement(location().start.line, location().start.column, new PCBreakStmt(location().start.line,
+				location().start.column));
 		}
 	/ "continue" __ ";"
 		{
-			return new PCStatement(line(), column(), new PCContinueStmt(line(),
-				column()));
+			return new PCStatement(location().start.line, location().start.column, new PCContinueStmt(location().start.line,
+				location().start.column));
 		}
-	/ stmt:ReturnStatement { return new PCStatement(line(), column(), stmt); }
+	/ stmt:ReturnStatement { return new PCStatement(location().start.line, location().start.column, stmt); }
 	/ stmt:PrimitiveStatement
-		{ return new PCStatement(line(), column(), stmt); }
+		{ return new PCStatement(location().start.line, location().start.column, stmt); }
 	/ stmt:StatementExpression __ ";"
-		{ return new PCStatement(line(), column(), stmt); }
-	/ __ ";" { return new PCStatement(line(), column()); }
+		{ return new PCStatement(location().start.line, location().start.column, stmt); }
+	/ __ ";" { return new PCStatement(location().start.line, location().start.column); }
 
 /*
  * A block statement a block of code enclosed by a pair of braces. Even though
@@ -464,7 +464,7 @@ Statement
 StatementBlock
 	= "{" __ blockStmts:(BlockStatement __)* "}"
 		{
-			var stmts = [line(), column()];
+			var stmts = [location().start.line, location().start.column];
 			for (var i = 0; i < blockStmts.length; ++i)
 			{
 				stmts.push(blockStmts[i][0]);
@@ -480,7 +480,7 @@ BlockStatement
 	= stmt:Statement { return stmt; }
 	/ stmt:Procedure { return stmt; }
 	/ stmt:DeclarationStatement
-		{ return new PCStatement(line(), column(), stmt); }
+		{ return new PCStatement(location().start.line, location().start.column, stmt); }
 	/ stmt:ConditionDeclarationStatement { return stmt; }
 
 /*
@@ -493,7 +493,7 @@ BlockStatement
 ConditionDeclarationStatement
 	= "condition" ___ id:Identifier __ "with" ___ exp:Expression __ ";"
 		{
-			return new PCConditionDecl(line(), column(), id, exp);
+			return new PCConditionDecl(location().start.line, location().start.column, id, exp);
 		}
 
 /*
@@ -514,7 +514,7 @@ Declaration
 	= type:Type ___ head:VariableDeclarator tail:(__ "," __ VariableDeclarator)*
 		{
 			var declarations = [];
-			declarations.push(false, line(), column(), type, head);
+			declarations.push(false, location().start.line, location().start.column, type, head);
 			for (var i = 0; i < tail.length; ++i)
 			{
 				declarations.push(tail[i][3]);
@@ -529,8 +529,8 @@ VariableDeclarator
 	= id:Identifier varInit:(__ "=" __ VariableInitializer)?
 		{
 			return varInit != null ?
-				new PCVariableDeclarator(line(), column(), id, varInit[3]) :
-				new PCVariableDeclarator(line(), column(), id);
+				new PCVariableDeclarator(location().start.line, location().start.column, id, varInit[3]) :
+				new PCVariableDeclarator(location().start.line, location().start.column, id);
 		}
 
 /*
@@ -549,18 +549,18 @@ VariableInitializer
 				{
 					inits.push(test[1][i][3]);
 				}
-				inits.unshift(line(), column(), uncomplete != null)
+				inits.unshift(location().start.line, location().start.column, uncomplete != null)
 				return construct(PCVariableInitializer, inits);
 			}
 			else
 			{
-				return new PCVariableInitializer(line(), column(),
+				return new PCVariableInitializer(location().start.line, location().start.column,
 					uncomplete != null);
 			}
 		}
 	/ exp:Expression
 		{
-			return new PCVariableInitializer(line(), column(), false, exp);
+			return new PCVariableInitializer(location().start.line, location().start.column, false, exp);
 		}
 
 /*
@@ -573,7 +573,7 @@ Type
 			var res = type;
 			for (var i = ranges.length - 1; i >= 0; --i)
 			{
-				res = new PCArrayType(line(), column(), res, ranges[i][2]);
+				res = new PCArrayType(location().start.line, location().start.column, res, ranges[i][2]);
 			}
 			return res;
 		}
@@ -589,17 +589,17 @@ Type
  */
 StatementExpression
 	= stmtExp:StartExpression
-		{ return new PCStmtExpression(line(), column(), stmtExp); }
+		{ return new PCStmtExpression(location().start.line, location().start.column, stmtExp); }
 	/ stmtExp:AssignmentExpression
-		{ return new PCStmtExpression(line(), column(), stmtExp); }
+		{ return new PCStmtExpression(location().start.line, location().start.column, stmtExp); }
 	/ stmtExp:SendExpression
-		{ return new PCStmtExpression(line(), column(), stmtExp); }
+		{ return new PCStmtExpression(location().start.line, location().start.column, stmtExp); }
 	/ stmtExp:PostfixExpression
-		{ return new PCStmtExpression(line(), column(), stmtExp); }
+		{ return new PCStmtExpression(location().start.line, location().start.column, stmtExp); }
 	/ stmtExp:CallExpression
-		{ return new PCStmtExpression(line(), column(), stmtExp); }
+		{ return new PCStmtExpression(location().start.line, location().start.column, stmtExp); }
 	/ stmtExp:ReceiveExpression
-		{ return new PCStmtExpression(line(), column(), stmtExp); }
+		{ return new PCStmtExpression(location().start.line, location().start.column, stmtExp); }
 
 /*
  * A list of expression statements.
@@ -625,7 +625,7 @@ StatementExpressionList
 SelectStatement
 	= "select" __ "{" __ stmts:(CaseStatement __ )+ __ "}"
 		{
-			var caseStmts = [line(), column()];
+			var caseStmts = [location().start.line, location().start.column];
 			for (var i = 0; i < stmts.length; ++i)
 			{
 				caseStmts.push(stmts[i][0]);
@@ -641,9 +641,9 @@ SelectStatement
  */
 CaseStatement
 	= "case" ___ exp:StatementExpression __ ":" __ stmt:Statement
-		{ return new PCCase(line(), column(), stmt, exp); }
+		{ return new PCCase(location().start.line, location().start.column, stmt, exp); }
 	/ "default" __ ":" __ stmt:Statement
-		{ return new PCCase(line(), column(), stmt); }
+		{ return new PCCase(location().start.line, location().start.column, stmt); }
 
 /*
  * The deterministic choice is represented via the if statement. This statement
@@ -660,8 +660,8 @@ IfStatement
 		__ Statement)?
 		{
 			return test != null ?
-				new PCIfStmt(line(), column(), exp, ifStmt, test[2]) :
-				new PCIfStmt(line(), column(), exp, ifStmt);
+				new PCIfStmt(location().start.line, location().start.column, exp, ifStmt, test[2]) :
+				new PCIfStmt(location().start.line, location().start.column, exp, ifStmt);
 		}
 
 /*
@@ -671,7 +671,7 @@ IfStatement
  */
 WhileStatement
 	= "while" __ "(" __ exp:Expression __ ")" __ stmt:Statement
-		{ return new PCWhileStmt(line(), column(), exp, stmt); }
+		{ return new PCWhileStmt(location().start.line, location().start.column, exp, stmt); }
 
 /*
  * The do-while statement is the second kind of loop. It starts with the keyword
@@ -681,7 +681,7 @@ WhileStatement
  */
 DoStatement
 	= "do" __ stmt:Statement __ "while" __ "(" __ exp:Expression __ ")" __ ";"
-		{ return new PCDoStmt(line(), column(), stmt, exp); }
+		{ return new PCDoStmt(location().start.line, location().start.column, stmt, exp); }
 
 /*
  * The for statement is the third kind of loop. It starts with the keyword "for"
@@ -700,7 +700,7 @@ ForStatement
 			{
 				res = res.concat(update);
 			}
-			res.unshift(line(), column(), stmt, init, exp);
+			res.unshift(location().start.line, location().start.column, stmt, init, exp);
 			return construct(PCForStmt, res);
 		}
 
@@ -712,7 +712,7 @@ ForInit
 	= head:(Declaration / StatementExpression) tail:(__ "," __ (Declaration /
 		StatementExpression))*
 		{
-			var inits = [line(), column()];
+			var inits = [location().start.line, location().start.column];
 			inits.push(head);
 			for (var i = 0; i < tail.length; ++i)
 			{
@@ -734,8 +734,8 @@ ForUpdate
 ReturnStatement
 	= "return" exp:(___ Expression)? __ ";"
 		{
-			return exp != null ? new PCReturnStmt(line(), column(), exp[1]) :
-				new PCReturnStmt(line(), column());
+			return exp != null ? new PCReturnStmt(location().start.line, location().start.column, exp[1]) :
+				new PCReturnStmt(location().start.line, location().start.column);
 		}
 
 /*
@@ -750,35 +750,35 @@ ReturnStatement
 PrimitiveStatement
 	= "join" ___ exp:Expression __ ";"
 		{
-			return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.JOIN,
+			return new PCPrimitiveStmt(location().start.line, location().start.column, PCPrimitiveStmt.JOIN,
 				exp);
 		}
 	/ "lock" ___ exp:Expression __ ";"
 		{
-			return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.LOCK,
+			return new PCPrimitiveStmt(location().start.line, location().start.column, PCPrimitiveStmt.LOCK,
 				exp);
 		}
 	/ "unlock" ___ exp:Expression __ ";"
 		{
-			return new PCPrimitiveStmt(line(), column(),
+			return new PCPrimitiveStmt(location().start.line, location().start.column,
 				PCPrimitiveStmt.UNLOCK, exp);
 		}
 	/ "waitForCondition" ___ exp:Expression __ ";"
 		{
-			return new PCPrimitiveStmt(line(), column(), PCPrimitiveStmt.WAIT,
+			return new PCPrimitiveStmt(location().start.line, location().start.column, PCPrimitiveStmt.WAIT,
 				exp);
 		}
 	/ "signal" ___ exp:Expression __ ";"
 		{
-			return new PCPrimitiveStmt(line(), column(),
+			return new PCPrimitiveStmt(location().start.line, location().start.column,
 				PCPrimitiveStmt.SIGNAL, exp);
 		}
 	/ "signalAll" exp:(___ Expression)? __ ";"
 		{
 			return exp != null ?
-				new PCPrimitiveStmt(line(), column(),
+				new PCPrimitiveStmt(location().start.line, location().start.column,
 					PCPrimitiveStmt.SIGNAL_ALL, exp[1]) :
-				new PCPrimitiveStmt(line(), column(),
+				new PCPrimitiveStmt(location().start.line, location().start.column,
 					PCPrimitiveStmt.SIGNAL_ALL);
 		}
 
@@ -789,7 +789,7 @@ PrimitiveStatement
 Println
 	= "println" __ "(" __ expList:ExpressionList __ ")" __ ";"
 		{
-			expList.unshift(line(), column());
+			expList.unshift(location().start.line, location().start.column);
 			return construct(PCPrintStmt, expList);
 		}
 
@@ -806,13 +806,13 @@ Println
  */
 PrimitiveType
 	= ch:Chan { return ch; }
-	/ "bool" { return new PCSimpleType(line(), column(), PCSimpleType.BOOL); }
-	/ "int" { return new PCSimpleType(line(), column(), PCSimpleType.INT); }
+	/ "bool" { return new PCSimpleType(location().start.line, location().start.column, PCSimpleType.BOOL); }
+	/ "int" { return new PCSimpleType(location().start.line, location().start.column, PCSimpleType.INT); }
 	/ "string"
-		{ return new PCSimpleType(line(), column(), PCSimpleType.STRING); }
-	/ "mutex" { return new PCSimpleType(line(), column(), PCSimpleType.MUTEX); }
-	/ "agent" { return new PCSimpleType(line(), column(), PCSimpleType.AGENT); }
-	/ id:Identifier { return new PCClassType(line(), column(), id); }
+		{ return new PCSimpleType(location().start.line, location().start.column, PCSimpleType.STRING); }
+	/ "mutex" { return new PCSimpleType(location().start.line, location().start.column, PCSimpleType.MUTEX); }
+	/ "agent" { return new PCSimpleType(location().start.line, location().start.column, PCSimpleType.AGENT); }
+	/ id:Identifier { return new PCClassType(location().start.line, location().start.column, id); }
 
 /*
  * Channel types can be build from integers, boolean and strings.
@@ -820,17 +820,17 @@ PrimitiveType
 Chan
 	= "intchan" int_:(IntegerLiteral)?
 		{
-			return new PCChannelType(line(), column(), PCSimpleType.INT,
+			return new PCChannelType(location().start.line, location().start.column, PCSimpleType.INT,
 				int_ != null ? int_ : PCChannelType.CAPACITY_UNKNOWN);
 		}
 	/ "boolchan" int_:(IntegerLiteral)?
 		{
-			return new PCChannelType(line(), column(), PCSimpleType.BOOL,
+			return new PCChannelType(location().start.line, location().start.column, PCSimpleType.BOOL,
 				int_ != null ? int_ : PCChannelType.CAPACITY_UNKNOWN);
 		}
 	/ "stringchan" int_:(IntegerLiteral)?
 		{
-			return new PCChannelType(line(), column(), PCSimpleType.STRING,
+			return new PCChannelType(location().start.line, location().start.column, PCSimpleType.STRING,
 				int_ != null ? int_ : PCChannelType.CAPACITY_UNKNOWN);
 		}
 
@@ -840,7 +840,7 @@ Chan
  * normal type are available.
  */
 ResultType
-	= "void" { return new PCSimpleType(line(), column(), PCSimpleType.VOID); }
+	= "void" { return new PCSimpleType(location().start.line, location().start.column, PCSimpleType.VOID); }
 	/ type:Type { return type; }
 
 /*
@@ -861,7 +861,7 @@ Expression
  */
 StartExpression
 	= "start" ___ exp:(MonCall / ProcCall)
-		{ return new PCStartExpression(line(), column(), exp); }
+		{ return new PCStartExpression(location().start.line, location().start.column, exp); }
 
 /*
  * Comma separated list of expression.
@@ -883,7 +883,7 @@ ExpressionList
  */
 AssignmentExpression
 	= dest:AssignDestination __ op:AssignmentOperator __ exp:Expression
-		{ return new PCAssignExpression(line(), column(), dest, op, exp); }
+		{ return new PCAssignExpression(location().start.line, location().start.column, dest, op, exp); }
 
 /*
  * The assignment destination has to be an identifier followed by array accesses
@@ -897,7 +897,7 @@ AssignDestination
 			{
 				index.push(pos[i][2]);
 			}
-			index.unshift(id, line(), column());
+			index.unshift(id, location().start.line, location().start.column);
 			return construct(PCAssignDestination, index);
 		}
 
@@ -922,7 +922,7 @@ AssignmentOperator
  */
 SendExpression
 	= callExp:CallExpression __ "<!" __ exp:Expression __
-		{ return new PCSendExpression(line(), column(), callExp, exp); }
+		{ return new PCSendExpression(location().start.line, location().start.column, callExp, exp); }
 
 /*
  * The conditional expression is a expression which evaluates to the expression
@@ -935,7 +935,7 @@ ConditionalExpression
 	= exp:ConditionalOrExpression rest:(__ "?" __ Expression __ ":" __
 		ConditionalExpression)?
 		{
-			return rest != null ? new PCConditionalExpression(line(), column(),
+			return rest != null ? new PCConditionalExpression(location().start.line, location().start.column,
 				exp, rest[3], rest[7]) : exp;
 		}
 
@@ -949,7 +949,7 @@ ConditionalOrExpression
 			var res = exp;
 			for (var i = 0; i < rest.length; ++i)
 			{
-				res = new PCOrExpression(line(), column(), res, rest[i][3]);
+				res = new PCOrExpression(location().start.line, location().start.column, res, rest[i][3]);
 			}
 			return res;
 		}
@@ -964,7 +964,7 @@ ConditionalAndExpression
 			var res = exp;
 			for (var i = 0; i < rest.length; ++i)
 			{
-				res = new PCAndExpression(line(), column(), res, rest[i][3]);
+				res = new PCAndExpression(location().start.line, location().start.column, res, rest[i][3]);
 			}
 			return res;
 		}
@@ -980,7 +980,7 @@ EqualityExpression
 			var res = exp;
 			for (var i = 0; i < rest.length; ++i)
 			{
-				res = new PCEqualityExpression(line(), column(), res,
+				res = new PCEqualityExpression(location().start.line, location().start.column, res,
 					rest[i][1], rest[i][3]);
 			}
 			return res;
@@ -1005,7 +1005,7 @@ RelationalExpression
 			var res = exp;
 			for (var i = 0; i < rest.length; ++i)
 			{
-				res = new PCRelationalExpression(line(), column(), res,
+				res = new PCRelationalExpression(location().start.line, location().start.column, res,
 					rest[i][1], rest[i][3]);
 			}
 			return res;
@@ -1026,7 +1026,7 @@ AdditiveExpression
 			var res = exp;
 			for (var i = 0; i < rest.length; ++i)
 			{
-				res = new PCAdditiveExpression(line(), column(), res,
+				res = new PCAdditiveExpression(location().start.line, location().start.column, res,
 					rest[i][1], rest[i][3]);
 			}
 			return res;
@@ -1048,7 +1048,7 @@ MultiplicativeExpression
 			var res = exp;
 			for (var i = 0; i < rest.length; ++i)
 			{
-				res = new PCMultiplicativeExpression(line(), column(), res,
+				res = new PCMultiplicativeExpression(location().start.line, location().start.column, res,
 					rest[i][1], rest[i][3]);
 			}
 			return res;
@@ -1066,7 +1066,7 @@ MultiplicativeExpression
  */
 UnaryExpression
 	= op:("+" / "-" / "!") __ exp:UnaryExpression
-		{ return new PCUnaryExpression(line(), column(), op, exp); }
+		{ return new PCUnaryExpression(location().start.line, location().start.column, op, exp); }
 	/ exp:ReceiveExpression { return exp; }
 	/ exp:PostfixExpression { return exp; }
 
@@ -1076,7 +1076,7 @@ UnaryExpression
  */
 PostfixExpression
 	= dest:AssignDestination _ op:("++" / "--")
-		{ return new PCPostfixExpression(line(), column(), dest, op); }
+		{ return new PCPostfixExpression(location().start.line, location().start.column, dest, op); }
 
 /*
  * Receives value from channel (call expression) and evaluates to this value.
@@ -1087,7 +1087,7 @@ ReceiveExpression
 			var res = exp;
 			for (var i = 0; i < op.length; i++)
 			{
-				res = new PCReceiveExpression(line(), column(), res)
+				res = new PCReceiveExpression(location().start.line, location().start.column, res)
 			}
 			return res;
 		}
@@ -1107,7 +1107,7 @@ CallExpression
 ProcCall
 	= id:Identifier __ args:Arguments
 		{
-			args.unshift(id, line(), column());
+			args.unshift(id, location().start.line, location().start.column);
 			return construct(PCProcedureCall, args);
 		}
 
@@ -1124,10 +1124,10 @@ Arguments
 MonCall
 	= exp:PrimaryExpression call:(_ "." __ ProcCall)+
 		{
-			var res = new PCClassCall(line(), column(), exp, call[0][3]);
+			var res = new PCClassCall(location().start.line, location().start.column, exp, call[0][3]);
 			for (var i = 1; i < call.length; ++i)
 			{
-				res = new PCClassCall(line(), column(), res, call[i][3]);
+				res = new PCClassCall(location().start.line, location().start.column, res, call[i][3]);
 			}
 			return res;
 		}
@@ -1141,7 +1141,7 @@ ArrayExpression
 			var res = exp;
 			for (var i = call.length - 1; i >= 0; --i)
 			{
-				res = new PCArrayExpression(line(), column(), res, call[i][2]);
+				res = new PCArrayExpression(location().start.line, location().start.column, res, call[i][2]);
 			}
 			return res;
 		}
@@ -1151,7 +1151,7 @@ ArrayExpression
  * containing an expression.
  */
 PrimaryExpression
-	= exp:Literal { return new PCLiteralExpression(line(), column(), exp); }
+	= exp:Literal { return new PCLiteralExpression(location().start.line, location().start.column, exp); }
 	/ exp:Identifier
-		{ return new PCIdentifierExpression(line(), column(), exp); }
+		{ return new PCIdentifierExpression(location().start.line, location().start.column, exp); }
 	/ "(" __ exp:Expression __ ")" { return exp; }
