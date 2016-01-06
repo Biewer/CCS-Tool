@@ -232,7 +232,6 @@ __ "inline whitespace"
   / '#' inlineCommentWhitespace           {}
   / '//' inlineCommentWhitespace             {}
   / '(*' commentA __		{}
-  / 			{}
  
 
 /*
@@ -378,6 +377,5 @@ expression
  	
  	___ "whitespace"
  	  = ' '*               {}
- 	  /          
  	
  	
