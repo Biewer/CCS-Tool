@@ -235,6 +235,9 @@ PCTArrayType::fulfillAssignment = (compiler, container) ->
 	result
 ###
 PC.ArrayType::createContainer = (compiler, containers=[]) ->
+	if (containers instanceof PCCVariableContainer)
+		# containers is not an array. We are compiling an assignment, "int[3] compiling = existing"
+		return containers
 	result = compiler.getFreshContainer(@getCCSType())
 	compiler.emitInput("array#{@capacity}_create", null, result)
 	compiler.emitOutput("array_setDefault", result, @elementsType.getCCSType().getDefaultContainer())
@@ -257,6 +260,8 @@ PC.Type::createContainer = (compiler, container) ->
 		result
 	else if @kind == PC.Type.STRING
 		new PCCConstantContainer("")
+	else if @kind == PC.Type.BOOL
+		new PCCConstantContainer(false)
 	else
 		new PCCConstantContainer(0)
 PC.ChannelType::createContainer = (compiler, container) ->
