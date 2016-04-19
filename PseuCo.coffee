@@ -573,6 +573,8 @@ class PCDecl extends PCNode
 	###
 	_getType: (env) ->
 		@children[i].collectEnvironment(env, @type) for i in [1...@children.length] by 1
+		if @type.isEqual(new PCTType(PCTType.MUTEX))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "OldSyntax", "message" : "You have used an old syntax. The type named \"mutex\" was renamed to \"lock\". For a complete list of changes look <a href=\"#/help#pseuco-syntax-migration\">here</a>."})
 		for child in @children[1..]
 			type = child._getType(env, @type)
 			if type? and not @type.isEqual(type)
@@ -751,7 +753,7 @@ class PCBaseType extends PCNode
 ###
 class PCSimpleType extends PCBaseType
 	constructor: (line, column, @type) ->
-		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type"}) if @type < 0 or @type > 5
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type"}) if @type < 0 or @type > 6
 		super line, column, []...
 
 	###
@@ -768,8 +770,9 @@ PCSimpleType.VOID = 0
 PCSimpleType.BOOL = 1
 PCSimpleType.INT = 2
 PCSimpleType.STRING = 3
-PCSimpleType.MUTEX = 4
-PCSimpleType.AGENT = 5
+PCSimpleType.LOCK = 4
+PCSimpleType.MUTEX = 5
+PCSimpleType.AGENT = 6
 
 PCSimpleType.typeToString = (type) ->
 	switch type
@@ -777,13 +780,15 @@ PCSimpleType.typeToString = (type) ->
 		when PCSimpleType.BOOL then "bool"
 		when PCSimpleType.INT then "int"
 		when PCSimpleType.STRING then "string"
-		when PCSimpleType.MUTEX then "lock"
+		when PCSimpleType.LOCK then "lock"
+		when PCSimpleType.MUTEX then "mutex"
 		when PCSimpleType.AGENT then "agent"
 		else throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type!"})
 
 PCSimpleType.typeToTypeKind = (type) ->
 	switch type
 		when PCSimpleType.MUTEX then PCTType.MUTEX
+		when PCSimpleType.LOCK then PCTType.LOCK
 		when PCSimpleType.AGENT then PCTType.AGENT
 		when PCSimpleType.VOID then PCTType.VOID
 		when PCSimpleType.BOOL then PCTType.BOOL
@@ -2046,7 +2051,7 @@ class PCPrimitiveStmt extends PCNode
 			when PCPrimitiveStmt.JOIN
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "join must be applied on agents, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.AGENT))
 			when PCPrimitiveStmt.LOCK, PCPrimitiveStmt.UNLOCK
-				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "lock and unlock must be applied on lock objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.MUTEX))
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "lock and unlock must be applied on lock objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.LOCK))
 			when PCPrimitiveStmt.WAIT
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "waitForCondition can only be used in monitors!"}) if not @insideMonitor()
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "waitForCondition must be applied on condition or boolean objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.Bool)) and not @_type.isEqual(new PCTType(PCTType.CONDITION))

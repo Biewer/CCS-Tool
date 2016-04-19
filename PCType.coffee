@@ -44,6 +44,7 @@ class PCTType
 			when PCTType.ARRAY then "array"
 			when PCTType.MONITOR then "monitor"
 			when PCTType.STRUCTURE then "struct"
+			when PCTType.LOCK then "lock"
 			when PCTType.MUTEX then "mutex"
 			when PCTType.CONDITION then "condition"
 			when PCTType.PROCEDURE then "procedure"
@@ -63,16 +64,17 @@ PCTType.ARRAY = 5;
 PCTType.MONITOR = 6;
 PCTType.STRUCT = 7;
 
-PCTType.MUTEX = 8;
-PCTType.CONDITION = 9;
+PCTType.LOCK = 8;
+PCTType.MUTEX = 9;
+PCTType.CONDITION = 10;
 
-PCTType.PROCEDURE = 10;
-PCTType.TYPE = 11;
-PCTType.MAINAGENT = 12;
+PCTType.PROCEDURE = 11;
+PCTType.TYPE = 12;
+PCTType.MAINAGENT = 13;
 
-PCTType.AGENT = 13;
+PCTType.AGENT = 14;
 
-PCTType.WILDCARD = 14;
+PCTType.WILDCARD = 15;
 
 
 

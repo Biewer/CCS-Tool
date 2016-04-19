@@ -32,16 +32,20 @@
  * - Declaration of expressions.
  */
 
-/**
- * @brief Little helper function for constructing the AST. It builds a new AST
- * node object by calling the given constructor with the given arguments.
- *
- * @param constructor The constructor of Object to build.
- * @param args A list of arguments for calling the constructor.
- *
- * @return A new object of type `constructor`.
+/*
+ * Global objects, variables, functions etc.
  */
 {
+	/**
+	 * @brief Little helper function for constructing the AST. It builds a new
+	 * AST node object by calling the given constructor with the given
+	 * arguments.
+	 *
+	 * @param constructor The constructor of Object to build.
+	 * @param args A list of arguments for calling the constructor.
+	 *
+	 * @return A new object of type `constructor`.
+	 */
 	function construct(constructor, args)
 	{
 		function F()
@@ -51,6 +55,15 @@
 		F.prototype = constructor.prototype;
 		return new F();
 	}
+
+	/*
+	 * List of custom error messages.
+	 */
+	var old_syntax = "You have used an old syntax. " +
+		"Primitive statements are no longer supported. " +
+		"Instead use a procedure call named exactly as the statement you " +
+		"tried to use. For a complete list of changes look " +
+		"<a href=\"#/help#pseuco-syntax-migration\">here</a>.";
 }
 
 /*
@@ -444,6 +457,61 @@ Statement
 			return new PCStatement(location().start.line,
 				location().start.column, stmt);
 		}
+	/ stmt:PrimitiveStatement
+		{
+			return new PCStatement(location().start.line,
+				location().start.column, stmt);
+		}
+	/ "join" __ exp:Expression __ ";"
+		{
+			throw ({
+				"line" : location().start.line,
+				"column" : location().start.column,
+				"wholeFile" : false,
+				"name" : "OldSyntax",
+				"message" : old_syntax
+			});
+		}
+	/ "unlock" __ exp:Expression __ ";"
+		{
+			throw ({
+				"line" : location().start.line,
+				"column" : location().start.column,
+				"wholeFile" : false,
+				"name" : "OldSyntax",
+				"message" : old_syntax
+			});
+		}
+	/ "waitForCondition" __ exp:Expression __ ";"
+		{
+			throw ({
+				"line" : location().start.line,
+				"column" : location().start.column,
+				"wholeFile" : false,
+				"name" : "OldSyntax",
+				"message" : old_syntax
+			});
+		}
+	/ "signal" __ exp:Expression __ ";"
+		{
+			throw ({
+				"line" : location().start.line,
+				"column" : location().start.column,
+				"wholeFile" : false,
+				"name" : "OldSyntax",
+				"message" : old_syntax
+			});
+		}
+	/ "signalAll" __ exp:(__ Expression)? __ ";"
+		{
+			throw ({
+				"line" : location().start.line,
+				"column" : location().start.column,
+				"wholeFile" : false,
+				"name" : "OldSyntax",
+				"message" : old_syntax
+			});
+		}
 	/ stmt:Println
 		{
 			return new PCStatement(location().start.line,
@@ -489,11 +557,6 @@ Statement
 					location().start.column));
 		}
 	/ stmt:ReturnStatement
-		{
-			return new PCStatement(location().start.line,
-				location().start.column, stmt);
-		}
-	/ stmt:PrimitiveStatement
 		{
 			return new PCStatement(location().start.line,
 				location().start.column, stmt);
@@ -925,6 +988,11 @@ PrimitiveType
 	/ "lock"
 		{
 			return new PCSimpleType(location().start.line,
+				location().start.column, PCSimpleType.LOCK);
+		}
+	/ "mutex"
+		{
+			return new PCSimpleType(location().start.line,
 				location().start.column, PCSimpleType.MUTEX);
 		}
 	/ "agent"
@@ -995,6 +1063,16 @@ StartExpression
 		{
 			return new PCStartExpression(location().start.line,
 				location().start.column, exp);
+		}
+	/ "start" __ exp:(MonCall / ProcCall) __
+		{
+			throw ({
+				"line" : location().start.line,
+				"column" : location().start.column,
+				"wholeFile" : false,
+				"name" : "OldSyntax",
+				"message" : old_syntax
+			});
 		}
 
 /*
