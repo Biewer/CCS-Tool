@@ -116,6 +116,20 @@ class PCProgram extends PCNode
 	globalDeclarations: (env) ->
 		env.beginNewProcedure(@, "println", PCSimpleType.VOID, [])
 		env.endProcedure()
+		env.beginNewProcedure(@, "start", PCSimpleType.AGENT, [])
+		env.endProcedure()
+		env.beginNewProcedure(@, "join", PCSimpleType.VOID, [])
+		env.endProcedure()
+		env.beginNewProcedure(@, "lock", PCSimpleType.VOID, [])
+		env.endProcedure()
+		env.beginNewProcedure(@, "unlock", PCSimpleType.VOID, [])
+		env.endProcedure()
+		env.beginNewProcedure(@, "waitForCondition", PCSimpleType.VOID, [])
+		env.endProcedure()
+		env.beginNewProcedure(@, "signal", PCSimpleType.VOID, [])
+		env.endProcedure()
+		env.beginNewProcedure(@, "signalAll", PCSimpleType.VOID, [])
+		env.endProcedure()
 
 	collectClasses: (env) ->
 		for c in @children
@@ -559,6 +573,8 @@ class PCDecl extends PCNode
 	###
 	_getType: (env) ->
 		@children[i].collectEnvironment(env, @type) for i in [1...@children.length] by 1
+		if @type.isEqual(new PCTType(PCTType.MUTEX))
+			throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "OldSyntax", "message" : "You have used an old syntax. The type named \"mutex\" was renamed to \"lock\". For a complete list of changes look <a href=\"#/help#pseuco-syntax-migration\">here</a>."})
 		for child in @children[1..]
 			type = child._getType(env, @type)
 			if type? and not @type.isEqual(type)
@@ -737,7 +753,7 @@ class PCBaseType extends PCNode
 ###
 class PCSimpleType extends PCBaseType
 	constructor: (line, column, @type) ->
-		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type"}) if @type < 0 or @type > 5
+		throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type"}) if @type < 0 or @type > 6
 		super line, column, []...
 
 	###
@@ -754,8 +770,9 @@ PCSimpleType.VOID = 0
 PCSimpleType.BOOL = 1
 PCSimpleType.INT = 2
 PCSimpleType.STRING = 3
-PCSimpleType.MUTEX = 4
-PCSimpleType.AGENT = 5
+PCSimpleType.LOCK = 4
+PCSimpleType.MUTEX = 5
+PCSimpleType.AGENT = 6
 
 PCSimpleType.typeToString = (type) ->
 	switch type
@@ -763,6 +780,7 @@ PCSimpleType.typeToString = (type) ->
 		when PCSimpleType.BOOL then "bool"
 		when PCSimpleType.INT then "int"
 		when PCSimpleType.STRING then "string"
+		when PCSimpleType.LOCK then "lock"
 		when PCSimpleType.MUTEX then "mutex"
 		when PCSimpleType.AGENT then "agent"
 		else throw ({"line" : 0, "column" : 0, "wholeFile" : true, "name" : "InvalidType", "message" : "Unknown type!"})
@@ -770,6 +788,7 @@ PCSimpleType.typeToString = (type) ->
 PCSimpleType.typeToTypeKind = (type) ->
 	switch type
 		when PCSimpleType.MUTEX then PCTType.MUTEX
+		when PCSimpleType.LOCK then PCTType.LOCK
 		when PCSimpleType.AGENT then PCTType.AGENT
 		when PCSimpleType.VOID then PCTType.VOID
 		when PCSimpleType.BOOL then PCTType.BOOL
@@ -867,7 +886,7 @@ class PCExpression extends PCNode
 class PCStartExpression extends PCExpression
 	getPrecedence: -> 42
 
-	toString: -> "start #{@childToString(0)}"
+	toString: -> "start (#{@childToString(0)})"
 
 	###
 	# @brief Type checking.
@@ -1997,12 +2016,12 @@ class PCReturnStmt extends PCNode
 #
 # Code example:
 #
-# join a1;
-# lock guard;
-# unlock guard;
-# waitForCondition c;
-# signal c;
-# signalAll c;
+# join (a1);
+# lock (guard);
+# unlock (guard);
+# waitForCondition (c);
+# signal (c);
+# signalAll (c);
 #
 ###
 class PCPrimitiveStmt extends PCNode
@@ -2013,14 +2032,14 @@ class PCPrimitiveStmt extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> "#{indent}#{PCPrimitiveStmt.kindToString(@kind)}#{if @children.length  == 1 then " #{@children[0].toString()}" else ""};"
+	toString: (indent) -> "#{indent}#{PCPrimitiveStmt.kindToString(@kind)}(#{if @children.length  == 1 then " #{@children[0].toString()}" else ""});"
 
 	###
 	# @brief Type checking.
 	#
 	# join can only be applied to agents.
 	#
-	# lock and unlock can only be applied to mutexes.
+	# lock and unlock can only be applied to locks.
 	#
 	# waitForCondition, signal and signalAll can only be applied to conditions
 	# and they can only be used inside a monitor.
@@ -2032,7 +2051,7 @@ class PCPrimitiveStmt extends PCNode
 			when PCPrimitiveStmt.JOIN
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "join must be applied on agents, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.AGENT))
 			when PCPrimitiveStmt.LOCK, PCPrimitiveStmt.UNLOCK
-				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "lock and unlock must be applied on mutex objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.MUTEX))
+				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "lock and unlock must be applied on lock objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.LOCK))
 			when PCPrimitiveStmt.WAIT
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "waitForCondition can only be used in monitors!"}) if not @insideMonitor()
 				throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "waitForCondition must be applied on condition or boolean objects, not #{@_type}!"}) if not @_type.isEqual(new PCTType(PCTType.Bool)) and not @_type.isEqual(new PCTType(PCTType.CONDITION))
@@ -2055,7 +2074,7 @@ PCPrimitiveStmt.kindToString = (kind) ->
 		when PCPrimitiveStmt.UNLOCK then "unlock"
 		when PCPrimitiveStmt.WAIT then "waitForCondition"
 		when PCPrimitiveStmt.SIGNAL then "signal"
-		when PCPrimitiveStmt.SIGNAL_ALL then "signal all"
+		when PCPrimitiveStmt.SIGNAL_ALL then "signalAll"
 
 ###
 # @brief Representation of the println statement.
