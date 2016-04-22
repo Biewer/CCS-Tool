@@ -1365,6 +1365,7 @@ class PCProcedureCall extends PCExpression
 	#
 	###
 	_getType: (env, className) ->
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidCall", "message" : "Procedures must be called within a procedure definition!"}) if not @insideProcedure()
 		proc = @getProcedure(env, className)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "No arguments for procedure that requires arguments!"}) if @children.length == 0 and proc.arguments.length > 0
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Arguments were passed to procedure without arguments!"}) if @children.length > 0 and proc.arguments.length == 0
