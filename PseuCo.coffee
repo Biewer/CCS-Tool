@@ -48,9 +48,9 @@ class PCNode
 	#
 	###
 	getType: (env) ->
-		if not @_type
+		if not (@_type?)
 			@_type = @_getType(env)
-			@_type = true if not @_type		# remember that we already checked type
+			@_type = true if not (@_type?)		# remember that we already checked type
 		if @_type == true then null else @_type
 
 	_collectEnvironment: (env) -> null
@@ -114,21 +114,21 @@ class PCNode
 ###
 class PCProgram extends PCNode
 	globalDeclarations: (env) ->
-		env.beginNewProcedure(@, "println", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "println", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "start", PCSimpleType.AGENT, [])
+		env.beginNewProcedure(@, "start", new PCTType(PCTType.AGENT), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "join", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "join", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "lock", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "lock", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "unlock", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "unlock", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "waitForCondition", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "waitForCondition", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "signal", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "signal", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
-		env.beginNewProcedure(@, "signalAll", PCSimpleType.VOID, [])
+		env.beginNewProcedure(@, "signalAll", new PCTType(PCTType.VOID), [])
 		env.endProcedure()
 
 	collectClasses: (env) ->
