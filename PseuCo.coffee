@@ -101,6 +101,16 @@ class PCNode
 			return true if child.usesSendOrReceiveOperator()
 		false
 
+	###
+	# @ brief Is the node inside of a PCCase node?
+	#
+	###
+	insideCase: ->
+		if @parent
+			@parent.insideCase()
+		else
+			false
+
 ###
 # @brief Represents the entire pseuCo program.
 #
@@ -1366,6 +1376,7 @@ class PCProcedureCall extends PCExpression
 	###
 	_getType: (env, className) ->
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidCall", "message" : "Procedures must be called within a procedure definition!"}) if not @insideProcedure()
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidCall", "message" : "Procedure calls are not allowed in an expression of a case statement!"}) if @insideCase()
 		proc = @getProcedure(env, className)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "No arguments for procedure that requires arguments!"}) if @children.length == 0 and proc.arguments.length > 0
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Arguments were passed to procedure without arguments!"}) if @children.length > 0 and proc.arguments.length == 0
@@ -1747,6 +1758,8 @@ class PCCase extends PCNode
 		child._collectEnvironment(env) for child in @children
 
 	toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0].toString(indent, true)}"
+
+	insideCase: -> true
 
 	###
 	# @brief Type checking.
