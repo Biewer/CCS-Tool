@@ -96,10 +96,11 @@ class PCNode
 	# node?
 	#
 	###
-	usesSendOrReceiveOperator: ->
+	usedSendOrReceiveOperators: ->
+		sum = 0
 		for child in @children
-			return true if child.usesSendOrReceiveOperator()
-		false
+			sum += child.usedSendOrReceiveOperators()
+		sum
 
 	###
 	# @ brief Is the node inside of a PCCase node?
@@ -1026,7 +1027,11 @@ class PCSendExpression extends PCExpression
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Values of type #{right} can't be sent over channels for #{left.channelledType}"}) if not left.channelledType.isEqual(right)
 		right
 
-	usesSendOrReceiveOperator: -> true
+	usedSendOrReceiveOperators: ->
+		sum = 0
+		for child in @children
+			sum += child.usedSendOrReceiveOperators()
+		sum + 1
 
 ###
 # @brief Representation of an expression containing a conditional expression.
@@ -1336,7 +1341,11 @@ class PCReceiveExpression extends PCExpression	# 1 child
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Expression to receive from must have a channeled type, not #{type}"}) if not (type instanceof PCTChannelType)
 		type.channelledType
 
-	usesSendOrReceiveOperator: -> true
+	usedSendOrReceiveOperators: ->
+		sum = 0
+		for child in @children
+			sum += child.usedSendOrReceiveOperators()
+		sum + 1
 
 ###
 # @brief Representation of an expression containing an procedure call.
@@ -1770,7 +1779,7 @@ class PCCase extends PCNode
 	###
 	_getType: (env) ->
 		child.getType(env) for child in @children
-		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "case condition requires at least one send or receive operation."}) if @children.length > 1 and not @children[1].usesSendOrReceiveOperator()
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Case condition requires exactly one send or receive operation!"}) if @children.length > 1 and @children[1].usedSendOrReceiveOperators() != 1
 		if @children[0] instanceof PCStatement and @children[0].children[0]? and @children[0].children[0] instanceof PCStmtBlock
 			@isReturnExhaustive = @children[0].children[0].isReturnExhaustive
 		new PCTType(PCTType.VOID)
