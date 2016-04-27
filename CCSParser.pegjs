@@ -275,7 +275,7 @@ expression
  				{ return [op, right]; } )*
  		{ 
  			while (equal.length > 0) {
- 				t = equal.shift();
+ 				var t = equal.shift();
  				left = new CCSEqualityExpression(left, t[1], t[0]).setCodePos(location().start.line,location().start.column);
  			}
  			return left;
@@ -288,7 +288,7 @@ expression
  				{ if (op instanceof Array) {op = op.join("");} return [op, right]; } )*
  		{ 
  			while (relational.length > 0) {
- 				t = relational.shift();
+ 				var t = relational.shift();
  				left = new CCSRelationalExpression(left, t[1], t[0]).setCodePos(location().start.line,location().start.column);
  			}
  			return left;
@@ -300,7 +300,7 @@ expression
  				{ return right; } )*
  		{ 
  			while (concat.length > 0) {
- 				t = concat.shift();
+ 				var t = concat.shift();
  				left = new CCSConcatenatingExpression(left, t).setCodePos(location().start.line,location().start.column);
  			}
  			return left;
@@ -313,7 +313,7 @@ expression
  				{ return [op, right]; } )*
  		{
  			while (addition.length > 0) {
- 				t = addition.shift();
+ 				var t = addition.shift();
  				left = new CCSAdditiveExpression(left, t[1], t[0]).setCodePos(location().start.line,location().start.column);
  			}
  			return left;
@@ -326,7 +326,7 @@ expression
  				{ return [op, right]; } )*
  		{
  			while (multiplication.length > 0) {
- 				t = multiplication.shift();
+ 				var t = multiplication.shift();
  				left = new CCSMultiplicativeExpression(left, t[1], t[0]).setCodePos(location().start.line,location().start.column);
  			}
  			return left;
