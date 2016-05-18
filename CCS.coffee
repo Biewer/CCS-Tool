@@ -302,10 +302,24 @@ class CCSProcess
 		res = SBArrayConcatChildren(rule.getPossibleSteps(this, info, copyOnPerform) for rule in @getApplicapleRules())
 	getPossibleSteps: (copyOnPerform) -> CCSExpandInput(@_getPossibleSteps({}, copyOnPerform))
 		
-	needsBracketsForSubprocess: (process) -> 
-		@getPrecedence? and process.getPrecedence? and process.getPrecedence() < @getPrecedence()
-	stringForSubprocess: (process, mini) ->
-		if @needsBracketsForSubprocess process
+	isLeftAssociative: -> false
+	isRightAssociative: -> false
+
+	needsBracketsForSubprocess: (process, left) -> 
+		if @getPrecedence? and process.getPrecedence?
+			precedence = process.getPrecedence()
+		else
+			return false
+		# Adjust precedence according to associativity
+		if @isLeftAssociative() and left == false
+			precedence -= 0.5
+		else if @isRightAssociative() and left == true
+			precedence -= 0.5
+
+		precedence < @getPrecedence()
+
+	stringForSubprocess: (process, mini, left) ->
+		if @needsBracketsForSubprocess(process, left)
 			"(#{process.toString(mini)})"
 		else
 			"#{process.toString(mini)}"
@@ -486,9 +500,10 @@ class CCSChoice extends CCSProcess
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 9
+	isLeftAssociative: -> true
 	getApplicapleRules: -> [CCSChoiceLRule, CCSChoiceRRule]
 	
-	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} + #{@stringForSubprocess(@getRight(), mini)}"
+	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini, true)} + #{@stringForSubprocess(@getRight(), mini, false)}"
 	copy: -> (new CCSChoice(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
@@ -497,9 +512,10 @@ class CCSParallel extends CCSProcess
 	constructor: (left, right) -> super left, right		# Process x Process
 	
 	getPrecedence: -> 6
+	isLeftAssociative: -> true
 	getApplicapleRules: -> [CCSParLRule, CCSParRRule, CCSSyncRule, CCSSyncExitRule]
 	
-	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} | #{@stringForSubprocess(@getRight(), mini)}"
+	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini, true)} | #{@stringForSubprocess(@getRight(), mini, false)}"
 	copy: -> (new CCSParallel(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
@@ -512,13 +528,14 @@ class CCSSequence extends CCSProcess
 		@getRight().performAutoComplete(cls)
 	
 	getPrecedence: -> 3
+	isLeftAssociative: -> true
 	getApplicapleRules: -> [CCSSeq1Rule, CCSSeq2Rule]
 	getPrefixes: -> @getLeft().getPrefixes()
 	getExits: -> @getLeft().getExits()
 
 	isUnguardedRecursion: -> @getLeft().isUnguardedRecursion() 		# if the left process is guarded, then the complete expression is, because the right one is guarded by a tau
 	
-	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini)} ; #{@stringForSubprocess(@getRight(), mini)}"
+	toString: (mini) -> "#{@stringForSubprocess(@getLeft(), mini, true)} ; #{@stringForSubprocess(@getRight(), mini, false)}"
 	copy: -> (new CCSSequence(@getLeft().copy(), @getRight().copy()))._setCCS(@ccs)
 
 
