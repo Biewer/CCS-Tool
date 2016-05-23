@@ -103,14 +103,13 @@ class PCNode
 		sum
 
 	###
-	# @ brief Is the node inside of a PCCase node?
+	# @ brief Does the node contain procedure calls?
 	#
 	###
-	insideCase: ->
-		if @parent
-			@parent.insideCase()
-		else
-			false
+	containsProcedureCall: ->
+		for child in @children
+			return true if child.containsProcedureCall()
+		false
 
 ###
 # @brief Represents the entire pseuCo program.
@@ -910,6 +909,8 @@ class PCStartExpression extends PCExpression
 		@children[0].getType(env)
 		new PCTType(PCTType.AGENT)
 
+	containsProcedureCall: -> true
+
 ###
 # @brief Representation of an assignment expression.
 #
@@ -1375,6 +1376,8 @@ class PCProcedureCall extends PCExpression
 
 	toString: -> "#{@procedureName}(#{(o.toString() for o in @children).join(", ")})"
 
+	containsProcedureCall: -> true
+
 	###
 	# @brief Type checking.
 	#
@@ -1385,7 +1388,6 @@ class PCProcedureCall extends PCExpression
 	###
 	_getType: (env, className) ->
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidCall", "message" : "Procedures must be called within a procedure definition!"}) if not @insideProcedure()
-		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidCall", "message" : "Procedure calls are not allowed in an expression of a case statement!"}) if @insideCase()
 		proc = @getProcedure(env, className)
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "No arguments for procedure that requires arguments!"}) if @children.length == 0 and proc.arguments.length > 0
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Arguments were passed to procedure without arguments!"}) if @children.length > 0 and proc.arguments.length == 0
@@ -1768,8 +1770,6 @@ class PCCase extends PCNode
 
 	toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0].toString(indent, true)}"
 
-	insideCase: -> true
-
 	###
 	# @brief Type checking.
 	#
@@ -1778,6 +1778,7 @@ class PCCase extends PCNode
 	#
 	###
 	_getType: (env) ->
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidCall", "message" : "Procedure calls are not allowed in an expression of a case statement!"}) if @children.length == 2 and @children[1].containsProcedureCall()
 		child.getType(env) for child in @children
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Case condition requires exactly one send or receive operation!"}) if @children.length > 1 and @children[1].usedSendOrReceiveOperators() != 1
 		if @children[0] instanceof PCStatement and @children[0].children[0]? and @children[0].children[0] instanceof PCStmtBlock
