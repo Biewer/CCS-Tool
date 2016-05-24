@@ -27,6 +27,8 @@ PC.Node::_childrenCompile = (compiler) ->
 	compiler.compile(c) for c in @children
 # PC.Node::registerServices = (compiler) ->		# services like mutex, waitroom, ... -> only generate CCS for necessary services
 # 	c.registerServices(compiler) for c in @children
+PC.Node::prepareSendReceive = (compiler) ->					# in case conditions, (left and) right operand of send/receive expression must be prepared before putting everything into the big choice
+	c.prepareSendReceive(compiler) for c in @children
 	
 	
 
@@ -194,9 +196,29 @@ PC.AssignDestination::getValueForArrayAtIndex = (compiler, instanceContainer, in
 
 	
 
+PC.SendExpression::prepareSendReceive = (compiler) ->
+	if @preparedChannel
+		throw new Error("Compiler Error: Preparing send twice (channel already prepared)!")
+	if @preparedData
+		throw new Error("Compiler Error: Preparing send twice (data already prepared)!")
+	@preparedChannel = compiler.compile(@children[0])
+	@preparedData = compiler.compile(@children[1])
+	# Bad thing: compiler protection does not work here :(. Let's hope that it is not necessary...
+	# Not necessary to go into recursion, because select's cases allow at most one send or receive
+
+
 PC.SendExpression::compile = (compiler) ->
-	c = compiler.compile(@children[0])
-	v = compiler.compile(@children[1])
+	if ((@preparedData == undefined) != (@preparedChannel == undefined))
+		throw new Error("Compiler Error: Preparing inconsistent!")
+	c = null
+	v = null
+	if @preparedChannel
+		c = @preparedChannel
+		v = @preparedData
+		@preparedChannel = @preparedData = null
+	else
+		c = compiler.compile(@children[0])
+		v = compiler.compile(@children[1])
 	if @children[0].getType(compiler).capacity <= 0
 		control = compiler.emitChoice()
 		compiler.emitCondition(new PCCBinaryContainer(c, new PCCConstantContainer(0), ">="))
@@ -299,8 +321,21 @@ PC.PostfixExpression::compile = (compiler) ->
 	
 	
 
-PC.ReceiveExpression::compile = (compiler) ->
+PC.ReceiveExpression::prepareSendReceive = (compiler) ->
+	if @preparedChannel
+		throw new Error("Compiler Error: Preparing receive twice!");
 	c = compiler.compile(@children[0])
+	# Bad thing: compiler protection does not work here :(. Let's hope that it is not necessary...
+	@preparedChannel = c
+	# Not necessary to go into recursion, because select's cases allow at most one send or receive
+
+PC.ReceiveExpression::compile = (compiler) ->
+	c = null
+	if @preparedChannel
+		c = @preparedChannel
+		@preparedChannel = undefined
+	else
+		c = compiler.compile(@children[0])
 	res = compiler.getFreshContainer(c.ccsType.getSubtype())
 	compiler.emitInput("receive", c, res)
 	res
@@ -409,6 +444,7 @@ PC.SelectStmt::compile = (compiler, loopEntry) ->
 	compiler.reopenEnvironment(@)
 	placeholders = []
 	breaks = []
+	@prepareSendReceive(compiler)		# evaluate right / left&right operand(s) of receive/send operator
 	for i in [0...@children.length-1] by 1
 		control = compiler.emitChoice()
 		breaks.concat(compiler.compile(@children[i], loopEntry))
@@ -421,6 +457,11 @@ PC.SelectStmt::compile = (compiler, loopEntry) ->
 	breaks
 	
 	
+PC.Case::prepareSendReceive = (compiler) ->
+	cond = @getCondition()
+	if cond
+		cond.prepareSendReceive(compiler)
+	# we do not want to prepare anything in the body of the case
 
 PC.Case::compile = (compiler, loopEntry) ->
 	cond = @getCondition()
