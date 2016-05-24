@@ -65,6 +65,8 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 		@needsAgentManager = false
 		@needsAgentJoiner = false
 
+		@newFrameOnSendReceive = false	# This set to true when a select stmt is compiled. We first compile everything up to the actual send/receive, because in the big choice, in each branch the first action must be the core send/receive action. Since this is difficult in general, we can work around this problem by putting the process applications in the big choice instead.
+
 	setNeedsReturn: -> @needsReturn = true
 	setNeedsMutex: -> @needsMutex = true
 	setNeedsWaitRoom: -> @needsWaitRoom = true
@@ -293,6 +295,14 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 		next.emitTransitionFromFrame(@, frame)
 		@addProcessGroupFrame(next)
 		next
+
+	addFollowupFrameForFrames: (derivationFrames) ->
+		frame = @getProcessFrame()
+		derivationFrames = [frame] if not derivationFrames
+		next = PCCProcessFrame.createFollowupFrameForFrames(derivationFrames)
+		@addProcessGroupFrame(next)
+		next
+
 	
 	emitMergeOfProcessFramesOfPlaceholders: (placeholders) ->
 		return null if placeholders.length == 0

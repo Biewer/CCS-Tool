@@ -411,7 +411,7 @@ PC.SelectStmt::compile = (compiler, loopEntry) ->
 	breaks = []
 	for i in [0...@children.length-1] by 1
 		control = compiler.emitChoice()
-		breaks.concat(compiler.compile(@children[i], loopEntry))
+		breaks = breaks.concat(compiler.compile(@children[i], loopEntry))
 		placeholders.push(compiler.emitProcessApplicationPlaceholder())
 		control.setBranchFinished()
 	breaks.concat(compiler.compile(@children[@children.length-1], loopEntry))
@@ -421,13 +421,21 @@ PC.SelectStmt::compile = (compiler, loopEntry) ->
 	breaks
 	
 	
-
+#### TODO TODO: This is a mess! I have to figure out how I can switch between process frames back and forth!!
 PC.Case::compile = (compiler, loopEntry) ->
 	cond = @getCondition()
 	if cond
+		compiler.newFrameOnSendReceive = true	# remember to 'stop' when we reach the core send/receive action
 		compiler.compile(cond)
+		# We have to check now, if a new process frame has already been created. If not, we must create a new one now.
 	else
-		compiler.emitSimplePrefix(CCS.internalChannelName)
+		compiler.emitSimplePrefix(CCS.internalChannelName)	# Decide t
+
+	# Before we continue, we must be sure that a new process frame has been opened already!
+	if (!p)
+		p = PCCProcessFrame.createFollowupFrameForFrames(compiler.getProcessFrame())	# derivation frame is the current frame, because all new frames start from the current frame
+		compiler.addProcessGroupFrame p 	# add the new frame on the compiler's process group frame stack
+
 	compiler.compile(@getExecution(), loopEntry)
 	
 	
