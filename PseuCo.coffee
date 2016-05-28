@@ -92,8 +92,8 @@ class PCNode
 			false
 
 	###
-	# @ brief Is the node inside of a PCSendExpression or PCReceiveExpression
-	# node?
+	# @ brief How many nodes beneath the current node are Send or Receive
+	# expressions?
 	#
 	###
 	usedSendOrReceiveOperators: ->
@@ -101,6 +101,16 @@ class PCNode
 		for child in @children
 			sum += child.usedSendOrReceiveOperators()
 		sum
+
+	###
+	# @ brief Is the node inside of a PCCaseStatement node?
+	#
+	###
+	insideCaseStatement: ->
+		if @parent
+			@parent.insideCaseStatement()
+		else
+			false
 
 	###
 	# @ brief Does the node contain procedure calls?
@@ -1060,6 +1070,7 @@ class PCConditionalExpression extends PCExpression	# Three children
 	_getType: (env) ->
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Value of type bool expected instead of #{@children[0].getType(env)} in conditional expression!"}) if not @children[0].getType(env).isEqual(new PCTType(PCTType.BOOL))
 		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Type of consequence and alternative must be the same! You have #{@children[1].getType(env)} and #{@children[2].getType(env)} instead."}) if not @children[1].getType(env).isEqual(@children[2].getType(env))
+		throw ({"line" : @line, "column" : @column, "wholeFile" : false, "name" : "InvalidType", "message" : "Send and Receive expressions are not allowed inside conditional expressions if they are in a case statement!"}) if @insideCaseStatement() and (@children[1].usedSendOrReceiveOperators() > 0 or @children[2].usedSendOrReceiveOperators() > 0)
 		@children[1].getType(env)
 
 ###
@@ -1761,6 +1772,8 @@ class PCCase extends PCNode
 	getCondition: -> if @children.length == 2 then @children[1] else null
 
 	getExecution: -> @children[0]
+
+	insideCaseStatement: -> true
 
 	collectEnvironment: (env) -> null
 
