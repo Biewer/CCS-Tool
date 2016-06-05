@@ -45,7 +45,7 @@ class PCCGlobal extends PC.EnvironmentNode
 class PCCClass extends PC.Class
 	constructor: ->
 		super
-		@addChild(new PCCInternalReadOnlyField(null, "guard", new PC.Type(PC.Type.MUTEX), true)) if @isMonitor()
+		@addChild(new PCCInternalReadOnlyField(null, "guard", new PC.Type(PC.Type.LOCK), true)) if @isMonitor()
 	getAllConditions: ->
 		result = []
 		for n, v of @variables
@@ -214,7 +214,7 @@ PC.Type::getCCSType = ->
 		when PC.Type.ARRAY then throw new Error("Unexpected type kind!")
 		when PC.Type.MONITOR then PCCType.INT
 		when PC.Type.STRUCTURE then PCCType.INT
-		when PC.Type.MUTEX then PCCType.INT
+		when PC.Type.LOCK then PCCType.INT
 		when PC.Type.CONDITION then PCCType.INT
 		when PC.Type.PROCEDURE then throw new Error("Unexpected type kind!")
 		when PC.Type.TYPE then throw new Error("Unexpected type kind!")
@@ -254,7 +254,7 @@ PC.Type::createContainer = (compiler, container) ->
 	return container if container
 	throw new Error("No default value for agents available") if @kind == PC.Type.AGENT
 	throw new Error("No default value for void available") if @kind == PC.Type.VOID
-	if @kind == PC.Type.MUTEX
+	if @kind == PC.Type.LOCK
 		result = compiler.getFreshContainer(PCCType.INT)
 		compiler.emitInput("mutex_create", null, result)
 		result
