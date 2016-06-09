@@ -1108,7 +1108,7 @@ AssignDestination
 	= id:Identifier pos:(__ "[" Expression "]")*
 		{
 			var index = [];
-			for (var i = pos.length - 1; i >= 0; --i)
+			for (var i = 0; i < pos.length; ++i)
 			{
 				index.push(pos[i][2]);
 			}
@@ -1370,7 +1370,7 @@ ArrayExpression
 	= exp:PrimaryExpression call:(__ "[" Expression "]")*
 		{
 			var res = exp;
-			for (var i = call.length - 1; i >= 0; --i)
+			for (var i = 0; i < call.length; ++i)
 			{
 				res = new PCArrayExpression(location().start.line,
 					location().start.column, res, call[i][2]);

@@ -88,7 +88,11 @@ class PCTArrayType extends PCTType
 		return false if @kind is PCTType.WILDCARD
 		(@elementsType.isAssignableTo(type.elementsType) or type.kind is PCTType.WILDCARD)
 	getBaseType: -> @elementsType.getBaseType()
-	toString: -> "#{@elementsType.toString()}[#{@capacity}]"
+	toString: ->
+		parts = @elementsType.toString().split('[')
+		partsFront = [parts[0], "#{@capacity}]"]
+		parts = partsFront.concat parts[1..]
+		parts.join '['
 
 
 class PCTChannelType extends PCTType
