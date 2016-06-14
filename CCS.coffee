@@ -540,10 +540,11 @@ class CCSSequence extends CCSProcess
 
 
 # - Restriction		
+# !! Changed precedence to binding stronger than choice and weaker than prefix
 class CCSRestriction extends CCSProcess
 	constructor: (process, @restrictedChannels) -> super process	# Process x string*
 	
-	getPrecedence: -> 1
+	getPrecedence: -> 10
 	getApplicapleRules: -> [CCSResRule]
 	getProcess: -> @subprocesses[0]
 	setProcess: (process) -> @subprocesses[0] = process 

@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 start = C:CCS { return C; }
 
 CCS
-  = PDefs:(Process/RangeDefinition)* _ System:Restriction _ !.
+  = PDefs:(Process/RangeDefinition)* _ System:Sequence _ !.
 		                                { 
 		                                	var defs = [];
 		                                  	for (var i = 0; i < PDefs.length; i++) {
@@ -42,7 +42,7 @@ RangeDefinition
 
 
 Process
-  = _ n:name _ params:("[" _ v:ValueIdentifier vs:(_ "," _ v2:ValueIdentifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Restriction __ [\n\r]+
+  = _ n:name _ params:("[" _ v:ValueIdentifier vs:(_ "," _ v2:ValueIdentifier { return v2; })* _ "]" _ { vs.unshift(v); return vs; } )? ":=" P:Sequence __ [\n\r]+
 		                                { 
 		                                  var res = new CCSProcessDefinition(n, P, params ? params : null, location().start.line).setCodePos(location().start.line,location().start.column);
 		                                  return res;
@@ -52,7 +52,7 @@ Process
 
 
 Restriction
-  = _ P:Sequence res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  (as) ? as : []; })?
+  = _ P:Prefix res:(_ "\\" _ "{" as:(_ a1:(channel / "*") as2:(_ "," _ a2:channel { return a2; })* { as2.unshift(a1); return as2; } )? _ "}" { return  (as) ? as : []; })?
   										{
   											res = res ? new CCSRestriction(P, res).setCodePos(location().start.line,location().start.column) : P;
   											//res.line = location().start.line;
@@ -90,7 +90,7 @@ Parallel
 
 
 Choice
-  = _ P:Prefix Ps:(_ "+" Q:Prefix { return Q; })*
+  = _ P:Restriction Ps:(_ "+" Q:Restriction { return Q; })*
 									  {
 									    Ps.unshift(P);
 									    while(Ps.length > 1){
@@ -170,7 +170,7 @@ Action
 
 
 Trivial
-  = _ "(" P:Restriction _ ")"       { 
+  = _ "(" P:Sequence _ ")"       { 
   										return P; 
   									}
   / _ "0"                         	{ 
