@@ -106,12 +106,12 @@ PC.ConditionDecl::compileDefaultValue = (compiler) ->
 
 PC.Decl::compile = (compiler) ->
 	type = @children[0]
-	#compiler.setNeedsMutex() if type.getType().type.kind == PC.Type.MUTEX
+	#compiler.setNeedsMutex() if type.getType().type.kind == PC.Type.LOCK
 	compiler.setNeedsMutex() if type.getType().type.compilerNeedsMutex()
 	compiler.compile(vd) for vd in @getDeclarators()
 	[]
 
-PC.Type::compilerNeedsMutex = () -> @kind == PC.Type.MUTEX
+PC.Type::compilerNeedsMutex = () -> @kind == PC.Type.LOCK
 PC.ArrayType::compilerNeedsMutex = () -> @elementsType.compilerNeedsMutex()
 	
 	
