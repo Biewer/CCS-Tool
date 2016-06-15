@@ -587,7 +587,7 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 			emitAccessors(@, i, size, j, args)
 			control.setBranchFinished()
 		#emitAccessors(@, i, size, size-1, args)
-		@emitCondition(new PCCBinaryContainer(index, new PCCConstantContainer(size), ">="))
+		@emitCondition(new PCCBinaryContainer(new PCCBinaryContainer(index, new PCCConstantContainer(size), ">="), new PCCBinaryContainer(index, new PCCConstantContainer(0), "<"), "||"))  # index >= size || index < 0
 		@throwException("Index ", index, " is out of array bounds ([0..#{size-1}])!")
 		@endProcessDefinition()
 		
