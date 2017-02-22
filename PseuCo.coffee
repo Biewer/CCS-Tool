@@ -125,7 +125,7 @@ class PCNode
 	# @ brief No indent toString wrapper.
 	#
 	###
-	toString: -> toString("")
+	toString: -> @_toString("")
 
 ###
 # @brief Represents the entire pseuCo program.
@@ -184,7 +184,7 @@ class PCProgram extends PCNode
 				if e and e.wholeFile?
 					PCErrorList.push e
 
-	toString: -> (o.toString("") for o in @children).join("\n")
+	toString: -> (o._toString("") for o in @children).join("\n")
 
 	###
 	# @brief Type checking.
@@ -241,7 +241,7 @@ class PCMainAgent extends PCNode
 		@children[0]._collectEnvironment(env)
 		env.endMainAgent()
 
-	toString: -> "mainAgent " + @children[0].toString("")
+	toString: -> "mainAgent " + @children[0]._toString("")
 
 	###
 	# @brief Type checking.
@@ -306,7 +306,7 @@ class PCProcedureDecl extends PCNode	# Children: PCFormalParameter objects
 		@getBody()._collectEnvironment(env)
 		env.endProcedure()
 
-	toString: (indent) -> "#{indent}#{@getResultType().toString()} #{@name}(#{((@getArgumentAtIndex(i).toString() for i in [0...@getArgumentCount()] by 1).join(", "))}) #{@getBody().toString(indent)}"
+	_toString: (indent) -> "#{indent}#{@getResultType().toString()} #{@name}(#{((@getArgumentAtIndex(i).toString() for i in [0...@getArgumentCount()] by 1).join(", "))}) #{@getBody()._toString(indent)}"
 
 	###
 	# @brief Type checking.
@@ -399,7 +399,7 @@ class PCMonitor extends PCNode
 		child._collectEnvironment(env) for child in @children
 		env.endClass()
 
-	toString: -> "monitor #{@name} {\n#{ (o.toString(PCIndent) for o in @children).join("\n") }\n}"
+	toString: -> "monitor #{@name} {\n#{ (o._toString(PCIndent) for o in @children).join("\n") }\n}"
 
 	###
 	# @brief Type checking.
@@ -476,7 +476,7 @@ class PCStruct extends PCNode
 		child._collectEnvironment(env) for child in @children
 		env.endClass()
 
-	toString: -> "struct #{@name} {\n#{ (o.toString(PCIndent) for o in @children).join("\n") }\n}"
+	toString: -> "struct #{@name} {\n#{ (o._toString(PCIndent) for o in @children).join("\n") }\n}"
 
 	###
 	# @brief Type checking.
@@ -533,7 +533,7 @@ class PCConditionDecl extends PCNode	# condition <id> with <boolean expression>
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> @collectEnvironment(env)
 
-	toString: (indent) -> "#{indent}condition #{@name} with #{@children[0].toString()};"
+	_toString: (indent) -> "#{indent}condition #{@name} with #{@children[0].toString()};"
 
 	###
 	# @brief Type checking.
@@ -582,7 +582,7 @@ class PCDecl extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> @collectEnvironment(env)
 
-	toString: (indent) ->
+	_toString: (indent) ->
 		res = indent + @children[0].toString() + " " + @children[1].toString()	# ToDo: Multiple declarators
 		res += ";" if @isStatement
 		res
@@ -1563,13 +1563,13 @@ class PCStatement extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> @children.length > 0 and @children[0]._collectEnvironment(env)
 
-	toString: (indent, expectsNewBlock) ->
+	_toString: (indent, expectsNewBlock) ->
 		addIndent = expectsNewBlock == true && (@children.length == 0 || !(@children[0] instanceof PCStmtBlock))
 		indent += PCIndent if addIndent
 		if @children.length == 0
 			res = indent + ";"
 		else
-			res = @children[0].toString(indent)
+			res = @children[0]._toString(indent)
 			res += ";" if @children[0] instanceof PCStmtExpression
 		res = "\n" + res if addIndent
 		res
@@ -1603,7 +1603,7 @@ class PCBreakStmt extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> indent + "break"
+	_toString: (indent) -> indent + "break"
 
 	###
 	# @brief Type checking.
@@ -1634,7 +1634,7 @@ class PCContinueStmt extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> indent + "continue"
+	_toString: (indent) -> indent + "continue"
 
 	###
 	# @brief Type checking.
@@ -1668,7 +1668,7 @@ class PCStmtBlock extends PCNode
 		child._collectEnvironment(env) for child in @children
 		env.closeEnvironment()
 
-	toString: (indent) -> "#{indent}{\n#{(o.toString(indent+PCIndent) for o in @children).join("\n")}\n#{indent}}"
+	_toString: (indent) -> "#{indent}{\n#{(o._toString(indent+PCIndent) for o in @children).join("\n")}\n#{indent}}"
 
 	###
 	# @brief Type checking.
@@ -1706,7 +1706,7 @@ class PCStmtExpression extends PCNode	# We need this for instanceof check
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> indent + @children[0].toString()
+	_toString: (indent) -> indent + @children[0].toString()
 
 	###
 	# @brief Type checking.
@@ -1740,7 +1740,7 @@ class PCSelectStmt extends PCNode	# children are cases
 		child._collectEnvironment(env) for child in @children
 		env.closeEnvironment()
 
-	toString: (indent) -> "#{indent}select {\n#{(o.toString(indent+PCIndent) for o in @children).join("\n")}\n#{indent}}"
+	_toString: (indent) -> "#{indent}select {\n#{(o._toString(indent+PCIndent) for o in @children).join("\n")}\n#{indent}}"
 
 	###
 	# @brief Type checking.
@@ -1787,7 +1787,7 @@ class PCCase extends PCNode
 	_collectEnvironment: (env) ->
 		child._collectEnvironment(env) for child in @children
 
-	toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0].toString(indent, true)}"
+	_toString: (indent) -> "#{indent}#{if @children.length == 2 then "case #{@children[1].toString()}" else "default"}: #{@children[0]._toString(indent, true)}"
 
 	###
 	# @brief Type checking.
@@ -1826,7 +1826,7 @@ class PCIfStmt extends PCNode
 		child._collectEnvironment(env) for child in @children
 		env.closeEnvironment()
 
-	toString: (indent) -> "#{indent}if (#{@children[0].toString()}) #{@children[1].toString(indent, true)}#{if @children[2] then "\n#{indent}else #{@children[2].toString(indent, true)}" else ""}"
+	_toString: (indent) -> "#{indent}if (#{@children[0].toString()}) #{@children[1]._toString(indent, true)}#{if @children[2] then "\n#{indent}else #{@children[2]._toString(indent, true)}" else ""}"
 
 	###
 	# @brief Type checking.
@@ -1873,7 +1873,7 @@ class PCWhileStmt extends PCNode
 		child._collectEnvironment(env) for child in @children
 		env.closeEnvironment()
 
-	toString: (indent) -> "#{indent}while (#{@children[0].toString()}) #{@children[1].toString(indent, true)}"
+	_toString: (indent) -> "#{indent}while (#{@children[0].toString()}) #{@children[1]._toString(indent, true)}"
 
 	###
 	# @brief Type checking.
@@ -1912,7 +1912,7 @@ class PCDoStmt extends PCNode
 		child._collectEnvironment(env) for child in @children
 		env.closeEnvironment()
 
-	toString: (indent) -> "#{indent}do #{@children[0].toString(indent, true)}\n#{indent}while (#{@children[1].toString()})"
+	_toString: (indent) -> "#{indent}do #{@children[0]._toString(indent, true)}\n#{indent}while (#{@children[1].toString()})"
 
 	###
 	# @brief Type checking.
@@ -1959,7 +1959,7 @@ class PCForStmt extends PCNode		# Add PCForUpdate class?
 		@body._collectEnvironment(env)
 		env.closeEnvironment()
 
-	toString: (indent) -> "#{indent}for (#{if @init then @init.toString() else ""}; #{if @expression then @expression.toString() else ""}; #{(o.toString("") for o in @update).join(", ")}) #{@body.toString(indent, true)}"
+	_toString: (indent) -> "#{indent}for (#{if @init then @init.toString() else ""}; #{if @expression then @expression.toString() else ""}; #{(o._toString("") for o in @update).join(", ")}) #{@body._toString(indent, true)}"
 
 	###
 	# @brief Type checking.
@@ -1992,7 +1992,7 @@ class PCForStmt extends PCNode		# Add PCForUpdate class?
 #
 ###
 class PCForInit extends PCNode
-	toString: -> "#{(o.toString("") for o in @children).join(", ")}"
+	toString: -> "#{(o._toString("") for o in @children).join(", ")}"
 
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) ->
@@ -2025,7 +2025,7 @@ class PCReturnStmt extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> "#{indent}return#{if @children.length  == 1 then " #{@children[0].toString()}" else ""};"
+	_toString: (indent) -> "#{indent}return#{if @children.length  == 1 then " #{@children[0].toString()}" else ""};"
 
 	###
 	# @brief Type checking.
@@ -2075,7 +2075,7 @@ class PCPrimitiveStmt extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> "#{indent}#{PCPrimitiveStmt.kindToString(@kind)}(#{if @children.length  == 1 then " #{@children[0].toString()}" else ""});"
+	_toString: (indent) -> "#{indent}#{PCPrimitiveStmt.kindToString(@kind)}(#{if @children.length  == 1 then " #{@children[0].toString()}" else ""});"
 
 	###
 	# @brief Type checking.
@@ -2136,7 +2136,7 @@ class PCPrintStmt extends PCNode
 	# Collects complete environment for type checking
 	_collectEnvironment: (env) -> null
 
-	toString: (indent) -> "#{indent}println(#{(o.toString() for o in @children).join(", ")});"
+	_toString: (indent) -> "#{indent}println(#{(o.toString() for o in @children).join(", ")});"
 
 	###
 	# @brief Type checking.
