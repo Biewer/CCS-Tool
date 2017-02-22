@@ -121,6 +121,12 @@ class PCNode
 			return true if child.containsProcedureCall()
 		false
 
+	###
+	# @ brief No indent toString wrapper.
+	#
+	###
+	toString: -> toString("")
+
 ###
 # @brief Represents the entire pseuCo program.
 #
