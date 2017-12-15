@@ -1,12 +1,20 @@
-PseuCo Compiler
+pseuCo to CCS Compiler
 ===============
+
+Authors
+-------
+pseuCo Parser: [Sebastian Biewer](https://depend.cs.uni-saarland.de/~biewer/), Pascal Held
+
+pseuCo to CCS Compiler: [Sebastian Biewer](https://depend.cs.uni-saarland.de/~biewer/)
+
 
 License
 -------
-PseuCo Compiler  
-Copyright (C) 2013  
-Saarland University (www.uni-saarland.de)  
-Sebastian Biewer (biewer-at-splodge.com)
+ 
+Copyright (c) 2013 - 2018  
+[Saarland University](https://www.uni-saarland.de)  
+[Dependable Systems and Software](https://depend.cs.uni-saarland.de)
+
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,19 +32,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Abstract
 --------
-Tool for CCS with value passing, value matching and sequence operator.
+This repository contains a CCS interpreter and a compiler for pseuCo that translates programs to CCS.
 
-Moreover, this tool can compile PseuCo to CCS.
-
-ToDo!
+For more information see [pseuCo.com](https://pseuco.com).
 
 
 Usage
 -----
-Use htdocs/index.html with the latest version of Safari or Firefox. In this prerelease version you need a separate tool to convert PseuCo to a JavaScript representation. You can double click on the PseuCo field to pop up an additional text field, where you can paste the JavaScript representation.
-
-
-**Note**: Unfinished prerelease software! Work is still in progress.
+This code is a submodule of pseuCo.com and can only be tested within pseuCo.com. You can find the source code and information regarding  installation in [this repository](https://dgit.cs.uni-saarland.de/pseuco/concurrent-programming-web).
 
 
 Credits

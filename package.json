@@ -1,15 +1,15 @@
 {
-  "name": "PseuCoCo",
+  "name": "pseuco-ccs-compiler",
   "version": "0.7.12",
-  "description": "PseuCo Compiler",
+  "description": "pseuCo to CCS Compiler",
   "main": "htdocs/index.html",
   "repository": {
     "type": "git",
-    "url": "git://github.com/Biewer/PseuCoCo.git"
+    "url": "git://dgit.cs.uni-saarland.de:2222/pseuco/pseuco-ccs-compiler.git"
   },
   "author": "Sebastian Biewer",
-  "license": "",
+  "license": "see Readme file",
   "bugs": {
-    "url": "https://github.com/Biewer/PseuCoCo/issues"
+    "url": "https://dgit.cs.uni-saarland.de/pseuco/pseuco-ccs-compiler/issues"
   }
 }
