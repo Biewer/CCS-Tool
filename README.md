@@ -1,6 +1,7 @@
 pseuCo to CCS Compiler
 ===============
 
+
 Authors
 -------
 pseuCo Parser: [Sebastian Biewer](https://depend.cs.uni-saarland.de/~biewer/), Pascal Held
@@ -40,6 +41,13 @@ For more information see [pseuCo.com](https://pseuco.com).
 Usage
 -----
 This code is a submodule of pseuCo.com and can only be tested within pseuCo.com. You can find the source code and information regarding  installation in [this repository](https://dgit.cs.uni-saarland.de/pseuco/concurrent-programming-web).
+
+
+Repository
+----------
+The primary repository for this project is located at <https://dgit.cs.uni-saarland.de/pseuco/pseuco-ccs-compiler>. 
+
+The GitHub version will be updated less regularly.
 
 
 Credits
