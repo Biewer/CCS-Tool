@@ -157,6 +157,8 @@ PC.AssignExpression::compile = (compiler) ->
 	c = compiler.compile(@getExpression())
 	if @operator == "+="
 		c = new PCCBinaryContainer(compiler.compile(@getDestination()), c, "+")
+	else if @operator == "-="
+		c = new PCCBinaryContainer(compiler.compile(@getDestination()), c, "-")
 	else if @operator == "*="
 		c = new PCCBinaryContainer(compiler.compile(@getDestination()), c, "*")
 	else if @operator == "/="
