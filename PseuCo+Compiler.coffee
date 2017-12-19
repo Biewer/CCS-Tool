@@ -540,7 +540,14 @@ PC.ForStmt::compile = (compiler) ->
 	if @init
 		compiler.emitNewScope()
 		compiler.compile(@init)
-	entry = compiler.emitNextProcessFrame()
+	toLoopBody = compiler.emitProcessApplicationPlaceholder()
+	entry = compiler.emitNextProcessFrame()		# This pushes an unreachable process 
+												# application on the stack, but this doesn't matter; 
+												# it's still better to use emitNextProcessFrame instead of 
+												# installing a new frame manually
+	compiler.compile(u) for u in @update
+	loopBody = compiler.emitNextProcessFrame()
+	loopBody.emitCallProcessFromFrame(compiler, toLoopBody.frame, toLoopBody)
 	breaks = []
 	control = null
 	if @expression 
@@ -551,7 +558,7 @@ PC.ForStmt::compile = (compiler) ->
 		control.setBranchFinished()
 		compiler.emitCondition(b)
 	breaks = breaks.concat(compiler.compile(@body, entry))
-	compiler.compile(u) for u in @update
+	
 	entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
 	control.setBranchFinished() if control
 	out = compiler.emitNextProcessFrame([statusQuo])
