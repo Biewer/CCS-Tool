@@ -40,6 +40,7 @@ class Environment
 	constructor: -> @env = {}
 	getValue: (id) ->
 		res = @env[id]
+		debugger
 		throw ({message: "Unbound identifier '" + id + "'", line: @line, column: @column, name: "Evaluation Error"}) if ! res 	# ToDo: line not available
 		res
 	setValue: (id, type) ->
@@ -186,6 +187,7 @@ class CCS
 # - ProcessDefinition
 class CCSProcessDefinition
 	constructor: (@name, @process, @params, @line=0) ->					# string x Process x CCSVariable*
+		@column = 1
 		@insertLinesBefore = 0 		# for toString... can be set by compiler for example
 
 	setCodePos: (line, column) ->
@@ -224,7 +226,7 @@ class CCSProcessDefinition
 	computeTypes: (penv) -> 
 		if @process.isUnguardedRecursion()
 			e = new Error("You are using unguarded recursion") 
-			e.line = @line
+			e.line = @line if not e.line
 			e.column = 1
 			e.name = if @ccs.allowUnguardedRecursion then "Type Warning" else "Type Error"
 			e.code = @ccs.toString()
@@ -232,16 +234,14 @@ class CCSProcessDefinition
 				@ccs.warnings.push(e)
 			else
 				throw e	
-		# try
-		penv.setType(@name, CCSTypeProcess)
-		@process.computeTypes(@env)
-		# catch e
-		# 	e = new Error(e.message)
-		# 	e.line = @line
-		# 	e.column = 1
-		# 	e.name = "TypeError"
-		# 	e.code = @ccs.toString()
-		# 	throw e
+		try
+			penv.setType(@name, CCSTypeProcess)
+			@process.computeTypes(@env)
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
+		
 	
 	toString: -> 
 		result = ""
@@ -290,7 +290,12 @@ class CCSProcess
 	# replaceChannelName: (old, newID) ->
 	# 	p.replaceChannelName(old, newID) for p in @subprocesses
 	computeTypes: (env) ->
-		p.computeTypes(env) for p in @subprocesses
+		try
+			p.computeTypes(env) for p in @subprocesses
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		null
 	isUnguardedRecursion: ->
 		(return true if p.isUnguardedRecursion()) for p in @subprocesses
@@ -370,7 +375,12 @@ class CCSProcessApplication extends CCSProcess
 				id = pd.params[i].name
 				# Note: if a variable exp cannot be typed, it is probably a channel name. Example: P[a,b] := c!.P[a,b]
 				# Note 2: Maybe, but probably is not enough here. Imagine P[2,3]: a is a constant expression, which does not have a .variableName!
-				type = pd.env.getType(id)
+				try
+					type = pd.env.getType(id)
+				catch e
+					e.line = @line if not e.line
+					e.column = @column if not e.column
+					throw e
 				if type == CCSTypeUnknown
 					type = if @valuesToPass[i].variableName then CCSTypeChannel else CCSTypeValue
 				if type == CCSTypeChannel  
@@ -385,21 +395,20 @@ class CCSProcessApplication extends CCSProcess
 			@process.applyReplacementDescriptor(replaces)
 		@process
 	getPrecedence: -> 12
-	###getTypeOfIdentifier: (identifier, type) ->
-		pd = @ccs.getProcessDefinition(@processName, @getArgCount())
-		if pd.params
-			for i in [0..pd.params.length-1] by 1
-				type = @valuesToPass[i].getTypeOfIdentifier(identifier, type)
-				type = CCSGetMostGeneralType(type, pd.types[i])
-		type###
+
 	computeTypes: (env) ->
 		pd = @getProcessDefinition()
 		return if not pd
 		# throw ({message: "Unknown process variable \"#{@processName}\" (with #{@getArgCount()} arguments)!", line: @line, column: @column, name: "Type Error"}) if not pd
-		if pd.params
-			for i in [0..pd.params.length-1] by 1
-				type = @valuesToPass[i].computeTypes(env, true)
-				pd.env.setType(pd.params[i].name, type)
+		try
+			if pd.params
+				for i in [0..pd.params.length-1] by 1
+					type = @valuesToPass[i].computeTypes(env, true)
+					pd.env.setType(pd.params[i].name, type)
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		super
 	isUnguardedRecursion: -> @getProcessDefinition() != null
 	
@@ -461,7 +470,12 @@ class CCSPrefix extends CCSProcess
 	# 	super old, newID #if @action.replaceChannelName(old, newID)
 	getPrefixes: -> return [@]
 	computeTypes: (env) ->
-		@action.computeTypes(env)
+		try
+			@action.computeTypes(env)
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		super
 	isUnguardedRecursion: -> false
 			
@@ -477,11 +491,14 @@ class CCSCondition extends CCSProcess
 	getPrecedence: -> 12
 	getApplicapleRules: -> [CCSCondRule]
 	getProcess: -> @subprocesses[0]
-	###getTypeOfIdentifier: (identifier, type) ->
-		type = @expression.getTypeOfIdentifier(identifier, type)
-		super identifier, type###
+
 	computeTypes: (env) ->
-		type = @expression.computeTypes(env, false)
+		try
+			type = @expression.computeTypes(env, false)
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		throw ({message: "Conditions can only check values. Channel names are not supported!", line: @line, column: @column, name: "Evaluation Error"}) if type == CCSTypeChannel
 		super
 	applyReplacementDescriptor: (replaces) ->
@@ -587,21 +604,17 @@ class CCSChannel
 		if replaces.variableHasChannelReplacement(@name)
 			@name = replaces.channelNameForVariableName(@name)
 		null
-	# replaceVariable: (varName, exp) ->
-	# 	@expression = @expression.replaceVariable(varName, exp) if @expression
-	# 	null
-	# replaceChannelName: (old, newID) ->
-	# 	@name = newID if @name == old
-	# 	null
-	###getTypeOfIdentifier: (identifier, type) ->
-		type = CCSGetMostGeneralType(type, CCSTypeChannel) if @name == identifier
-		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
-		type###
+
 	computeTypes: (env) ->
-		env.setType(@name, CCSTypeChannel)
-		if @expression
-			type = @expression.computeTypes(env, false)
-			throw ({message: "Channel variables are not allowed in channel specifier expression!", line: @line, column: @column, name: "Type Error"}) if type == CCSTypeChannel
+		try
+			env.setType(@name, CCSTypeChannel)
+			if @expression
+				type = @expression.computeTypes(env, false)
+				throw ({message: "Channel variables are not allowed in channel specifier expression!", line: @line, column: @column, name: "Type Error"}) if type == CCSTypeChannel
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		null
 	toString: (mini) ->
 		result = "" + @name
@@ -654,12 +667,15 @@ class CCSAction
 	applyReplacementDescriptor: (replaces) ->
 		@channel.applyReplacementDescriptor(replaces)
 		replaces
-	# replaceVariable: (varName, exp) ->		# returns true if prefix should continue replacing the variable in its subprocess
-	# 	@channel.replaceVariable(varName, exp)
-	# 	true
-	# replaceChannelName: (old, newID) -> @channel.replaceChannelName old, newID
-	#getTypeOfIdentifier: (identifier, type) -> @channel.getTypeOfIdentifier(identifier, type)
-	computeTypes: (env) -> @channel.computeTypes(env)
+	
+
+	computeTypes: (env) -> 
+		try
+			@channel.computeTypes(env)
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 
 
 # - Simple Action
@@ -810,15 +826,14 @@ class CCSMatch extends CCSAction
 		super
 		@expression = @expression.applyReplacementDescriptor(replaces)
 		replaces
-	# replaceVariable: (varName, exp) -> 
-	# 	super varName, exp
-	# 	@expression = @expression.replaceVariable(varName, exp)
-	# 	true
-	###getTypeOfIdentifier: (identifier, type) -> 
-		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
-		super identifier, type###
+
 	computeTypes: (env) ->
-		type = @expression.computeTypes(env, false)
+		try
+			type = @expression.computeTypes(env, false)
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		throw new Error("Channels can not be sent over channels!") if type == CCSTypeChannel
 		super
 	
@@ -843,16 +858,15 @@ class CCSOutput extends CCSAction
 		super
 		@expression = @expression.applyReplacementDescriptor(replaces) if @expression
 		replaces
-	# replaceVariable: (varName, exp) -> 
-	# 	super varName, exp
-	# 	@expression = @expression.replaceVariable(varName, exp) if @expression
-	# 	true
-	###getTypeOfIdentifier: (identifier, type) -> 
-		type = @expression.getTypeOfIdentifier(identifier, type) if @expression
-		super identifier, type###
+
 	computeTypes: (env) ->
 		if @expression
-			type = @expression.computeTypes(env, false)
+			try
+				type = @expression.computeTypes(env, false)
+			catch e
+				e.line = @line if not e.line
+				e.column = @column if not e.column
+				throw e
 			throw ({message: "Channels can not be sent over channels!", line: @line, column: @column, name: "Type Error"}) if type == CCSTypeChannel
 		super
 			
@@ -898,7 +912,12 @@ class CCSExpression
 	# replaceChannelName: (old, newID) -> null
 	
 	computeTypes: (env, allowsChannel) ->
-		e.computeTypes(env, false) for e in @subExps
+		try
+			e.computeTypes(env, false) for e in @subExps
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 		CCSTypeValue
 
 	evaluate: -> throw new Error("Abstract method!")
@@ -957,13 +976,18 @@ class CCSVariableExpression extends CCSExpression
 	
 	getPrecedence: -> 18
 	computeTypes: (env, allowsChannel) -> 		# channel is allowed if cariable expression is root expression of a process application argument
-		if allowsChannel
-			env.setType(@variableName, CCSTypeUnknown)
-			env.getType(@variableName)
-		else	
-			env.getType(@variableName)	# Ensure that the variable is bound
-			env.setType(@variableName, CCSTypeValue)	# We have to force type "value"
-			super
+		try
+			if allowsChannel
+				env.setType(@variableName, CCSTypeUnknown)
+				env.getType(@variableName)
+			else	
+				env.getType(@variableName)	# Ensure that the variable is bound
+				env.setType(@variableName, CCSTypeValue)	# We have to force type "value"
+				super
+		catch e
+			e.line = @line if not e.line
+			e.column = @column if not e.column
+			throw e
 	#usesIdentifier: (identifier) -> identifier == @variableName
 	applyReplacementDescriptor: (replaces) ->
 		if replaces.variableHasExpressionReplacement(@variableName)
