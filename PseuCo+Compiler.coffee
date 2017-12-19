@@ -613,9 +613,11 @@ PC.PrimitiveStmt::compile = (compiler, loopEntry) ->
 			compiler.emitOutput("add", c, null)
 			g = compiler.getVariableWithNameOfClass("guard", null, true).getContainer(compiler)
 			a = if compiler.useReentrantLocks then compiler.getVariableWithNameOfClass("a", null, true).getContainer(compiler) else null
-			compiler.emitOutput("unlock", g, a)
+			r = compiler.getFreshContainer(PCCType.INT)
+			compiler.emitInput("fullunlock", g, r)
 			compiler.emitOutput("wait", c, null)
 			compiler.emitOutput("lock", g, a)
+			compiler.emitOutput("multilock", g, new PCCBinaryContainer(r, new PCCConstantContainer(1), "-"))	# perform the r-1 remaining reentrant calls of lock using multilock
 			entry.emitCallProcessFromFrame(compiler, compiler.getProcessFrame())
 			control.setBranchFinished()
 			compiler.emitCondition(b)

@@ -471,6 +471,18 @@ class PCCCompiler 		# ToDo: Allow assigning a recently used program controller (
 		@emitMatch("lock", i, a)
 		@emitProcessApplication("Mutex", [i, new PCCBinaryContainer(c, new PCCConstantContainer(1), "+"), a])
 		control.setBranchFinished()
+
+		control = @emitChoice()
+		r = new PCCVariableContainer("r", PCCType.INT)
+		@emitInput("multilock", i, r)
+		@emitProcessApplication("Mutex", [i, new PCCBinaryContainer(c, r, "+"), a])	# add r reentrances to current counter c
+		control.setBranchFinished()
+		control = @emitChoice()
+		@emitOutput("fullunlock", i, c)
+		@emitProcessApplication("Mutex", [i, new PCCConstantContainer(0), a])
+		control.setBranchFinished()
+
+
 		@emitInput("unlock", i, a2)
 		control = @emitChoice()
 		@emitCondition(new PCCBinaryContainer(a, a2, "=="))
