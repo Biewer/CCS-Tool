@@ -206,6 +206,12 @@ CoreRange
 
 channel "channel"
   = first:[a-z] rest:[A-Za-z0-9_]* { return first + rest.join(''); }
+  / '\u03c4' { return "i" }
+  / '\ud835\uded5' {return "i" }
+  / '\ud835\udf0f' { return "i" }
+  / '\ud835\udf49' { return "i" }
+  / '\ud835\udf83' { return "i" }
+  / '\ud835\udfbd' { return "i" }
   
 int "integer"
   = "0" { return 0; }
