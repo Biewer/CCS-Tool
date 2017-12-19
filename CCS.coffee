@@ -172,7 +172,7 @@ class CCS
 		result = null
 		(result = pd if pd.name == name and argCount == pd.getArgCount()) for pd in @processDefinitions
 		if not result
-			uid = "#{pd.name}&#{argCount}"
+			uid = "#{name}&#{argCount}"
 			if @unknownProcessDefnitions[uid] != true
 				@unknownProcessDefnitions[uid] = true
 				warning = ({message: "Did not find definition for process \"#{name}\" with #{argCount} arguments. Assuming stop (0).", wholeFile:true, name: "Missing process definition"})
