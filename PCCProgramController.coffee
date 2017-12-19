@@ -357,8 +357,10 @@ class PCCField extends PCCGlobalVariable
 	trackValue: (compiler) -> compiler.trackClassVars()
 	getContainer: (compiler) ->
 		if @getIdentifier() == "#guard"
-			result = compiler.getFreshContainer(PCCType.INT)
-			compiler.emitInput("env_class_get_guard", compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
+			# result = compiler.getFreshContainer(PCCType.INT)
+			# compiler.emitInput("env_class_get_guard", compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
+			throw new Error("Dead Code (PCCProgramController.PCCField.getContainer)")
+			#TODO: Remove eventually
 		else
 			result = compiler.getFreshContainer(@type.getCCSType())
 			compiler.emitInput(@accessorChannel(false), compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
@@ -373,11 +375,11 @@ class PCCInternalReadOnlyField extends PCCField
 		local = compiler.getVariableWithName(@getIdentifier())
 		containers = (v.getContainer(compiler) for v in variables)
 		c = local.getContainer(compiler)
-		compiler.emitOutput("env_class_guard", instance, c)						# too much hard coded?
+		compiler.emitOutput("env_class_#{@parent.getName()}_guard", instance, c)						# too much hard coded?
 		compiler.emitProcessApplication(@getEnvProcessName(), containers)
 	getContainer: (compiler) -> 
 		result = compiler.getFreshContainer(PCCType.INT)
-		compiler.emitInput("env_class_guard", compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
+		compiler.emitInput("env_class_#{@parent.getName()}_guard", compiler.getVariableWithNameOfClass("i", null, true).getContainer(compiler), result)
 		result
 	setContainer: -> throw new Error("Setting container for read only variable!")
 	
