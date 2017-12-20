@@ -1,6 +1,6 @@
 {
   "name": "pseuco-ccs-compiler",
-  "version": "0.7.20",
+  "version": "0.7.21",
   "description": "pseuCo to CCS Compiler",
   "main": "htdocs/index.html",
   "repository": {
