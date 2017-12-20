@@ -1,8 +1,0 @@
-mainAgent{
-   int j, n; 
-   n = 1;        
-   for (j = 5; j > 0 ; j--){
-      n = n*j;
-   }                                       
-   println(" Die Fakultaet von 5 ist " + n + "."); // Ich verrate was rauskommt.
-}	

@@ -63,11 +63,6 @@ exports["UnaryContainer"] = PCCUnaryContainer
 
 
 
-exports["Executor"] = PCCExecutor
-
-
-
-
 exports["ProcessFrame"] = PCCProcessFrame
 exports["ProcedureFrame"] = PCCProcedureFrame
 exports["Groupable"] = PCCGroupable

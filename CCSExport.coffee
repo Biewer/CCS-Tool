@@ -46,7 +46,7 @@ exports["Restriction"] = CCSRestriction
 exports["Channel"] = CCSChannel
 exports["Action"] = CCSAction
 exports["SimpleAction"] = CCSSimpleAction
-# Private: CCSInternalActionCreate
+
 exports["ValueSet"] = CCSValueSet
 exports["Variable"] = CCSVariable
 exports["Input"] = CCSInput
@@ -69,7 +69,6 @@ exports["actionSets"] = ActionSets
 
 exports["Step"] = CCSStep
 exports["BaseStep"] = CCSBaseStep
-# exports["InputStep"] = CCSInputStep
 
 exports["PrefixRule"] = CCSPrefixRule
 exports["OutputRule"] = CCSOutputRule
@@ -88,11 +87,6 @@ exports["Seq1Rule"] = CCSSeq1Rule
 exports["Seq2Rule"] = CCSSeq2Rule
 exports["RecRule"] = CCSRecRule
 
-
-# Private: CCSExecutorCopyOnPerformStepPolicy
-# Private: CCSExecutorStepCountPerExecutionUnit
-# Private: CCSExecutorDefaultStepPicker
-exports["Executor"] = CCSExecutor
 
 
 
